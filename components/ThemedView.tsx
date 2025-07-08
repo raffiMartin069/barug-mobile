@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors'
 import React from 'react'
-import { useColorScheme, View } from 'react-native'
+import { StyleSheet, useColorScheme, View } from 'react-native'
 
 const ThemedView = ({ style = null, ...props }) => {
     const colorScheme = useColorScheme()
@@ -8,10 +8,16 @@ const ThemedView = ({ style = null, ...props }) => {
     
     return (
         <View
-            style={[{backgroundColor: theme.background}, style]}
+            style={[{backgroundColor: theme.background}, styles.container, style]}
             {...props}
         />
     )
 }
 
 export default ThemedView
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+})

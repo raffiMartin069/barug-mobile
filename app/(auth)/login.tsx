@@ -9,12 +9,12 @@ import React, { useState } from 'react'
 import { Image, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native'
 
 const Login = () => {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ThemedView style={styles.container}>
+        <ThemedView>
 
             <ThemedCard>
                 <Image
@@ -31,16 +31,15 @@ const Login = () => {
                 <Spacer height={20}/>
 
                 <ThemedTextInput
-                    placeholder="Email or Username"
+                    placeholder='Email or Username'
                     value={email}
                     onChangeText={setEmail}
-                    keyboardType="email-address"
                 />
 
                 <Spacer height={10}/>
 
                 <ThemedTextInput
-                    placeholder="Password"
+                    placeholder='Password'
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -48,7 +47,7 @@ const Login = () => {
 
                 <Spacer height={15}/>
                 
-                <Link href="/">
+                <Link href='/emailconfirmed'>
                     <ThemedText style={styles.link} link={true}>
                         Forgot Password?
                     </ThemedText>
@@ -60,7 +59,7 @@ const Login = () => {
 
                 <ThemedText style={styles.link}>
                     Don't have an account?
-                    <Link href="/">
+                    <Link href='/'>
                         <ThemedText link={true}> Register</ThemedText>
                     </Link>
                 </ThemedText>
@@ -74,10 +73,6 @@ const Login = () => {
 export default Login
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-    },
     image: {
         width: '100%',
         height: 70,
