@@ -43,11 +43,10 @@ const styles = StyleSheet.create ({
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: 'white',
         borderColor: 'black',
-        borderWidth: 1.5,
-        borderRadius: 6,
-        paddingHorizontal: 15,
+        borderBottomWidth: 2,
+        paddingHorizontal: 12,
     },
     textinput: {
         paddingVertical: 15,
