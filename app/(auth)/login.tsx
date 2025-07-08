@@ -47,7 +47,7 @@ const Login = () => {
 
                 <Spacer height={15}/>
                 
-                <Link href='/emailconfirmed'>
+                <Link href='/forgotpassword'>
                     <ThemedText style={styles.link} link={true}>
                         Forgot Password?
                     </ThemedText>
@@ -59,7 +59,7 @@ const Login = () => {
 
                 <ThemedText style={styles.link}>
                     Don't have an account?
-                    <Link href='/'>
+                    <Link href='/register'>
                         <ThemedText link={true}> Register</ThemedText>
                     </Link>
                 </ThemedText>

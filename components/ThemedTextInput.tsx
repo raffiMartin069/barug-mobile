@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
 import { StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const ThemedTextInput = ({ style = null, secureTextEntry = false, ...props }) => {
+const ThemedTextInput = ({ style = null, secureTextEntry = false, value, onChangeText, ...props }) => {
     const colorScheme = useColorScheme()
     const theme = Colors[colorScheme] ?? Colors.light
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
@@ -12,13 +12,13 @@ const ThemedTextInput = ({ style = null, secureTextEntry = false, ...props }) =>
         <View style={[styles.inputContainer, style]}>
             <TextInput
                 style={[
-                    {
-                        color: theme.text, flex: 1
-                    },
+                { color: theme.text, flex: 1 },
                 styles.textinput,
                 style
                 ]}
                 secureTextEntry={secureTextEntry && !isPasswordVisible}
+                value={value}
+                onChangeText={onChangeText}
                 {...props}
             />
             {secureTextEntry && (
