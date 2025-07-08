@@ -22,9 +22,9 @@ const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue
         style={{
           backgroundColor: 'white',
           borderColor: theme.text,
-          borderWidth: 0, // remove all borders
-          borderBottomWidth: 2, // only bottom border
-          borderRadius: 0, // no corner radius
+          borderWidth: 0,
+          borderBottomWidth: 2,
+          borderRadius: 0,
           paddingHorizontal: 15,
         }}
         textStyle={{
