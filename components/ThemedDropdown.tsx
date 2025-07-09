@@ -3,14 +3,16 @@ import React, { useState } from 'react';
 import { StyleSheet, useColorScheme, View } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 
-const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue, ...props }) => {
+const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue, order = 0, ...props }) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
   const [open, setOpen] = useState(false);
   const [dropdownItems, setDropdownItems] = useState(items);
+  const baseZIndex = 1000; 
+  const computedZIndex = baseZIndex - order;
 
   return (
-    <View style={[styles.container, style]}>
+    <View style={[style, {zIndex: computedZIndex}]}>
       <DropDownPicker
         open={open}
         value={value}
@@ -19,6 +21,7 @@ const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue
         setValue={setValue}
         setItems={setDropdownItems}
         placeholder={placeholder}
+        listMode="SCROLLVIEW"
         style={{
           backgroundColor: 'white',
           borderColor: theme.text,
@@ -48,6 +51,6 @@ export default ThemedDropdown
 
 const styles = StyleSheet.create({
     container: {
-    zIndex: 1000, // fixes overlapping issues
+    zIndex: 1000,
   },
 })

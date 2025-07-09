@@ -30,13 +30,13 @@ export default ThemedText
 const styles = StyleSheet.create({
     title: {
         fontSize: 25,
-        fontWeight: 700,
+        fontWeight: 'bold',
     },
     subtitle: {
         fontSize: 16,
     },
     link: {
-        fontWeight: 500,
+        fontWeight: 'bold',
     },
     btn: {
         fontSize: 18,

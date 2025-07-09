@@ -4,13 +4,18 @@ import ThemedCard from '@/components/ThemedCard'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { Link } from 'expo-router'
+import { Link, useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { Image, Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native'
 
 const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const router = useRouter()
+
+  const handleSubmit = () => {
+    router.push('/chooserole')
+  }
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -53,8 +58,8 @@ const Login = () => {
                     </ThemedText>
                 </Link>
 
-                <ThemedButton>
-                    <ThemedText btn={true}>LOG IN</ThemedText>
+                <ThemedButton onPress={handleSubmit}>
+                    <ThemedText style={styles.text} btn={true}>Log In</ThemedText>
                 </ThemedButton>
 
                 <ThemedText style={styles.link}>

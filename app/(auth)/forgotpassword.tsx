@@ -31,7 +31,7 @@ const ForgotPassword = () => {
                     onChangeText={setEmail}
                 />
 
-                <Spacer height={5}/>
+                <Spacer height={15}/>
 
                 <ThemedButton>
                     <ThemedText btn={true}>Continue</ThemedText>
