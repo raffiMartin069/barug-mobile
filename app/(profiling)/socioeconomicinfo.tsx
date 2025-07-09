@@ -5,6 +5,7 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
@@ -15,13 +16,18 @@ const SocioeconomicInfo = () => {
   const [mthlypersonalincome, setMnthlyPersonalIncome] = useState('')
   const [govprogrm, setGovProgram] = useState('')
 
+  const router = useRouter()
+
+  const handleSubmit = () => {
+    router.push('/joinhousehold')
+  }
+
   return (
-    <>
     <ThemedView safe={true}>
         <ThemedKeyboardAwareScrollView>
             <View>
-                
-                <ThemedText title={true}>Socioeconomic Information</ThemedText>
+
+                <ThemedText style={styles.text} title={true}>Socioeconomic Information</ThemedText>
 
                 <Spacer height={20}/>
 
@@ -70,21 +76,21 @@ const SocioeconomicInfo = () => {
                 />
             </View>
 
-            <View style={{ paddingVertical: 15 }}>
-                <ThemedButton>
+            <View>
+                <ThemedButton onPress={handleSubmit}>
                     <ThemedText btn={true}>Continue</ThemedText>
                 </ThemedButton>
             </View>
 
         </ThemedKeyboardAwareScrollView>
     </ThemedView>
-    </>
-    
   )
 }
 
 export default SocioeconomicInfo
 
 const styles = StyleSheet.create({
-
+    text: {
+        textAlign: 'center',
+    },
 })

@@ -9,7 +9,7 @@ import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, StyleSheet } from 'react-native';
+import { Image, Pressable, StyleSheet } from 'react-native';
 
 const PersonalInfo = () => {
   const [fname, setFname] = useState('')
@@ -27,6 +27,10 @@ const PersonalInfo = () => {
 
   const handleSubmit = () => {
     router.push('/emailsent')
+  }
+
+  const handleHomeAddress = () => {
+    router.push('/emailconfirmed')
   }
 
   return (
@@ -130,11 +134,15 @@ const PersonalInfo = () => {
 
             <Spacer height={10}/>
 
+            <Pressable onPress={handleHomeAddress}>
                 <ThemedTextInput
                     placeholder='Home Address'
                     value={address}
                     onChangeText={setAddress}
+                    editable={false}
+                    pointerEvents="none"
                 />
+            </Pressable>
 
             <Spacer height={10}/>
             
