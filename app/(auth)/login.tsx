@@ -59,7 +59,7 @@ const Login = () => {
 
                 <ThemedText style={styles.link}>
                     Don't have an account?
-                    <Link href='/register'>
+                    <Link href='/personalinfo'>
                         <ThemedText link={true}> Register</ThemedText>
                     </Link>
                 </ThemedText>

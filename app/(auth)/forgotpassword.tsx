@@ -7,7 +7,7 @@ import ThemedView from '@/components/ThemedView'
 import React, { useState } from 'react'
 import { TouchableWithoutFeedback } from 'react-native'
 
-const forgotpassword = () => {
+const ForgotPassword = () => {
   const [email, setEmail] = useState('')
   return (
     <TouchableWithoutFeedback>
@@ -28,7 +28,7 @@ const forgotpassword = () => {
                 <ThemedTextInput
                     placeholder='Enter your email address'
                     value={email}
-                    onChange={setEmail}
+                    onChangeText={setEmail}
                 />
 
                 <Spacer height={5}/>
@@ -42,4 +42,4 @@ const forgotpassword = () => {
   )
 }
 
-export default forgotpassword
+export default ForgotPassword

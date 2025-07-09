@@ -5,7 +5,7 @@ import ThemedView from '@/components/ThemedView'
 import { Link } from 'expo-router'
 import React from 'react'
 
-const emailconfirmed = () => {
+const EmailConfirmed = () => {
   return (
     <ThemedView>
         <ThemedCard>
@@ -24,4 +24,4 @@ const emailconfirmed = () => {
   )
 }
 
-export default emailconfirmed
+export default EmailConfirmed

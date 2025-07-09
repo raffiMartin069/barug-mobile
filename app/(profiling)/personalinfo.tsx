@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { Image, Keyboard, ScrollView, StyleSheet, TouchableWithoutFeedback } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-const register = () => {
+const PersonalInfo = () => {
   const [fname, setFname] = useState('')
   const [mname, setMname] = useState('')
   const [lname, setLname] = useState('')
@@ -161,7 +161,7 @@ const register = () => {
   )
 }
 
-export default register
+export default PersonalInfo
 
 const styles = StyleSheet.create({
     scrollContainer: {
