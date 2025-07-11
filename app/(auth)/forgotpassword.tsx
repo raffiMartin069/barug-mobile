@@ -4,11 +4,17 @@ import ThemedCard from '@/components/ThemedCard'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { TouchableWithoutFeedback } from 'react-native'
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('')
+  const router = useRouter()
+
+  const handleSubmit = () => {
+    router.push('/emailsent')
+  }
   return (
     <TouchableWithoutFeedback>
         <ThemedView>
@@ -33,7 +39,7 @@ const ForgotPassword = () => {
 
                 <Spacer height={15}/>
 
-                <ThemedButton>
+                <ThemedButton onPress={handleSubmit}>
                     <ThemedText btn={true}>Continue</ThemedText>
                 </ThemedButton>
             </ThemedCard>

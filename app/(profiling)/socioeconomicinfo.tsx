@@ -19,7 +19,7 @@ const SocioeconomicInfo = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/joinhousehold')
+    router.push('/createhousehold')
   }
 
   return (
@@ -51,10 +51,12 @@ const SocioeconomicInfo = () => {
 
                 <Spacer height={10}/>
 
-                <ThemedTextInput
-                    placeholder='Occupation'
+                <ThemedDropdown
+                    items={[]}
                     value={occupation}
-                    onChangeText={setOccupation}
+                    setValue={setOccupation}
+                    placeholder='Occupation'
+                    order={2}
                 />
 
                 <Spacer height={10}/>
@@ -72,9 +74,11 @@ const SocioeconomicInfo = () => {
                     value={govprogrm}
                     setValue={setGovProgram}
                     placeholder='Government Program'
-                    order={2}
+                    order={3}
                 />
             </View>
+
+            <Spacer height={15}/>
 
             <View>
                 <ThemedButton onPress={handleSubmit}>
