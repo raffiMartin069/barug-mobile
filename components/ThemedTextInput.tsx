@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
 import { StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const ThemedTextInput = ({ style = null, secureTextEntry = false, value, onChangeText, ...props }) => {
+const ThemedTextInput = ({ style = null, secureTextEntry = false,  showClearButton = false, value, onChangeText, onRemove = () => {}, ...props }) => {
     const colorScheme = useColorScheme()
     const theme = Colors[colorScheme] ?? Colors.light
     const [isPasswordVisible, setIsPasswordVisible] = useState(false)
@@ -21,7 +21,7 @@ const ThemedTextInput = ({ style = null, secureTextEntry = false, value, onChang
                 onChangeText={onChangeText}
                 {...props}
             />
-            {secureTextEntry && (
+            {secureTextEntry ? (
                 <TouchableOpacity
                     onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                     style={styles.iconContainer}
@@ -32,7 +32,18 @@ const ThemedTextInput = ({ style = null, secureTextEntry = false, value, onChang
                         color={theme.icon}
                     />
                 </TouchableOpacity>
-            )}
+            ) : showClearButton ? (
+                <TouchableOpacity
+                    onPress={() => onRemove ? onRemove() : onChangeText('')}
+                    style={styles.iconContainer}
+                >
+                    <Ionicons
+                        name="remove-circle-outline"
+                        size={20}
+                        color={theme.icon}
+                    />
+                </TouchableOpacity>
+            ) : null}
         </View>
     )
 }

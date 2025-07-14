@@ -6,68 +6,97 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { Ionicons } from '@expo/vector-icons'
 import React, { useState } from 'react'
-import { StyleSheet, TouchableOpacity, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 const AddMember = () => {
-  const [resid, setResID] = useState('')
-  const [hhrel, setHhRel] = useState('')
-  const [famrel, setFamRel] = useState('')
+  const [members, setMembers] = useState([
+    {resid: '', hhrel: '', famrel: ''}
+  ])
+
+  const addMember = () => {
+    setMembers([...members, {resid: '', hhrel: '', famrel: ''}])
+  }
+
+  const updateField = (index, field, value) => {
+    const updatedMembers = [...members]
+    updatedMembers[index][field] = value
+    setMembers(updatedMembers)
+  }
+
+  const removeField = (index) => {
+    const updatedMembers = members.filter((_, i) => i !== index)
+    setMembers(updatedMembers)
+  }
 
   return (
     <ThemedView safe={true}>
         <ThemedKeyboardAwareScrollView>
             <View>
+
                 <ThemedText style={styles.textcenter} title={true}>Add Member/s</ThemedText>
+
                 <Spacer height={20}/>
+                
                 <View style={styles.row}>
                     <ThemedText style={styles.textbold} subtitle={true}>Household #:</ThemedText>
                     <ThemedText subtitle={true}>00000111</ThemedText>
                 </View>
+
                 <View style={styles.row}>
                     <ThemedText style={styles.textbold} subtitle={true}>Family #:</ThemedText>
                     <ThemedText subtitle={true}>00000111</ThemedText>
                 </View>
+                
                 <Spacer height={10}/>
+
                 <ThemedDivider/>
+
                 <Spacer height={10}/>
-                <View style={styles.inputRow}>
-                    <ThemedTextInput
-                        placeholder="Member's Resident ID"
-                        style={styles.textInput}
-                        value={resid}
-                        onChangeText={setResID}
-                    />
-                    <TouchableOpacity onPress={() => setResID('')}>
-                        <Ionicons name="remove-circle-outline" size={20}/>
-                    </TouchableOpacity>
-                </View>
 
-                <ThemedDropdown
-                    items={[]}
-                    value={famrel}
-                    setValue={setFamRel}
-                    placeholder='Relationship to Household Head'
-                    order={0}
-                />
+                {members.map((member,   index) => (
+                    <View key={index}>
+                        <ThemedTextInput
+                            placeholder="Member's Resident ID"
+                            value={member.resid}
+                            onChangeText={(value) => updateField(index, 'resid', value)}
+                            showClearButton={members.length > 1}
+                            onRemove={() => removeField(index)}
+                        />
 
-                <Spacer height={10 }/>
+                        <Spacer height={10 }/>
 
-                <ThemedDropdown
-                    items={[]}
-                    value={hhrel}
-                    setValue={setHhRel}
-                    placeholder='Relationship to Family Head'
-                    order={1}
-                />
+                        <ThemedDropdown
+                            items={[]}
+                            value={member.famrel}
+                            setValue={(value) => updateField(index, 'famrel', value)}
+                            placeholder='Relationship to Household Head'
+                            order={0}
+                        />
 
-                <Spacer height={30}/>
-                <ThemedDivider/>
-                <Spacer height={10}/>
-                <ThemedButton style={{ borderWidth: 0 }} submit={false}>
-                    <ThemedText non_btn>+ Add another member</ThemedText>
-                </ThemedButton>
+                        <Spacer height={10 }/>
+
+                        <ThemedDropdown
+                            items={[]}
+                            value={member.hhrel}
+                            setValue={(value) => updateField(index, 'hhrel', value)}
+                            placeholder='Relationship to Family Head'
+                            order={1}
+                        />
+
+                        <Spacer/>
+
+                        <ThemedDivider/>
+                        
+                    </View>
+                ))}
+
+            <Spacer height={10}/>
+
+            <ThemedButton style={{ borderWidth: 0 }} submit={false} onPress={addMember}>
+                <ThemedText non_btn>+ Add another member</ThemedText>
+            </ThemedButton>
+                
             </View>
             <Spacer height={15}/>
             <View>
@@ -94,12 +123,5 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginVertical: 5,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    textInput: {
-        flex: 1,
     },
 })
