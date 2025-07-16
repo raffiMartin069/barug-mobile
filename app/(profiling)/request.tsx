@@ -1,21 +1,18 @@
-import ThemedCard from '@/components/ThemedCard'
-import ThemedText from '@/components/ThemedText'
+import ThemedMap from '@/components/ThemedMap'
 import ThemedView from '@/components/ThemedView'
 import React from 'react'
-import { StyleSheet, TouchableWithoutFeedback } from 'react-native'
+import { StyleSheet } from 'react-native'
 
-const request = () => {
+const Request = () => {
   return (
-    <TouchableWithoutFeedback>
-        <ThemedView>
-            <ThemedCard>
-                <ThemedText></ThemedText>
-            </ThemedCard>
-        </ThemedView>
-    </TouchableWithoutFeedback>
+    <ThemedView safe={true} style={{ flex: 1 }}>
+        <ThemedMap
+          route={'/residentaddress'}
+        />
+    </ThemedView>
   )
 }
 
-export default request
+export default Request
 
 const styles = StyleSheet.create({})

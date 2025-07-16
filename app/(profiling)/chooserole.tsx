@@ -13,7 +13,7 @@ const ChooseRole = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/demographicinfo')
+    router.push('/request')
   }
   return (
     <ThemedView>
