@@ -6,16 +6,15 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { useSearchParams } from 'expo-router/build/hooks'
+import React, { useEffect, useState } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 
 const CreateHousehold = () => {
+  const params = useSearchParams()
+
   const [householdnum, setHouseholdNum] = useState('')
-  const [housenum, setHouseNum] = useState('')
-  const [street, setStreet] = useState('')
-  const [puroksitio, setPurokSitio] = useState('')
-  const [brgy, setBrgy] = useState('')
-  const [city, setCity] = useState('')
+  const [hAddress, setHAddress] = useState('')
   const [hhhead, setHhHead] = useState('')
   const [housetype, setHouseType] = useState('')
   const [houseownership, setHouseOwnership] = useState('')
@@ -24,6 +23,22 @@ const CreateHousehold = () => {
 
   const handleSubmit = () => {
     router.push('/createfamily')
+  }
+
+  useEffect(() => {
+    if ( params.get('hnum') || params.get('street') || params.get('puroksitio') || params.get('brgy') || params.get('city') ) {
+        const fullAddress = `${params.get('hnum') ?? ''} ${params.get('street') ?? ''}, ${params.get('puroksitio') ?? ''}, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`
+        setHAddress(fullAddress)
+    }
+  })
+
+  const handleHomeAddress = () => {
+    router.push({
+      pathname: '/mapaddress',
+      params: {
+        returnTo: '/homeaddress',
+      }
+    })
   }
 
 
@@ -42,43 +57,15 @@ const CreateHousehold = () => {
 
             <Spacer height={10}/>
 
-            <ThemedTextInput
-              placeholder='House Number'
-              value={housenum}
-              onChangeText={setHouseNum}
-            />
-
-            <Spacer height={10}/>
-
-            <ThemedTextInput
-              placeholder='Street'
-              value={street}
-              onChangeText={setStreet}
-            />
-
-            <Spacer height={10}/>
-
-            <ThemedTextInput
-              placeholder='Purok or Sitio'
-              value={puroksitio}
-              onChangeText={setPurokSitio}
-            />
-
-            <Spacer height={10}/>
-
-            <ThemedTextInput
-              placeholder='Barangay'
-              value={brgy}
-              onChangeText={setBrgy}
-            />
-
-            <Spacer height={10}/>
-
-            <ThemedTextInput
-              placeholder='City'
-              value={city}
-              onChangeText={setCity}
-            />
+            <Pressable onPress={handleHomeAddress}>
+                <ThemedTextInput
+                placeholder='Home Address'
+                value={hAddress}
+                onChangeText={setHAddress}
+                editable={false}
+                pointerEvents="none"
+              />
+            </Pressable>
 
             <Spacer height={10}/>
 

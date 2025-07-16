@@ -58,13 +58,17 @@ const Login = () => {
                     </ThemedText>
                 </Link>
 
+                <Spacer height={5}/>
+
                 <ThemedButton onPress={handleSubmit}>
                     <ThemedText style={styles.text} btn={true}>Log In</ThemedText>
                 </ThemedButton>
 
+                <Spacer height={5}/>
+
                 <ThemedText style={styles.link}>
                     Don't have an account?
-                    <Link href='/personalinfo'>
+                    <Link href='/register'>
                         <ThemedText link={true}> Register</ThemedText>
                     </Link>
                 </ThemedText>

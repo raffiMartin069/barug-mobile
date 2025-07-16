@@ -1,55 +1,61 @@
 import Spacer from '@/components/Spacer';
 import ThemedButton from '@/components/ThemedButton';
 import ThemedDatePicker from '@/components/ThemedDatePicker';
+import ThemedDropdown from '@/components/ThemedDropdown';
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
 import ThemedRadioButton from '@/components/ThemedRadioButton';
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
-import { Link, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSearchParams } from 'expo-router/build/hooks';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 const PersonalInfo = () => {
+  const params = useSearchParams()
+
   const [fname, setFname] = useState('')
   const [mname, setMname] = useState('')
   const [lname, setLname] = useState('')
   const [suffix, setSuffix] = useState('')
   const [gender, setGender] = useState('male');
   const [dob, setDob] = useState('')
-  const [street, setStreet] = useState('')
-  const [puroksitio, setPurokSitio] = useState('')
-  const [brgy, setBrgy] = useState('')
-  const [city, setCity] = useState('')
+  const [civilStatus, setCivilStatus] = useState('');
+  const [nationality, setNationality] = useState('');
+  const [religion, setReligion] = useState('');
+  const [haddress, setHAddress] = useState('')
   const [mobnum, setMobNum] = useState('')
   const [email, setEmail] = useState('')
+
+  useEffect(() => {
+    if (params.get('street') || params.get('puroksitio') || params.get('brgy') || params.get('city') ) {
+        const fullAddress = `${params.get('street') ?? ''}, ${params.get('puroksitio') ?? ''}, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`
+        setHAddress(fullAddress)
+    }
+  })
 
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/verifyemail')
+    router.push('/socioeconomicinfo')
   }
 
   const handleHomeAddress = () => {
-    router.push('/emailconfirmed')
+    router.push({
+        pathname: '/mapaddress',
+        params: {
+            returnTo: '/residentaddress',
+        }
+    })
   }
 
   return (
     <ThemedView safe={true}>
         <ThemedKeyboardAwareScrollView>
             <View>
-                <Image
-                    source={require('@/assets/images/icon-.png')}
-                    style={styles.image}
-                />
 
-                <Spacer height={20}/>
-
-                <ThemedText style={styles.text} title={true}>Barangay Sto. Niño</ThemedText>
-
-                <ThemedText style={styles.text} subtitle={true}>Register to access barangay services.</ThemedText>
-                
-                <Spacer height={20}/>
+                <ThemedText style={styles.text} title={true}>Personal Information</ThemedText>
 
                 <ThemedTextInput
                     placeholder='First Name'
@@ -106,29 +112,45 @@ const PersonalInfo = () => {
 
                 <Spacer height={10}/>
 
-                <ThemedTextInput
-                    placeholder='Street'
-                    value={street}
-                    onChangeText={setStreet}
+                <ThemedDropdown
+                    items={[]}
+                    value={civilStatus}
+                    setValue={setCivilStatus}
+                    placeholder='Civil Status'
+                    order={0}
                 />
 
-                <ThemedTextInput
-                    placeholder='Purok or Sitio'
-                    value={puroksitio}
-                    onChangeText={setPurokSitio}
+                <Spacer height={10}/>
+
+                <ThemedDropdown
+                    items={[]}
+                    value={nationality}
+                    setValue={setNationality}
+                    placeholder='Nationality'
+                    order={1}
                 />
 
-                <ThemedTextInput
-                    placeholder='Barangay'
-                    value={brgy}
-                    onChangeText={setBrgy}
+                <Spacer height={10}/>
+
+                <ThemedDropdown
+                    items={[]}
+                    value={religion}
+                    setValue={setReligion}
+                    placeholder='Religion'
+                    order={2}
                 />
 
-                <ThemedTextInput
-                    placeholder='City'
-                    value={city}
-                    onChangeText={setCity}
-                />
+                <Spacer height={10}/>
+
+                <Pressable onPress={handleHomeAddress}>
+                    <ThemedTextInput
+                        placeholder='Home Address'
+                        value={haddress}
+                        onChangeText={setHAddress}
+                        editable={false}
+                        pointerEvents="none"
+                    />
+                </Pressable>
 
                 <Spacer height={10}/>
                 
@@ -152,15 +174,8 @@ const PersonalInfo = () => {
             
             <View>
                 <ThemedButton onPress={handleSubmit}>
-                    <ThemedText btn={true}>Register</ThemedText>
+                    <ThemedText btn={true}>Continue</ThemedText>
                 </ThemedButton>
-                <Spacer height={10}/>
-                <ThemedText style={styles.link}>Already have an account? {"\u00A0"}
-                    <Link href='/login'>
-                        <ThemedText link={true}>Log in</ThemedText>
-                    </Link>
-                </ThemedText>
-                <Spacer height={15}/>
             </View>
             
 

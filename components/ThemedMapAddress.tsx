@@ -4,11 +4,18 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import ThemedCard from './ThemedCard';
 
-const ThemedMap = ({ route }) => {
+const ThemedMapAddress = ({ route}) => {
     const router = useRouter()
 
     const handleAddress = () => {
-      router.push(route)
+      router.push({
+        pathname: route,
+        params: {
+          street: location.street,
+          brgy: location.barangay,
+          city: location.city,
+        },
+      })
     }
 
     const [location, setLocation] = useState({
@@ -227,7 +234,7 @@ const ThemedMap = ({ route }) => {
   )
 }
 
-export default ThemedMap
+export default ThemedMapAddress
 
 const styles = StyleSheet.create({
     container: {

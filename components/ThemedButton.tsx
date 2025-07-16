@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     backgroundColor: Colors.primary,
     padding: 15,
-    borderRadius: 12,
+    borderRadius: 24,
     marginVertical: 5,
   },
   non_submit: {

@@ -4,14 +4,35 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { useRouter } from 'expo-router'
+import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 const ResidentAddress = () => {
-  const [street, setStreet] = useState('')
+  const params = useSearchParams()
+  const street = params.get("street") ?? "";
+  const brgy = params.get("brgy") ?? "";
+  const city = params.get("city") ?? "";
+
+  const [streetState, setStreet] = useState(street)
   const [puroksitio, setPurokSitio] = useState('')
-  const [brgy, setBrgy] = useState('')
-  const [city, setCity] = useState('')
+  const [brgyState, setBrgy] = useState(brgy)
+  const [cityState, setCity] = useState(city)
+
+  const router = useRouter()
+
+  const submitAddress = () => {
+    router.push({
+        pathname: '/personalinfo',
+        params: {
+            street: streetState,
+            puroksitio: puroksitio,
+            brgy: brgyState,
+            city: cityState,
+        },
+    })
+  }
 
   return (
     <ThemedView safe={true}>
@@ -20,7 +41,7 @@ const ResidentAddress = () => {
                 <ThemedText style={styles.text} title={true}>Home Address</ThemedText>
                 <ThemedTextInput
                     placeholder='Street'
-                    value={street}
+                    value={streetState}
                     onChangeText={setStreet}
                 />
                 <Spacer height={10}/>
@@ -32,19 +53,19 @@ const ResidentAddress = () => {
                 <Spacer height={10}/>
                 <ThemedTextInput
                     placeholder='Barangay'
-                    value={brgy}
+                    value={brgyState}
                     onChangeText={setBrgy}
                 />
                 <Spacer height={10}/>
                 <ThemedTextInput
                     placeholder='City'
-                    value={city}
+                    value={cityState}
                     onChangeText={setCity}
                 />
             </View>
             <Spacer height={15}/>
             <View>
-                <ThemedButton>
+                <ThemedButton onPress={submitAddress}>
                     <ThemedText btn={true}>Continue</ThemedText>
                 </ThemedButton>
             </View>
