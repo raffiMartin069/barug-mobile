@@ -13,7 +13,7 @@ const SocioeconomicInfo = () => {
   const [educattainment, setEducAttainment] = useState('')
   const [employmentstat, setEmploymentStat] = useState('')
   const [occupation, setOccupation] = useState('')
-  const [mthlypersonalincome, setMnthlyPersonalIncome] = useState('')
+  const [mnthlypersonalincome, setMnthlyPersonalIncome] = useState('')
   const [govprogrm, setGovProgram] = useState('')
 
   const router = useRouter()
@@ -51,21 +51,21 @@ const SocioeconomicInfo = () => {
 
                 <Spacer height={10}/>
 
-                <ThemedDropdown
-                    items={[]}
-                    value={occupation}
-                    setValue={setOccupation}
+                <ThemedTextInput
                     placeholder='Occupation'
-                    order={2}
+                    value={occupation}
+                    onChangeText={setOccupation}
                 />
 
                 <Spacer height={10}/>
 
-                <ThemedTextInput
+                <ThemedDropdown
+                    items={[]}
+                    value={mnthlypersonalincome}
+                    setValue={setMnthlyPersonalIncome}
                     placeholder='Monthly Personal Income'
-                    value={mthlypersonalincome}
-                    onChangeText={setMnthlyPersonalIncome}
-                />
+                    order={2}
+                /> 
 
                 <Spacer height={10}/>
 
