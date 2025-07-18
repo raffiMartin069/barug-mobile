@@ -27,6 +27,8 @@ const PersonalInfo = () => {
   const [haddress, setHAddress] = useState('')
   const [mobnum, setMobNum] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [cpassword, setCPassword] = useState('')
 
   useEffect(() => {
     if (params.get('street') || params.get('puroksitio') || params.get('brgy') || params.get('city') ) {
@@ -167,7 +169,25 @@ const PersonalInfo = () => {
                     placeholder='Email Address'
                     value={email}
                     onChangeText={setEmail}
-                />          
+                /> 
+
+                <Spacer height={10}/>         
+
+                <ThemedTextInput
+                    placeholder='Password'
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                />
+
+                <Spacer height={10}/>         
+
+                <ThemedTextInput
+                    placeholder='Confirm Password'
+                    value={cpassword}
+                    onChangeText={setCPassword}
+                    secureTextEntry
+                />
             </View>
 
             <Spacer height={15}/>

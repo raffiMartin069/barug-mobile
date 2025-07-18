@@ -13,11 +13,11 @@ import { StyleSheet, View } from 'react-native'
 
 const CreateFamily = () => {
   const [fams, setFam] = useState ([
-    {famnum: '', famhead: '', hhheadrel: '', nhts: '', indigent: '', incomesource: '', fammnthlyincome: '', hhtype: ''}
+    {famnum: '', famhead: '', hhheadrel: '', nhts: 'no', indigent: 'no', incomesource: '', fammnthlyincome: '', hhtype: ''}
   ])
 
   const createFamily = () => {
-    setFam([...fams, {famnum: '', famhead: '', hhheadrel: '', nhts: '', indigent: '', incomesource: '', fammnthlyincome: '', hhtype: ''}])
+    setFam([...fams, {famnum: '', famhead: '', hhheadrel: '', nhts: 'no', indigent: 'no', incomesource: '', fammnthlyincome: '', hhtype: ''}])
   }
 
   const updateField = (index, field, value) => {
@@ -30,15 +30,6 @@ const CreateFamily = () => {
     const updatedFam = fams.filter((_, i) => i !== index)
     setFam(updatedFam)
   }
-
-//   const [famnum, setFamNum] = useState('')
-//   const [famhead, setFamHead] = useState('')
-//   const [hhheadrel, setHhHeadRel] = useState('')
-//   const [nhts, setNhts] = useState('yes')
-//   const [indigent, setIndigent] = useState('yes')
-//   const [incomesource, setIncomeSource] = useState('')
-//   const [fammnthlyincome, setFamMnthlyIncome] = useState('')
-//   const [hhtype, setHhType] = useState('')
 
   const router = useRouter()
 
