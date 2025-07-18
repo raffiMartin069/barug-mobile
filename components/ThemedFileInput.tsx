@@ -4,28 +4,31 @@ import * as DocumentPicker from 'expo-document-picker'
 import React, { useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const ThemedFileInput = ({ style, placeholder = 'Select a file', onFileSelected = () => {}, onRemove = () => {}, ...props }) => {
+const ThemedFileInput = ({ style = null, placeholder = 'Select a file', ...props }) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
   const [selectedFile, setSelectedFile] = useState(null)
 
   const handlePickFile = async () => {
   try {
-    const res = await DocumentPicker.getDocumentAsync()
+    const res = await DocumentPicker.getDocumentAsync({
+      type: '*/*',
+      copyToCacheDirectory: true,
+      multiple: false,
+    })
     if (!res.canceled && res.assets && res.assets.length > 0) {
       const file = res.assets[0]
       setSelectedFile(file)
-      //onFileSelected(file)
     }
   } catch (error) {
     console.error('File pick cancelled or failed:', error)
   }
-}
-
-  const handleRemoveFile = () => {
-    setSelectedFile(null) // Clear local state
-    onRemove()            // Notify parent about removal
   }
+
+  // const handleRemoveFile = () => {
+  //   setSelectedFile(null) // Clear local state
+  //   onRemove()            // Notify parent about removal
+  // }
   
   return (
     <View>
@@ -47,7 +50,7 @@ const ThemedFileInput = ({ style, placeholder = 'Select a file', onFileSelected 
 
       {selectedFile && (
         <TouchableOpacity
-          onPress={handleRemoveFile}
+          // onPress={handleRemoveFile}
           style={styles.iconContainer}
         >
           <Ionicons
