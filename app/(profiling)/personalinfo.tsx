@@ -9,7 +9,7 @@ import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 const PersonalInfo = () => {
@@ -38,7 +38,7 @@ const PersonalInfo = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/socioeconomicinfo')
+    router.push('/createhousehold')
   }
 
   const handleHomeAddress = () => {

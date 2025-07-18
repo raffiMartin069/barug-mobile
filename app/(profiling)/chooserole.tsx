@@ -5,7 +5,7 @@ import ThemedRadioButton from '@/components/ThemedRadioButton'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { StyleSheet } from 'react-native'
 
 const ChooseRole = () => {
@@ -13,7 +13,7 @@ const ChooseRole = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/createhousehold')
+    router.push('/personalinfo')
   }
   return (
     <ThemedView>
