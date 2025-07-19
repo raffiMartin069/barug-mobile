@@ -1,15 +1,78 @@
-import { Stack } from 'expo-router'
+import { Colors } from '@/constants/Colors'
+import { Ionicons } from '@expo/vector-icons'
+import { Tabs } from 'expo-router'
 import React from 'react'
-import { StyleSheet } from 'react-native'
+import { Platform, StyleSheet, TouchableNativeFeedback, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const _layout = () => {
+const Residentlayout = () => {
+  const colorScheme = useColorScheme()
+  const theme = Colors[colorScheme] ?? Colors.light
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name='residenthome'/>
-    </Stack>
+    <>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {backgroundColor: theme.background, height: 100},
+          tabBarActiveTintColor: theme.tabIconSelected,
+          tabBarInactiveTintColor: theme.tabIconDefault,
+          tabBarButton: (props) => (
+            Platform.OS === 'android' ? (
+              <TouchableNativeFeedback
+                background={TouchableNativeFeedback.Ripple(
+                  theme.tabIconSelected + '33', // ripple color with alpha
+                  false, // not borderless
+                  30 // 👈 Ripple radius
+                )}
+                useForeground={true}
+                onPress={props.onPress}
+              >
+                <View style={styles.tabButton}>{props.children}</View>
+              </TouchableNativeFeedback>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={props.onPress}
+                style={styles.tabButton}
+              >
+                {props.children}
+              </TouchableOpacity>
+            )
+          ),
+        }}
+      >
+        <Tabs.Screen
+          name='residenthome'
+          options={{title:'Home', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+         <Tabs.Screen
+          name='requestdoc'
+          options={{title:'Request a Document', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'document-text' : 'document-text'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+      </Tabs>
+    </>
   )
 }
 
-export default _layout
+export default Residentlayout
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+})

@@ -6,7 +6,7 @@ import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const ResidentHome = () => {
   return (
@@ -27,7 +27,7 @@ const ResidentHome = () => {
 
         <View>
 
-          <Spacer height={20}/>
+          <Spacer height={5}/>
 
           <ThemedCard>
             <ThemedText style={styles.text} subtitle={true}>Activities</ThemedText>
@@ -39,27 +39,33 @@ const ResidentHome = () => {
             <ThemedText style={styles.text} subtitle={true}>Services</ThemedText>
             <View style={styles.container}>
               <View style={styles.subcontainer}>
-                <ThemedIcon
-                  name={'document-text'}
-                  iconColor={'#9c27b0'}
-                  bgColor={'#f3e5f5'}
-                />
+                <TouchableOpacity>
+                  <ThemedIcon
+                    name={'document-text'}
+                    iconColor={'#9c27b0'}
+                    bgColor={'#f3e5f5'}
+                  />
+                </TouchableOpacity>
                 <ThemedText style={styles.icontext}>Request a Document</ThemedText>
               </View>
               <View style={styles.subcontainer}>
-                <ThemedIcon
-                  name={'warning'}
-                  iconColor={'#2196f3'}
-                  bgColor={'#e3f2fd'}
-                />
+                <TouchableOpacity>
+                  <ThemedIcon
+                    name={'warning'}
+                    iconColor={'#2196f3'}
+                    bgColor={'#e3f2fd'}
+                  />
+                </TouchableOpacity>
                 <ThemedText style={styles.icontext}>File a Blotter Report</ThemedText>
               </View>
               <View style={styles.subcontainer}>
-                <ThemedIcon
-                  name={'folder-open'}
-                  iconColor={'#8bc34a'}
-                  bgColor={'#e8f5e9'}
-                />
+                <TouchableOpacity>
+                  <ThemedIcon
+                    name={'folder-open'}
+                    iconColor={'#8bc34a'}
+                    bgColor={'#e8f5e9'}
+                  />
+                </TouchableOpacity>
                 <ThemedText style={styles.icontext}>Barangay Cases</ThemedText>
               </View>
             </View>
