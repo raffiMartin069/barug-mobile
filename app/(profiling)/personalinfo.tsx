@@ -29,6 +29,7 @@ const PersonalInfo = () => {
   const [mobnum, setMobNum] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState(''); // ✅ New password field
+  const [cpassword, setCPassword] = useState('')
   const [loading, setLoading] = useState(false);
 
   const civilStatusOptions = [

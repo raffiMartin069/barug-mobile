@@ -19,7 +19,7 @@ const SocioeconomicInfo = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/createhousehold')
+    router.push('/validid')
   }
 
   return (
