@@ -23,7 +23,6 @@ const ThemedMapAddress = ({ route}) => {
       lng: 123.9028,
       fullAddress: '',
       street: '',
-      purokSitio: '',
       barangay: '',
       city: '',
       inside: true,
@@ -121,7 +120,6 @@ const ThemedMapAddress = ({ route}) => {
                         const fullAddress = data.display_name || "No address found";
 
                         const street = addr.road || addr.pedestrian || "Unknown Street";
-                        const purokSitio = addr.suburb || addr.hamlet || addr.village || "N/A";
                         const barangay = addr.neighbourhood || addr.suburb || "Señor Santo Niño";
                         const city = addr.city || addr.town || addr.municipality || "Unknown City";
                         // Send back to React Native
@@ -132,7 +130,6 @@ const ThemedMapAddress = ({ route}) => {
                             lat: lat,
                             lng: lng,
                             street: street,
-                            purokSitio: purokSitio,
                             barangay: barangay,
                             city: city,
                         }));
@@ -190,7 +187,6 @@ const ThemedMapAddress = ({ route}) => {
             lng: data.lng,
             fullAddress: data.fullAddress,
             street: data.street,
-            purokSitio: data.purokSitio,
             barangay: data.barangay,
             city: data.city,
             inside: data.inside,
@@ -216,7 +212,6 @@ const ThemedMapAddress = ({ route}) => {
             ) : location.inside ? (
               <>
                 <Text style={styles.address}>Street: {location.street}</Text>
-                <Text style={styles.address}>Purok or Sitio: {location.purokSitio}</Text>
                 <Text style={styles.address}>Barangay: {location.barangay}</Text>
                 <Text style={styles.address}>City: {location.city}</Text>
               </>

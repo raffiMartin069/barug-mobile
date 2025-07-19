@@ -54,7 +54,7 @@ const Register = () => {
                     <View style={styles.circle}>
                         <Text style={styles.circleText}>3</Text>
                     </View>
-                    <Text style={styles.stepText}>Supporting Documents</Text>
+                    <Text style={styles.stepText}>Valid ID</Text>
                     </View>
                 </View>
 
