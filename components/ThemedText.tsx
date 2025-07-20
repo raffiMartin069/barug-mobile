@@ -40,13 +40,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     btn: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 500,
         color: '#fff',
         alignSelf: 'center',
     },
     non_btn: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 500,
         color: Colors.primary,
         alignSelf: 'center',

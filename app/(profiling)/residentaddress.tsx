@@ -1,4 +1,5 @@
 import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
@@ -36,9 +37,13 @@ const ResidentAddress = () => {
 
   return (
     <ThemedView safe={true}>
+        <ThemedAppBar
+            title='Home Address'
+            showNotif={false}
+            showProfile={false}
+        />
         <ThemedKeyboardAwareScrollView>
             <View>
-                <ThemedText style={styles.text} title={true}>Home Address</ThemedText>
                 <ThemedTextInput
                     placeholder='Street'
                     value={streetState}

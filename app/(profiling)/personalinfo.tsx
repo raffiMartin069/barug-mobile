@@ -1,8 +1,10 @@
 import Spacer from '@/components/Spacer';
+import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedButton from '@/components/ThemedButton';
 import ThemedDatePicker from '@/components/ThemedDatePicker';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
+import ThemedProgressBar from '@/components/ThemedProgressBar';
 import ThemedRadioButton from '@/components/ThemedRadioButton';
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
@@ -54,10 +56,18 @@ const PersonalInfo = () => {
 
   return (
     <ThemedView safe={true}>
+        <ThemedAppBar
+            title='Personal Information'
+            showNotif={false}
+            showProfile={false}
+        />
+        
+        <ThemedProgressBar
+            step={1}
+            totalStep={3}
+        />
         <ThemedKeyboardAwareScrollView>
             <View>
-
-                <ThemedText style={styles.text} title={true}>Personal Information</ThemedText>
 
                 <ThemedTextInput
                     placeholder='First Name'

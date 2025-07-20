@@ -1,7 +1,9 @@
 import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
@@ -24,12 +26,17 @@ const SocioeconomicInfo = () => {
 
   return (
     <ThemedView safe={true}>
+        <ThemedAppBar
+            title='Socioeconomic Information'
+            showNotif={false}
+            showProfile={false}
+        />
+        <ThemedProgressBar
+            step={2}
+            totalStep={3}
+        />
         <ThemedKeyboardAwareScrollView>
             <View>
-
-                <ThemedText style={styles.text} title={true}>Socioeconomic Information</ThemedText>
-
-                <Spacer height={20}/>
 
                 <ThemedDropdown
                     items={[]}

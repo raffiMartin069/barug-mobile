@@ -1,8 +1,10 @@
 import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedFileInput from '@/components/ThemedFileInput'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import React, { useState } from 'react'
@@ -33,11 +35,17 @@ const ValidId = () => {
 
   return (
     <ThemedView safe={true}>
+      <ThemedAppBar
+        title='Valid ID'
+        showNotif={false}
+        showProfile={false}
+      />
+      <ThemedProgressBar
+            step={3}
+            totalStep={3}
+        />
       <ThemedKeyboardAwareScrollView>
         <View>
-          <ThemedText style={styles.text} title={true}>Valid ID</ThemedText>
-
-          <Spacer height={20}/>
 
           <ThemedDropdown
             items={[]}

@@ -24,14 +24,14 @@ const styles = StyleSheet.create({
   submit: {
     color: '#fff',
     backgroundColor: Colors.primary,
-    padding: 15,
+    padding: 10,
     borderRadius: 24,
     marginVertical: 5,
   },
   non_submit: {
     color: Colors.primary,
     backgroundColor: '#fff',
-    padding: 15,
+    padding: 10,
     borderWidth: 2,
     borderColor: Colors.primary,
     borderRadius: 24,
