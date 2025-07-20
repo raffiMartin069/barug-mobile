@@ -7,6 +7,7 @@ import ThemedRadioButton from '@/components/ThemedRadioButton'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { indigentOptions, nhtsOptions } from '@/constants/formoptions'
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -83,10 +84,7 @@ const CreateFamily = () => {
                                 <ThemedRadioButton
                                     value={fam.nhts}
                                     onChange={(value) => updateField(index, 'nhts', value)}
-                                    options={[
-                                    { label: 'Yes', value: 'yes' },
-                                    { label: 'No', value: 'no' },
-                                    ]}
+                                    options={nhtsOptions}
                                 />
                             </View>
 
@@ -96,10 +94,7 @@ const CreateFamily = () => {
                                 <ThemedRadioButton
                                     value={fam.indigent}
                                     onChange={(value) => updateField(index, 'indigent', value)}
-                                    options={[
-                                    { label: 'Yes', value: 'yes' },
-                                    { label: 'No', value: 'no' },
-                                    ]}
+                                    options={indigentOptions}
                                 />
                             </View>
                         </View>

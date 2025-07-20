@@ -8,8 +8,10 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
+import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
+import { educAttainmentOptions, empStatOptions, govProgOptions, mnthlyPerosonalIncomeOptions } from '../../constants/formoptions'
 
 const SocioeconomicInfo = () => {
   const [educattainment, setEducAttainment] = useState('')
@@ -19,9 +21,20 @@ const SocioeconomicInfo = () => {
   const [govprogrm, setGovProgram] = useState('')
 
   const router = useRouter()
+  const params = useSearchParams()
 
   const handleSubmit = () => {
-    router.push('/validid')
+    router.push({
+        pathname: '/validid',
+        params: {
+            ...Object.fromEntries(params.entries()),
+            educattainment,
+            employmentstat,
+            occupation,
+            mnthlypersonalincome,
+            govprogrm,
+        }
+    })
   }
 
   return (
@@ -39,7 +52,7 @@ const SocioeconomicInfo = () => {
             <View>
 
                 <ThemedDropdown
-                    items={[]}
+                    items={educAttainmentOptions}
                     value={educattainment}
                     setValue={setEducAttainment}
                     placeholder='Educational Attainment'
@@ -49,7 +62,7 @@ const SocioeconomicInfo = () => {
                 <Spacer height={10}/>
                 
                 <ThemedDropdown
-                    items={[]}
+                    items={empStatOptions}
                     value={employmentstat}
                     setValue={setEmploymentStat}
                     placeholder='Employment Status'
@@ -67,7 +80,7 @@ const SocioeconomicInfo = () => {
                 <Spacer height={10}/>
 
                 <ThemedDropdown
-                    items={[]}
+                    items={mnthlyPerosonalIncomeOptions}
                     value={mnthlypersonalincome}
                     setValue={setMnthlyPersonalIncome}
                     placeholder='Monthly Personal Income'
@@ -77,7 +90,7 @@ const SocioeconomicInfo = () => {
                 <Spacer height={10}/>
 
                 <ThemedDropdown
-                    items={[]}
+                    items={govProgOptions}
                     value={govprogrm}
                     setValue={setGovProgram}
                     placeholder='Government Program'

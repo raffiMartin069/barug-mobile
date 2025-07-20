@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { civilStatusOptions, genderOptions, nationalityOptions, religionOptions } from '../../constants/formoptions';
 
 const PersonalInfo = () => {
   const params = useSearchParams()
@@ -27,22 +28,57 @@ const PersonalInfo = () => {
   const [nationality, setNationality] = useState('');
   const [religion, setReligion] = useState('');
   const [haddress, setHAddress] = useState('')
+  const [street, setStreet] = useState('');
+  const [purokSitio, setPurokSitio] = useState('');
+  const [brgy, setBrgy] = useState('');
+  const [city, setCity] = useState('');
   const [mobnum, setMobNum] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [cpassword, setCPassword] = useState('')
 
   useEffect(() => {
-    if (params.get('street') || params.get('puroksitio') || params.get('brgy') || params.get('city') ) {
-        const fullAddress = `${params.get('street') ?? ''}, ${params.get('puroksitio') ?? ''}, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`
-        setHAddress(fullAddress)
+    const streetParam = params.get('street') ?? '';
+    const purokParam = params.get('puroksitio') ?? '';
+    const brgyParam = params.get('brgy') ?? '';
+    const cityParam = params.get('city') ?? '';
+
+    if (streetParam || purokParam || brgyParam || cityParam) {
+        const fullAddress = `${streetParam}, ${purokParam}, ${brgyParam}, ${cityParam}`;
+        setStreet(streetParam);
+        setPurokSitio(purokParam);
+        setBrgy(brgyParam);
+        setCity(cityParam);
+        setHAddress(fullAddress);
     }
-  })
+  }, [params])
 
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/socioeconomicinfo')
+    router.push({
+        pathname: '/socioeconomicinfo',
+        params: {
+            fname,
+            mname,
+            lname,
+            suffix,
+            gender,
+            dob,
+            civilStatus,
+            nationality,
+            religion,
+            haddress,
+            street,
+            purokSitio,
+            brgy,
+            city,
+            mobnum,
+            email,
+            password,
+            cpassword,
+        }
+    })
   }
 
   const handleHomeAddress = () => {
@@ -66,6 +102,7 @@ const PersonalInfo = () => {
             step={1}
             totalStep={3}
         />
+        
         <ThemedKeyboardAwareScrollView>
             <View>
 
@@ -106,10 +143,7 @@ const PersonalInfo = () => {
                 <ThemedRadioButton
                     value={gender}
                     onChange={setGender}
-                    options={[
-                    { label: 'Male', value: 'male' },
-                    { label: 'Female', value: 'female' },
-                    ]}
+                    options={genderOptions}
                 />
 
                 <Spacer height={10}/>
@@ -125,7 +159,7 @@ const PersonalInfo = () => {
                 <Spacer height={10}/>
 
                 <ThemedDropdown
-                    items={[]}
+                    items={civilStatusOptions}
                     value={civilStatus}
                     setValue={setCivilStatus}
                     placeholder='Civil Status'
@@ -135,7 +169,7 @@ const PersonalInfo = () => {
                 <Spacer height={10}/>
 
                 <ThemedDropdown
-                    items={[]}
+                    items={nationalityOptions}
                     value={nationality}
                     setValue={setNationality}
                     placeholder='Nationality'
@@ -143,9 +177,9 @@ const PersonalInfo = () => {
                 />
 
                 <Spacer height={10}/>
-
+                
                 <ThemedDropdown
-                    items={[]}
+                    items={religionOptions}
                     value={religion}
                     setValue={setReligion}
                     placeholder='Religion'
@@ -208,8 +242,8 @@ const PersonalInfo = () => {
                 </ThemedButton>
             </View>
             
-
         </ThemedKeyboardAwareScrollView>  
+        
     </ThemedView>  
   )
 }

@@ -7,12 +7,17 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { idTypeOptions } from '@/constants/formoptions'
+import { useRouter } from 'expo-router'
+import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 const ValidId = () => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [idType, setIdType] = useState('')
+  const router = useRouter()
+  const params = useSearchParams()
 
   const handleFileSelected = (file) => {
     console.log('Selected file:', file)
@@ -27,9 +32,26 @@ const ValidId = () => {
   const handleSubmit = () => {
     if (selectedFile) {
       console.log('Uploading file:', selectedFile.uri)
+      router.push({
+        pathname: '/reviewinputs',
+        params: {
+          ...Object.fromEntries(params.entries()),
+          idType,
+          validIdUri: selectedFile?.uri ?? '',
+        }
+      })
       // TODO: Upload the file to your API
     } else {
       console.log('No file selected.')
+      // router.push('/reviewinputs')
+      router.push({
+        pathname: '/reviewinputs',
+        params: {
+          ...Object.fromEntries(params.entries()),
+          idType,
+          validIdUri: selectedFile?.uri ?? '',
+        }
+      })
     }
   }
 
@@ -48,7 +70,7 @@ const ValidId = () => {
         <View>
 
           <ThemedDropdown
-            items={[]}
+            items={idTypeOptions}
             value={idType}
             setValue={setIdType}
             placeholder={'ID Type'}
@@ -74,7 +96,7 @@ const ValidId = () => {
             <ThemedText non_btn={true}>Skip</ThemedText>
           </ThemedButton>
           <ThemedButton onPress={handleSubmit}>
-            <ThemedText btn={true}>Submit</ThemedText>
+            <ThemedText btn={true}>Continue</ThemedText>
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>

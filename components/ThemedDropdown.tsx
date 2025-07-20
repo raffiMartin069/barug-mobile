@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors';
 import React, { useState } from 'react';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue, order = 0, ...props }) => {
@@ -12,7 +12,7 @@ const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue
   const computedZIndex = baseZIndex - order;
 
   return (
-    <View style={[style, {zIndex: computedZIndex}]}>
+    <View style={[style]}>
       <DropDownPicker
         open={open}
         value={value}
@@ -22,6 +22,9 @@ const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue
         setItems={setDropdownItems}
         placeholder={placeholder}
         listMode="SCROLLVIEW"
+        autoScroll={true}
+        zIndex={computedZIndex}        
+        zIndexInverse={baseZIndex + 1}
         style={{
           backgroundColor: 'white',
           borderColor: theme.text,
@@ -41,6 +44,7 @@ const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue
           backgroundColor: theme.background,
           borderColor: theme.text,
           borderWidth: 2,
+          maxHeight: 200,
         }}
       />
     </View>
@@ -48,9 +52,3 @@ const ThemedDropdown = ({ style = null, placeholder, items = [], value, setValue
 }
 
 export default ThemedDropdown
-
-const styles = StyleSheet.create({
-    container: {
-    zIndex: 1000,
-  },
-})
