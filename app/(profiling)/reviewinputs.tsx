@@ -136,6 +136,20 @@ const ReviewInputs = () => {
 
                 <Spacer height={10}/>
 
+                <View style={styles.row}>
+                    <ThemedText subtitle={true}>Password:</ThemedText>
+                    <ThemedText subtitle={true}>{data.password}</ThemedText>
+                </View>
+
+                <Spacer height={10}/>
+
+                <View style={styles.row}>
+                    <ThemedText subtitle={true}>Confirm Password:</ThemedText>
+                    <ThemedText subtitle={true}>{data.cpassword}</ThemedText>
+                </View>
+
+                <Spacer height={10}/>
+
                 <ThemedText title={true}>Socioeconomic Information</ThemedText>
 
                 <Spacer height={10}/>
