@@ -36,18 +36,50 @@ const PersonalInfo = () => {
     { label: 'Single', value: '1' },
     { label: 'Married', value: '2' },
     { label: 'Widowed', value: '3' },
+    { label: 'Separated', value: '4' },
+    { label: 'Divorced', value: '5' },
   ];
 
   const nationalityOptions = [
-    { label: 'Filipino', value: '1' },
-    { label: 'American', value: '2' },
-    { label: 'Japanese', value: '3' },
+    { label: 'AMERICAN', value: '1' },
+    { label: 'AUSTRALIAN', value: '2' },
+    { label: 'BRAZILIAN', value: '3' },
+    { label: 'BRITISH', value: '4' },
+    { label: 'CANADIAN', value: '5' },
+    { label: 'CHINESE', value: '6' },
+    { label: 'FILIPINO', value: '7' },
+    { label: 'FRENCH', value: '8' },
+    { label: 'GERMAN', value: '9' },
+    { label: 'INDIAN', value: '10' },
+    { label: 'INDONESIAN', value: '11' },
+    { label: 'ITALIAN', value: '12' },
+    { label: 'JAPANESE', value: '13' },
+    { label: 'KOREAN', value: '14' },
+    { label: 'MALAYSIAN', value: '15' },
+    { label: 'RUSSIAN', value: '16' },
+    { label: 'SAUDI', value: '17' },
+    { label: 'SPANISH', value: '18' },
+    { label: 'THAI', value: '19' },
+    { label: 'VIETNAMESE', value: '20' },
   ];
 
+
   const religionOptions = [
-    { label: 'Catholic', value: '1' },
-    { label: 'Muslim', value: '2' },
-    { label: 'Protestant', value: '3' },
+    { label: 'AGNOSTIC', value: '1' },
+    { label: 'AMISH', value: '2' },
+    { label: 'BORN AGAIN', value: '3' },
+    { label: 'BUDDHIST', value: '4' },
+    { label: 'CHRISTIAN', value: '5' },
+    { label: 'EVANGELICAL', value: '6' },
+    { label: 'HINDU', value: '7' },
+    { label: 'IGLESIA NI CRISTO', value: '8' },
+    { label: 'ISLAM', value: '9' },
+    { label: "JEHOVAH'S WITNESS", value: '10' },
+    { label: 'ORTHODOX', value: '11' },
+    { label: 'PROTESTANT', value: '12' },
+    { label: 'ROMAN CATHOLIC', value: '13' },
+    { label: 'SEVENTH-DAY ADVENTIST', value: '14' },
+    { label: 'OTHERS', value: '15' },
   ];
 
   useEffect(() => {
@@ -57,9 +89,8 @@ const PersonalInfo = () => {
       params.get('brgy') ||
       params.get('city')
     ) {
-      const fullAddress = `${params.get('street') ?? ''}, ${
-        params.get('puroksitio') ?? ''
-      }, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`;
+      const fullAddress = `${params.get('street') ?? ''}, ${params.get('puroksitio') ?? ''
+        }, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`;
       setHAddress(fullAddress);
     }
   }, [params]);
@@ -72,6 +103,12 @@ const PersonalInfo = () => {
       return;
     }
 
+    // ✅ Check if password and confirm password match
+    if (password !== cpassword) {
+      Alert.alert('Password Mismatch', 'Passwords do not match. Please try again.');
+      return;
+    }
+    
     setLoading(true);
 
     // Build payload for API
@@ -106,7 +143,7 @@ const PersonalInfo = () => {
       Alert.alert('Success', 'Resident registered successfully.');
 
       // Navigate to next screen
-      router.push('/socioeconomicinfo');
+      router.push('/verifyemail');
     } catch (error: any) {
       console.error('❌ Registration failed:', error);
       Alert.alert('Registration Failed', error.message || 'Something went wrong.');
@@ -251,6 +288,14 @@ const PersonalInfo = () => {
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
+            secureTextEntry
+          />
+          <Spacer height={10} />
+
+          <ThemedTextInput
+            placeholder='Confirm Password'
+            value={cpassword}
+            onChangeText={setCPassword}
             secureTextEntry
           />
         </View>

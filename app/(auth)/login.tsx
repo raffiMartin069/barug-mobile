@@ -9,12 +9,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    StyleSheet,
-    TouchableWithoutFeedback,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  StyleSheet,
+  TouchableWithoutFeedback,
 } from 'react-native';
 
 const Login = () => {
@@ -37,13 +37,43 @@ const Login = () => {
       // Save token to AsyncStorage
       await AsyncStorage.setItem('userToken', response.token);
 
-      // Navigate to chooserole screen
-      router.push('/chooserole');
-    } catch (err: any) {
-      Alert.alert('Login Failed', err.message || 'Invalid credentials');
+      // Navigate to resident home
+      router.push('/residenthome');
+    }
+
+    catch (err: any) {
+      // Don’t show red error box in production
+      if (__DEV__) {
+        console.log('Login failed:', err);
+      }
+
+      let errorCode = '';
+      try {
+        if (typeof err.message === 'string' && err.message.startsWith('{')) {
+          const parsedError = JSON.parse(
+            err.message.replace(/'/g, '"').replace(/ None/g, ' null')
+          );
+          errorCode = parsedError.code;
+        }
+      } catch (parseErr) {
+        if (__DEV__) {
+          console.warn('Error parsing backend error:', parseErr);
+        }
+      }
+
+      if (errorCode === 'P6071') {
+        // Redirect user to verify email page
+        router.push({ pathname: '/verifyemail', params: { email } });
+        return; // Prevent further error handling
+      }
+
+      Alert.alert('Login Failed', 'Invalid credentials');
     } finally {
       setLoading(false);
     }
+
+
+
   };
 
   return (
