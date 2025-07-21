@@ -1,13 +1,12 @@
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
 import * as DocumentPicker from 'expo-document-picker'
-import React, { useState } from 'react'
+import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const ThemedFileInput = ({ style = null, placeholder = 'Select a file', ...props }) => {
+const ThemedFileInput = ({ style = null, placeholder = 'Select a file', selectedFile, onFileSelected, onFileRemoved, ...props }) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
-  const [selectedFile, setSelectedFile] = useState(null)
 
   const handlePickFile = async () => {
   try {
@@ -18,20 +17,19 @@ const ThemedFileInput = ({ style = null, placeholder = 'Select a file', ...props
     })
     if (!res.canceled && res.assets && res.assets.length > 0) {
       const file = res.assets[0]
-      setSelectedFile(file)
+      onFileSelected && onFileSelected(file)
     }
   } catch (error) {
     console.error('File pick cancelled or failed:', error)
   }
   }
 
-  // const handleRemoveFile = () => {
-  //   setSelectedFile(null) // Clear local state
-  //   onRemove()            // Notify parent about removal
-  // }
+  const handleRemoveFile = () => {
+    onFileRemoved && onFileRemoved() // Clear local state
+  }
   
   return (
-    <View>
+    <View style={styles.inputContainer}>
         <TouchableOpacity
         style={styles.textContainer}
         onPress={handlePickFile}
@@ -50,7 +48,7 @@ const ThemedFileInput = ({ style = null, placeholder = 'Select a file', ...props
 
       {selectedFile && (
         <TouchableOpacity
-          // onPress={handleRemoveFile}
+          onPress={handleRemoveFile}
           style={styles.iconContainer}
         >
           <Ionicons
@@ -67,7 +65,7 @@ const ThemedFileInput = ({ style = null, placeholder = 'Select a file', ...props
 export default ThemedFileInput
 
 const styles = StyleSheet.create({
-    inputContainer: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',

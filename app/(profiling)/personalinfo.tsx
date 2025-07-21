@@ -1,9 +1,11 @@
 import { registerResidentWithVerification } from '@/api/profilingApi'; // 👈 API function
 import Spacer from '@/components/Spacer';
+import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedButton from '@/components/ThemedButton';
 import ThemedDatePicker from '@/components/ThemedDatePicker';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
+import ThemedProgressBar from '@/components/ThemedProgressBar';
 import ThemedRadioButton from '@/components/ThemedRadioButton';
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
@@ -12,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { civilStatusOptions, genderOptions, nationalityOptions, religionOptions } from '../../constants/formoptions';
 
 const PersonalInfo = () => {
   const params = useSearchParams();
@@ -25,10 +28,14 @@ const PersonalInfo = () => {
   const [civilStatus, setCivilStatus] = useState('');
   const [nationality, setNationality] = useState('');
   const [religion, setReligion] = useState('');
-  const [haddress, setHAddress] = useState('');
-  const [mobnum, setMobNum] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(''); // ✅ New password field
+  const [haddress, setHAddress] = useState('')
+  const [street, setStreet] = useState('');
+  const [purokSitio, setPurokSitio] = useState('');
+  const [brgy, setBrgy] = useState('');
+  const [city, setCity] = useState('');
+  const [mobnum, setMobNum] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [cpassword, setCPassword] = useState('')
   const [loading, setLoading] = useState(false);
 
@@ -83,16 +90,20 @@ const PersonalInfo = () => {
   ];
 
   useEffect(() => {
-    if (
-      params.get('street') ||
-      params.get('puroksitio') ||
-      params.get('brgy') ||
-      params.get('city')
-    ) {
-      const fullAddress = `${params.get('street') ?? ''}, ${params.get('puroksitio') ?? ''
-        }, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`;
-      setHAddress(fullAddress);
+    const streetParam = params.get('street') ?? '';
+    const purokParam = params.get('puroksitio') ?? '';
+    const brgyParam = params.get('brgy') ?? '';
+    const cityParam = params.get('city') ?? '';
+
+    if (streetParam || purokParam || brgyParam || cityParam) {
+        const fullAddress = `${streetParam}, ${purokParam}, ${brgyParam}, ${cityParam}`;
+        setStreet(streetParam);
+        setPurokSitio(purokParam);
+        setBrgy(brgyParam);
+        setCity(cityParam);
+        setHAddress(fullAddress);
     }
+  }, [params])
   }, [params]);
 
   const router = useRouter();
@@ -163,11 +174,19 @@ const PersonalInfo = () => {
 
   return (
     <ThemedView safe={true}>
-      <ThemedKeyboardAwareScrollView>
-        <View>
-          <ThemedText style={styles.text} title={true}>
-            Personal Information
-          </ThemedText>
+        <ThemedAppBar
+            title='Personal Information'
+            showNotif={false}
+            showProfile={false}
+        />
+        
+        <ThemedProgressBar
+            step={1}
+            totalStep={3}
+        />
+        
+        <ThemedKeyboardAwareScrollView>
+            <View>
 
           <ThemedTextInput
             placeholder="First Name"
@@ -201,16 +220,13 @@ const PersonalInfo = () => {
 
           <Spacer height={10} />
 
-          <ThemedText subtitle={true}>Sex</ThemedText>
-
-          <ThemedRadioButton
-            value={gender}
-            onChange={setGender}
-            options={[
-              { label: 'Male', value: 'male' },
-              { label: 'Female', value: 'female' },
-            ]}
-          />
+                <ThemedText subtitle={true}>Sex</ThemedText>
+                
+                <ThemedRadioButton
+                    value={gender}
+                    onChange={setGender}
+                    options={genderOptions}
+                />
 
           <Spacer height={10} />
 
@@ -224,33 +240,33 @@ const PersonalInfo = () => {
 
           <Spacer height={10} />
 
-          <ThemedDropdown
-            items={civilStatusOptions}
-            value={civilStatus}
-            setValue={setCivilStatus}
-            placeholder="Civil Status"
-            order={0}
-          />
+                <ThemedDropdown
+                    items={civilStatusOptions}
+                    value={civilStatus}
+                    setValue={setCivilStatus}
+                    placeholder='Civil Status'
+                    order={0}
+                />
 
           <Spacer height={10} />
 
-          <ThemedDropdown
-            items={nationalityOptions}
-            value={nationality}
-            setValue={setNationality}
-            placeholder="Nationality"
-            order={1}
-          />
+                <ThemedDropdown
+                    items={nationalityOptions}
+                    value={nationality}
+                    setValue={setNationality}
+                    placeholder='Nationality'
+                    order={1}
+                />
 
-          <Spacer height={10} />
-
-          <ThemedDropdown
-            items={religionOptions}
-            value={religion}
-            setValue={setReligion}
-            placeholder="Religion"
-            order={2}
-          />
+                <Spacer height={10}/>
+                
+                <ThemedDropdown
+                    items={religionOptions}
+                    value={religion}
+                    setValue={setReligion}
+                    placeholder='Religion'
+                    order={2}
+                />
 
           <Spacer height={10} />
 

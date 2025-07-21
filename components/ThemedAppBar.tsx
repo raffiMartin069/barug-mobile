@@ -1,33 +1,38 @@
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
+import { useNavigation } from 'expo-router'
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = true, showProfile = true,  ...props}) => {
+const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = true, showNotif = true, showProfile = true,  ...props}) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
+  const navigation = useNavigation()
 
   return (
     <View style={[styles.container, {backgroundColor: theme.link}, style]}>
       {showBack && (
         <View style={styles.leftSection}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
               <Ionicons name='arrow-back' size={20} color={theme.background}/>
           </TouchableOpacity>
         </View>
       )}
       <Text style={[styles.title, {color: theme.background}, !showBack && styles.leftSection]}>{title}</Text>
       <View style={styles.rightSection}>
-        <TouchableOpacity>
-            <Ionicons name='notifications' size={20} color={theme.background}/>
-            {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {showNotif && (
+          <TouchableOpacity>
+              <Ionicons name='notifications' size={20} color={theme.background}/>
+              {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+  
         {showProfile && (
             <TouchableOpacity>
                 <Ionicons name='person' size={20} color={theme.background}/>
@@ -41,7 +46,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
 export default ThemedAppBar
 
 const styles = StyleSheet.create({
-    container: {
+  container: {
     height: 60,
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,12 +1,23 @@
+import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
+import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedFileInput from '@/components/ThemedFileInput'
+import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { idTypeOptions } from '@/constants/formoptions'
+import { useRouter } from 'expo-router'
+import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
-import { StyleSheet, Text } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 const ValidId = () => {
   const [selectedFile, setSelectedFile] = useState(null)
+  const [idType, setIdType] = useState('')
+  const router = useRouter()
+  const params = useSearchParams()
 
   const handleFileSelected = (file) => {
     console.log('Selected file:', file)
@@ -21,6 +32,14 @@ const ValidId = () => {
   const handleSubmit = () => {
     if (selectedFile) {
       console.log('Uploading file:', selectedFile.uri)
+      router.push({
+        pathname: '/reviewinputs',
+        params: {
+          ...Object.fromEntries(params.entries()),
+          idType,
+          validIdUri: selectedFile?.uri ?? '',
+        }
+      })
       // TODO: Upload the file to your API
     } else {
       console.log('No file selected.')
@@ -28,22 +47,50 @@ const ValidId = () => {
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <Text style={styles.label}>Upload a Valid ID:</Text>
-
-      <ThemedFileInput
-        placeholder="Select a valid ID"
+    <ThemedView safe={true}>
+      <ThemedAppBar
+        title='Valid ID'
+        showNotif={false}
+        showProfile={false}
       />
+      <ThemedProgressBar
+            step={3}
+            totalStep={3}
+        />
+      <ThemedKeyboardAwareScrollView>
+        <View>
 
-      {selectedFile && (
-        <Text style={styles.filename}>
-          Selected File: {selectedFile.name}
-        </Text>
-      )}
+          <ThemedDropdown
+            items={idTypeOptions}
+            value={idType}
+            setValue={setIdType}
+            placeholder={'ID Type'}
+            order={0}
+          />
 
-      <ThemedButton onPress={handleSubmit}>
-        <ThemedText btn={true}>Submit</ThemedText>
-      </ThemedButton>
+          <Spacer height={15}/>
+          
+          <ThemedText subtitle={true}>Upload a Valid ID:</ThemedText>
+
+          <ThemedFileInput
+            placeholder="Select a valid ID"
+            selectedFile={selectedFile}
+            onFileSelected={handleFileSelected}
+            onFileRemoved={handleRemoveFile}
+          />
+        </View>
+
+        <Spacer height={15}/>
+        
+        <View>
+          <ThemedButton submit={false}>
+            <ThemedText non_btn={true}>Skip</ThemedText>
+          </ThemedButton>
+          <ThemedButton onPress={handleSubmit}>
+            <ThemedText btn={true}>Continue</ThemedText>
+          </ThemedButton>
+        </View>
+      </ThemedKeyboardAwareScrollView>
     </ThemedView>
   )
 }
@@ -51,16 +98,7 @@ const ValidId = () => {
 export default ValidId
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 10,
-  },
-  filename: {
-    marginTop: 10,
-    fontStyle: 'italic',
+  text: {
+    textAlign: 'center',
   },
 })

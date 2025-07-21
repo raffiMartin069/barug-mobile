@@ -1,3 +1,4 @@
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedMapAddress from '@/components/ThemedMapAddress'
 import ThemedView from '@/components/ThemedView'
 import { useSearchParams } from 'expo-router/build/hooks'
@@ -9,6 +10,11 @@ const MapAddress = () => {
 
   return (
     <ThemedView safe={true}>
+        <ThemedAppBar
+          title='Map'
+          showNotif={false}
+          showProfile={false}
+        />
         <ThemedMapAddress
             route={routeTo}
         />
