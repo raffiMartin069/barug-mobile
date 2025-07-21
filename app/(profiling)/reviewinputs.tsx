@@ -148,7 +148,7 @@ const ReviewInputs = () => {
                     <ThemedText subtitle={true}>{data.cpassword}</ThemedText>
                 </View>
 
-                <Spacer height={10}/>
+                <Spacer height={20}/>
 
                 <ThemedText title={true}>Socioeconomic Information</ThemedText>
 
@@ -187,6 +187,8 @@ const ReviewInputs = () => {
                     <ThemedText subtitle={true}>{govProgMap[data.govprogrm]}</ThemedText>
                 </View>
 
+                <Spacer height={20}/>
+
                 <ThemedText title={true}>Valid ID</ThemedText>
 
                 <Spacer height={10}/>
@@ -203,6 +205,8 @@ const ReviewInputs = () => {
                     <ThemedText subtitle={true}>{data.validIdUri ? data.validIdUri : 'No Image Uploaded'}</ThemedText>
                 </View>
             </View>
+
+            <Spacer height={15}/>
 
             <View>
                 <ThemedButton>

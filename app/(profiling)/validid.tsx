@@ -43,15 +43,6 @@ const ValidId = () => {
       // TODO: Upload the file to your API
     } else {
       console.log('No file selected.')
-      // router.push('/reviewinputs')
-      router.push({
-        pathname: '/reviewinputs',
-        params: {
-          ...Object.fromEntries(params.entries()),
-          idType,
-          validIdUri: selectedFile?.uri ?? '',
-        }
-      })
     }
   }
 
