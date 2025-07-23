@@ -1,84 +1,82 @@
-import Spacer from '@/components/Spacer'
-import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedCard from '@/components/ThemedCard'
-import ThemedIcon from '@/components/ThemedIcon'
-import ThemedImage from '@/components/ThemedImage'
-import ThemedText from '@/components/ThemedText'
-import ThemedView from '@/components/ThemedView'
-import React from 'react'
-import { StyleSheet, TouchableOpacity, View } from 'react-native'
+import { fetchResidentProfile } from '@/api/residentApi';
+import Spacer from '@/components/Spacer';
+import ThemedAppBar from '@/components/ThemedAppBar';
+import ThemedCard from '@/components/ThemedCard';
+import ThemedImage from '@/components/ThemedImage';
+import ThemedText from '@/components/ThemedText';
+import ThemedView from '@/components/ThemedView';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 const ResidentHome = () => {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const data = await fetchResidentProfile();
+        setProfile(data);
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
+
+  if (loading) {
+    return (
+      <ThemedView>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </ThemedView>
+    );
+  }
+
   return (
-    <ThemedView style={{justifyContent: 'flex-start'}} safe={true}>
+    <ThemedView style={{ justifyContent: 'flex-start' }} safe={true}>
+      <ThemedAppBar title="Barangay Sto. Niño" showBack={false} />
 
-        <ThemedAppBar
-            title={'Barangay Sto. Niño'}
-            showBack={false}
+      <View style={[styles.container, { paddingHorizontal: 15, paddingVertical: 10 }]}>
+        <ThemedText title={true}>
+          Welcome, {profile?.first_name || 'Resident'}!
+        </ThemedText>
+        <ThemedImage
+          src={
+            profile?.p_person_img
+              ? { uri: profile.p_person_img }
+              : require('@/assets/images/sample1.jpg')
+          }
+          size={60}
         />
+      </View>
 
-        <View style={[styles.container, {paddingHorizontal: 15, paddingVertical: 10,}]}>
-          <ThemedText title={true}>Welcome, firstname!</ThemedText>
-          <ThemedImage
-            src={require('@/assets/images/sample1.jpg')}
-            size={60}
-          />
-        </View>
+      {/* Services */}
+      <View>
+        <Spacer height={5} />
+        <ThemedCard>
+          <ThemedText style={styles.text} subtitle={true}>
+            Activities
+          </ThemedText>
+        </ThemedCard>
 
-        <View>
-
-          <Spacer height={5}/>
-
-          <ThemedCard>
-            <ThemedText style={styles.text} subtitle={true}>Activities</ThemedText>
-          </ThemedCard>
-          
-          <Spacer height={20}/>
-
-          <ThemedCard>
-            <ThemedText style={styles.text} subtitle={true}>Services</ThemedText>
-            <View style={styles.container}>
-              <View style={styles.subcontainer}>
-                <TouchableOpacity>
-                  <ThemedIcon
-                    name={'document-text'}
-                    iconColor={'#9c27b0'}
-                    bgColor={'#f3e5f5'}
-                  />
-                </TouchableOpacity>
-                <ThemedText style={styles.icontext}>Request a Document</ThemedText>
-              </View>
-              <View style={styles.subcontainer}>
-                <TouchableOpacity>
-                  <ThemedIcon
-                    name={'warning'}
-                    iconColor={'#2196f3'}
-                    bgColor={'#e3f2fd'}
-                  />
-                </TouchableOpacity>
-                <ThemedText style={styles.icontext}>File a Blotter Report</ThemedText>
-              </View>
-              <View style={styles.subcontainer}>
-                <TouchableOpacity>
-                  <ThemedIcon
-                    name={'folder-open'}
-                    iconColor={'#8bc34a'}
-                    bgColor={'#e8f5e9'}
-                  />
-                </TouchableOpacity>
-                <ThemedText style={styles.icontext}>Barangay Cases</ThemedText>
-              </View>
-            </View>
-
-          </ThemedCard>
-
-        </View>
-
+        <Spacer height={20} />
+        <ThemedCard>
+          <ThemedText style={styles.text} subtitle={true}>
+            Services
+          </ThemedText>
+          <View style={styles.container}>
+            {/* Service buttons */}
+          </View>
+        </ThemedCard>
+      </View>
     </ThemedView>
-  )
-}
+  );
+};
 
-export default ResidentHome
+export default ResidentHome;
 
 const styles = StyleSheet.create({
   container: {
@@ -86,18 +84,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  subcontainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 10,
-    width: 90,
-  },
   text: {
     textAlign: 'center',
     fontWeight: 'bold',
   },
-  icontext: {
-    textAlign: 'center',
-    paddingTop: 10,
-  }
-})
+});
