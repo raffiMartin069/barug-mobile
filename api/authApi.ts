@@ -21,6 +21,7 @@ export const loginUser = async (email: string, password: string) => {
   }
 };
 
+
 // export const loginUser = async (email: string, password: string) => {
 //   try {
 //     const response = await apiClient.post('/auth/login/', {
@@ -37,7 +38,9 @@ export const loginUser = async (email: string, password: string) => {
 
 export const resendVerificationEmail = async (email: string) => {
   try {
-    const response = await apiClient.post("/auth/resend-verification/", { email });
+    const response = await apiClient.post("/auth/resend-verification/", { 
+      email 
+    });
     return response.data; 
   } catch (error: any) {
     console.error("Resend error:", error.response?.data || error.message);

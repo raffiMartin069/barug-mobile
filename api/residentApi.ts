@@ -9,3 +9,4 @@ export const fetchResidentProfile = async () => {
     throw error.response?.data || { message: 'Failed to fetch profile' };
   }
 };
+

@@ -68,7 +68,6 @@ const PersonalInfo = () => {
     return phRegex.test(number);
   };
 
-
   
   // ✅ Handle Submit with full frontend validation and Supabase error handling
   // ✅ Handle Submit with trimming and error handling
@@ -180,7 +179,7 @@ const PersonalInfo = () => {
     } catch (error: any) {
       console.error('❌ Registration API error:', error);
 
-      let code = 'UNKNOWsssN';
+      let code = 'UNKNOWN';
       let reason = 'Something went wrong during registration.';
 
       if (typeof error?.error === 'string') {
