@@ -94,6 +94,14 @@ export const idTypeMap = {
 
 };
 
+export const relationshipOptions = [
+
+];
+
+export const relationshipMap = {
+
+};
+
 export const nhtsOptions = [
   { label: 'Yes', value: 'yes' },
   { label: 'No', value: 'no' },

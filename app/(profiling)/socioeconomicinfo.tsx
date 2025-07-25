@@ -25,7 +25,7 @@ const SocioeconomicInfo = () => {
 
   const handleSubmit = () => {
     router.push({
-        pathname: '/validid',
+        pathname: '/valididguardian',
         params: {
             ...Object.fromEntries(params.entries()),
             educattainment,

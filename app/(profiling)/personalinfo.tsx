@@ -191,6 +191,8 @@ const PersonalInfo = () => {
                 <Pressable onPress={handleHomeAddress}>
                     <ThemedTextInput
                         placeholder='Home Address'
+                        multiline={true}
+                        numberOfLines={2}
                         value={haddress}
                         onChangeText={setHAddress}
                         editable={false}

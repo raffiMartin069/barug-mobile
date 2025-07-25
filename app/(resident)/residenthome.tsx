@@ -17,10 +17,10 @@ const ResidentHome = () => {
             showBack={false}
         />
 
-        <View style={[styles.container, {paddingHorizontal: 15, paddingVertical: 10,}]}>
+        <View style={[styles.container, {paddingHorizontal: 10, paddingVertical: 10,}]}>
           <ThemedText title={true}>Welcome, firstname!</ThemedText>
           <ThemedImage
-            src={require('@/assets/images/sample1.jpg')}
+            src={require('@/assets/images/default-image.jpg')}
             size={60}
           />
         </View>

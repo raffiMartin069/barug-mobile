@@ -1,6 +1,6 @@
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
-import { useNavigation } from 'expo-router'
+import { useNavigation, useRouter } from 'expo-router'
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 
@@ -8,6 +8,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
   const navigation = useNavigation()
+  const router = useRouter()
 
   return (
     <View style={[styles.container, {backgroundColor: theme.link}, style]}>
@@ -19,6 +20,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
         </View>
       )}
       <Text style={[styles.title, {color: theme.background}, !showBack && styles.leftSection]}>{title}</Text>
+      
       <View style={styles.rightSection}>
         {showNotif && (
           <TouchableOpacity>
@@ -34,7 +36,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
         )}
   
         {showProfile && (
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/residentprofile')}>
                 <Ionicons name='person' size={20} color={theme.background}/>
             </TouchableOpacity>
         )}
