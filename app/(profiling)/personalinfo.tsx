@@ -175,7 +175,8 @@ const PersonalInfo = () => {
       const response = await registerResidentWithVerification(payload);
       console.log('✅ Registered:', response);
       Alert.alert('Success', 'Resident registered successfully.');
-      router.push('/verifyemail');
+      // router.push('/verifyemail');
+      router.push({ pathname: '/verifyemail', params: { email } });
     } catch (error: any) {
       console.error('❌ Registration API error:', error);
 
