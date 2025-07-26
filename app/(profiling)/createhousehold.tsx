@@ -1,4 +1,5 @@
 import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
@@ -44,11 +45,13 @@ const CreateHousehold = () => {
 
   return (
     <ThemedView safe={true}>
+      <ThemedAppBar
+        title='Create Household'
+        showNotif={false}
+        showProfile={false}
+      />
       <ThemedKeyboardAwareScrollView>
         <View>
-            <ThemedText style={styles.text} title={true}>Create Household</ThemedText>
-
-            <Spacer height={20}/>
             <ThemedTextInput
               placeholder='Household Number'
               value={householdnum}

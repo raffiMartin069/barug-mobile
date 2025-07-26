@@ -100,7 +100,7 @@ const PersonalInfo = () => {
         
         <ThemedProgressBar
             step={1}
-            totalStep={3}
+            totalStep={2}
         />
         
         <ThemedKeyboardAwareScrollView>

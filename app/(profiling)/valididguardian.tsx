@@ -4,6 +4,7 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedFileInput from '@/components/ThemedFileInput'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { idTypeOptions, relationshipOptions } from '@/constants/formoptions'
@@ -53,6 +54,11 @@ const ValidIdGuardian = () => {
         title="Parent / Guardian's Valid ID"
         showNotif={false}
         showProfile={false}
+      />
+
+      <ThemedProgressBar
+        step={2}
+        totalStep={2}
       />
       
       <ThemedKeyboardAwareScrollView>

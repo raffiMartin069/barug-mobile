@@ -46,7 +46,7 @@ const SocioeconomicInfo = () => {
         />
         <ThemedProgressBar
             step={2}
-            totalStep={3}
+            totalStep={2}
         />
         <ThemedKeyboardAwareScrollView>
             <View>

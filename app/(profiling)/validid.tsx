@@ -54,9 +54,9 @@ const ValidId = () => {
         showProfile={false}
       />
       <ThemedProgressBar
-            step={3}
-            totalStep={3}
-        />
+        step={2}
+        totalStep={2}
+      />
       <ThemedKeyboardAwareScrollView>
         <View>
 

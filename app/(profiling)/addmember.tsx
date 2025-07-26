@@ -1,4 +1,5 @@
 import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedDropdown from '@/components/ThemedDropdown'
@@ -31,12 +32,18 @@ const AddMember = () => {
 
   return (
     <ThemedView safe={true}>
+        <ThemedAppBar
+            title='Add Member/s'
+            showNotif={false}
+            showProfile={false}
+        />
         <ThemedKeyboardAwareScrollView>
             <View>
 
-                <ThemedText style={styles.textcenter} title={true}>Add Member/s</ThemedText>
-
-                <Spacer height={20}/>
+                <View style={styles.row}>
+                    <ThemedText style={styles.textbold} subtitle={true}>Home Address:</ThemedText>
+                    <ThemedText subtitle={true}>00000111</ThemedText>
+                </View>
                 
                 <View style={styles.row}>
                     <ThemedText style={styles.textbold} subtitle={true}>Household #:</ThemedText>
@@ -44,7 +51,17 @@ const AddMember = () => {
                 </View>
 
                 <View style={styles.row}>
+                    <ThemedText style={styles.textbold} subtitle={true}>Household Head:</ThemedText>
+                    <ThemedText subtitle={true}>00000111</ThemedText>
+                </View>
+
+                <View style={styles.row}>
                     <ThemedText style={styles.textbold} subtitle={true}>Family #:</ThemedText>
+                    <ThemedText subtitle={true}>00000111</ThemedText>
+                </View>
+
+                <View style={styles.row}>
+                    <ThemedText style={styles.textbold} subtitle={true}>Family Header:</ThemedText>
                     <ThemedText subtitle={true}>00000111</ThemedText>
                 </View>
                 
