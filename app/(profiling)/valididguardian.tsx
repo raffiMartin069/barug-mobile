@@ -6,6 +6,7 @@ import ThemedFileInput from '@/components/ThemedFileInput'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { idTypeOptions, relationshipOptions } from '@/constants/formoptions'
 import { useRouter } from 'expo-router'
@@ -17,6 +18,7 @@ const ValidIdGuardian = () => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [idType, setIdType] = useState('')
   const [relationship, setRelationship] = useState('')
+  const [guardian, setGuardian] = useState('')
   const [reason, setReason] = useState('')
   const router = useRouter()
   const params = useSearchParams()
@@ -63,6 +65,12 @@ const ValidIdGuardian = () => {
       
       <ThemedKeyboardAwareScrollView>
         <View>
+
+          <ThemedTextInput
+            placeholder="Parent / Guardian's Name"
+            value={guardian}
+            onChangeText={setGuardian}
+          />
           <ThemedDropdown
             items={relationshipOptions}
             value={relationship}
