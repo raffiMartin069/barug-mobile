@@ -56,7 +56,51 @@ const Residentlayout = () => {
           name='requestdoc'
           options={{title:'Request a Document', tabBarIcon: ({focused}) => (
             <Ionicons
-              name={focused ? 'document-text' : 'document-text'}
+              name={focused ? 'document-text' : 'document-text-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+        <Tabs.Screen
+          name='docreqhistory'
+          options={{title:'Document Request History', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'newspaper' : 'newspaper-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+        <Tabs.Screen
+          name='fileblotterreport'
+          options={{title:'File Blotter Report', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'receipt' : 'receipt-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+        <Tabs.Screen
+          name='blotrpthistory'
+          options={{title:'Blotter Report History', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'list' : 'list-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+        <Tabs.Screen
+          name='barangaycases'
+          options={{title:'Barangay Cases', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'folder-open' : 'folder-open-outline'}
               size={20}
               color={focused ? theme.tabIconSelected : theme.tabIconDefault}
             />
