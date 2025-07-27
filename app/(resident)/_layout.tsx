@@ -42,7 +42,7 @@ const Residentlayout = () => {
         }}
       >
         <Tabs.Screen
-          name='residenthome'
+          name='(tabs)/residenthome'
           options={{title:'Home', tabBarIcon: ({focused}) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
@@ -52,20 +52,9 @@ const Residentlayout = () => {
           )}}
         />
 
-         <Tabs.Screen
-          name='requestdoc'
-          options={{title:'Request a Document', tabBarIcon: ({focused}) => (
-            <Ionicons
-              name={focused ? 'document-text' : 'document-text-outline'}
-              size={20}
-              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
-            />
-          )}}
-        />
-
         <Tabs.Screen
-          name='docreqhistory'
-          options={{title:'Document Request History', tabBarIcon: ({focused}) => (
+          name='(tabs)/docreqhistory'
+          options={{title:'Document Request', tabBarIcon: ({focused}) => (
             <Ionicons
               name={focused ? 'newspaper' : 'newspaper-outline'}
               size={20}
@@ -75,8 +64,8 @@ const Residentlayout = () => {
         />
 
         <Tabs.Screen
-          name='fileblotterreport'
-          options={{title:'File Blotter Report', tabBarIcon: ({focused}) => (
+          name='(tabs)/blotrpthistory'
+          options={{title:'Blotter Report', tabBarIcon: ({focused}) => (
             <Ionicons
               name={focused ? 'receipt' : 'receipt-outline'}
               size={20}
@@ -86,18 +75,7 @@ const Residentlayout = () => {
         />
 
         <Tabs.Screen
-          name='blotrpthistory'
-          options={{title:'Blotter Report History', tabBarIcon: ({focused}) => (
-            <Ionicons
-              name={focused ? 'list' : 'list-outline'}
-              size={20}
-              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
-            />
-          )}}
-        />
-
-        <Tabs.Screen
-          name='barangaycases'
+          name='(tabs)/barangaycases'
           options={{title:'Barangay Cases', tabBarIcon: ({focused}) => (
             <Ionicons
               name={focused ? 'folder-open' : 'folder-open-outline'}
@@ -118,5 +96,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  label: {
+    textAlign: 'center', 
+    fontSize: 10,
+    fontWeight: 600,
   },
 })

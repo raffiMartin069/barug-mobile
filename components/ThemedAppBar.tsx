@@ -23,7 +23,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
       
       <View style={styles.rightSection}>
         {showNotif && (
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/notifications')}>
               <Ionicons name='notifications' size={20} color={theme.background}/>
               {unreadCount > 0 && (
               <View style={styles.badge}>

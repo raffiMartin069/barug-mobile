@@ -19,7 +19,7 @@ const ResidentProfile = () => {
   const router = useRouter()
   
   return (
-    <ThemedView style={{justifyContent: 'flex-start'}} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
       <ThemedAppBar
         title='Profile'
         showProfile={false}

@@ -14,7 +14,7 @@ const ResidentHome = () => {
   const router = useRouter()
 
   return (
-    <ThemedView style={{justifyContent: 'flex-start'}} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
 
         <ThemedAppBar
             title={'Barangay Sto. Niño'}
@@ -40,7 +40,7 @@ const ResidentHome = () => {
 
               <View style={styles.activityItem}>
                 <ThemedIcon
-                  name={'document-text'}
+                  name={'newspaper'}
                   iconColor={'#6b4c3b'}
                   bgColor={'#f2e5d7'}
                   shape='square'
@@ -116,7 +116,7 @@ const ResidentHome = () => {
                 <View style={styles.subcontainer}>
                   <TouchableOpacity onPress={() => router.push('/requestdoc')}>
                     <ThemedIcon
-                      name={'document-text'}
+                      name={'newspaper'}
                       iconColor={'#6b4c3b'}
                       bgColor={'#f2e5d7'}
                     />
@@ -150,13 +150,11 @@ const ResidentHome = () => {
           </ScrollView>
         </KeyboardAvoidingView>
 
-        <TouchableOpacity onPress={() => router.push('/chatbot')}>
+        <TouchableOpacity style={styles.fab} onPress={() => router.push('/chatbot')}>
           <ThemedIcon
             name={'chatbubbles'}
-            iconColor="#fff"
             bgColor="#310101"
             size={24}
-            isFloating={true}
           />
         </TouchableOpacity>
 
@@ -177,6 +175,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 10,
     width: 90,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    zIndex: 999,
   },
   text: {
     textAlign: 'center',
