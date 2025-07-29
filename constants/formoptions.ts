@@ -169,6 +169,14 @@ export const idTypeMap = {
   5: 'Barangay ID',
 };
 
+export const relationshipOptions = [
+
+];
+
+export const relationshipMap = {
+
+};
+
 // ✅ NHTS Options
 export const nhtsOptions = [
   { label: 'Yes', value: 'yes' },

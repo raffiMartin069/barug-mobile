@@ -6,16 +6,20 @@ import ThemedFileInput from '@/components/ThemedFileInput'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { idTypeOptions } from '@/constants/formoptions'
+import { idTypeOptions, relationshipOptions } from '@/constants/formoptions'
 import { useRouter } from 'expo-router'
 import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
-const ValidId = () => {
+const ValidIdGuardian = () => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [idType, setIdType] = useState('')
+  const [relationship, setRelationship] = useState('')
+  const [guardian, setGuardian] = useState('')
+  const [reason, setReason] = useState('')
   const router = useRouter()
   const params = useSearchParams()
 
@@ -49,23 +53,38 @@ const ValidId = () => {
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
-        title='Valid ID'
+        title="Parent / Guardian's Valid ID"
         showNotif={false}
         showProfile={false}
       />
+
       <ThemedProgressBar
         step={2}
         totalStep={2}
       />
+      
       <ThemedKeyboardAwareScrollView>
         <View>
+
+          <ThemedTextInput
+            placeholder="Parent / Guardian's Name"
+            value={guardian}
+            onChangeText={setGuardian}
+          />
+          <ThemedDropdown
+            items={relationshipOptions}
+            value={relationship}
+            setValue={setRelationship}
+            placeholder={'Relationship to Parent / Guardian'}
+            order={0}
+          />
 
           <ThemedDropdown
             items={idTypeOptions}
             value={idType}
             setValue={setIdType}
             placeholder={'ID Type'}
-            order={0}
+            order={1}
           />
 
           <Spacer height={15}/>
@@ -78,14 +97,19 @@ const ValidId = () => {
             onFileSelected={handleFileSelected}
             onFileRemoved={handleRemoveFile}
           />
+
+          <ThemedDropdown
+            items={[]}
+            value={reason}
+            setValue={setReason}
+            placeholder={'Reason'}
+            order={2}
+          />
         </View>
 
         <Spacer height={15}/>
         
         <View>
-          <ThemedButton submit={false}>
-            <ThemedText non_btn={true}>Skip</ThemedText>
-          </ThemedButton>
           <ThemedButton onPress={handleSubmit}>
             <ThemedText btn={true}>Continue</ThemedText>
           </ThemedButton>
@@ -95,7 +119,7 @@ const ValidId = () => {
   )
 }
 
-export default ValidId
+export default ValidIdGuardian
 
 const styles = StyleSheet.create({
   text: {

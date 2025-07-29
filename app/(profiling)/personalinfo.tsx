@@ -222,19 +222,51 @@ const PersonalInfo = () => {
 
   return (
     <ThemedView safe={true}>
-      <ThemedAppBar title='Personal Information' showNotif={false} showProfile={false} />
-      <ThemedProgressBar step={1} totalStep={3} />
+        <ThemedAppBar
+            title='Personal Information'
+            showNotif={false}
+            showProfile={false}
+        />
+        
+        <ThemedProgressBar
+            step={1}
+            totalStep={2}
+        />
+        
+        <ThemedKeyboardAwareScrollView>
+            <View>
 
-      <ThemedKeyboardAwareScrollView>
-        <View>
-          <ThemedTextInput placeholder="First Name" value={fname} onChangeText={setFname} />
-          <Spacer height={10} />
-          <ThemedTextInput placeholder="Middle Name" value={mname} onChangeText={setMname} />
-          <Spacer height={10} />
-          <ThemedTextInput placeholder="Last Name" value={lname} onChangeText={setLname} />
-          <Spacer height={10} />
-          <ThemedTextInput placeholder="Suffix" value={suffix} onChangeText={setSuffix} />
-          <Spacer height={10} />
+                <ThemedTextInput
+                    placeholder='First Name'
+                    value={fname}
+                    onChangeText={setFname}
+                />
+
+                <Spacer height={10}/>
+
+                <ThemedTextInput
+                    placeholder='Middle Name'
+                    value={mname}
+                    onChangeText={setMname}
+                />
+
+                <Spacer height={10}/>
+
+                <ThemedTextInput
+                    placeholder='Last Name'
+                    value={lname}
+                    onChangeText={setLname}
+                />
+
+                <Spacer height={10}/>
+
+                <ThemedTextInput
+                    placeholder='Suffix'
+                    value={suffix}
+                    onChangeText={setSuffix}
+                />
+
+                <Spacer height={10}/>
 
           <ThemedText subtitle={true}>Sex</ThemedText>
           <ThemedRadioButton value={gender} onChange={setGender} options={genderOptions} />
@@ -276,24 +308,28 @@ const PersonalInfo = () => {
           />
           <Spacer height={10} />
 
-          <Pressable onPress={handleHomeAddress}>
-            <ThemedTextInput
-              placeholder="Home Address"
-              value={haddress}
-              onChangeText={setHAddress}
-              editable={false}
-              pointerEvents="none"
-            />
-          </Pressable>
-          <Spacer height={10} />
+                <Pressable onPress={handleHomeAddress}>
+                    <ThemedTextInput
+                        placeholder='Home Address'
+                        multiline={true}
+                        numberOfLines={2}
+                        value={haddress}
+                        onChangeText={setHAddress}
+                        editable={false}
+                        pointerEvents="none"
+                    />
+                </Pressable>
 
-          <ThemedTextInput
-            placeholder="Mobile Number"
-            value={mobnum}
-            onChangeText={setMobNum}
-            keyboardType="numeric"
-          />
-          <Spacer height={10} />
+                <Spacer height={10}/>
+                
+                <ThemedTextInput
+                    placeholder='Mobile Number'
+                    value={mobnum}
+                    onChangeText={setMobNum}
+                    keyboardType='numeric'
+                />
+
+                <Spacer height={10}/>
 
           <ThemedTextInput
             placeholder="Email Address"

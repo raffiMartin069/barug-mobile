@@ -42,7 +42,7 @@ const Residentlayout = () => {
         }}
       >
         <Tabs.Screen
-          name='residenthome'
+          name='(tabs)/residenthome'
           options={{title:'Home', tabBarIcon: ({focused}) => (
             <Ionicons
               name={focused ? 'home' : 'home-outline'}
@@ -52,11 +52,33 @@ const Residentlayout = () => {
           )}}
         />
 
-         <Tabs.Screen
-          name='requestdoc'
-          options={{title:'Request a Document', tabBarIcon: ({focused}) => (
+        <Tabs.Screen
+          name='(tabs)/docreqhistory'
+          options={{title:'Document Request', tabBarIcon: ({focused}) => (
             <Ionicons
-              name={focused ? 'document-text' : 'document-text'}
+              name={focused ? 'newspaper' : 'newspaper-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+        <Tabs.Screen
+          name='(tabs)/blotrpthistory'
+          options={{title:'Blotter Report', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'receipt' : 'receipt-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
+        <Tabs.Screen
+          name='(tabs)/barangaycases'
+          options={{title:'Barangay Cases', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'folder-open' : 'folder-open-outline'}
               size={20}
               color={focused ? theme.tabIconSelected : theme.tabIconDefault}
             />
@@ -74,5 +96,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  label: {
+    textAlign: 'center', 
+    fontSize: 10,
+    fontWeight: 600,
   },
 })

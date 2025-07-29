@@ -1,4 +1,5 @@
 import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedDropdown from '@/components/ThemedDropdown'
@@ -40,11 +41,13 @@ const CreateFamily = () => {
   
   return (
     <ThemedView safe={true}>
+        <ThemedAppBar
+            title='Create Family'
+            showNotif={false}
+            showProfile={false}
+        />
         <ThemedKeyboardAwareScrollView>
             <View>
-                <ThemedText style={styles.text} title={true}>Create Family</ThemedText>
-                
-                <Spacer height={20}/>
 
                 {fams.map((fam, index) => (
                     <View key={index}>

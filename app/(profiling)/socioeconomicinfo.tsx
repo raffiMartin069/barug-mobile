@@ -25,7 +25,7 @@ const SocioeconomicInfo = () => {
 
   const handleSubmit = () => {
     router.push({
-        pathname: '/validid',
+        pathname: '/valididguardian',
         params: {
             ...Object.fromEntries(params.entries()),
             educattainment,
@@ -46,7 +46,7 @@ const SocioeconomicInfo = () => {
         />
         <ThemedProgressBar
             step={2}
-            totalStep={3}
+            totalStep={2}
         />
         <ThemedKeyboardAwareScrollView>
             <View>

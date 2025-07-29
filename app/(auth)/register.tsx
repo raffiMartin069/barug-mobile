@@ -43,16 +43,10 @@ const Register = () => {
                     <Text style={styles.stepText}>Personal Information</Text>
                     </View>
 
-                    <View style={styles.stepItem}>
-                    <View style={styles.circle}>
-                        <Text style={styles.circleText}>2</Text>
-                    </View>
-                    <Text style={styles.stepText}>Socioeconomic Information</Text>
-                    </View>
 
                     <View style={styles.stepItem}>
                     <View style={styles.circle}>
-                        <Text style={styles.circleText}>3</Text>
+                        <Text style={styles.circleText}>2</Text>
                     </View>
                     <Text style={styles.stepText}>Valid ID</Text>
                     </View>
@@ -81,7 +75,7 @@ export default Register
 const styles = StyleSheet.create({
     image: {
         width: '100%',
-        height: 100,
+        height: 70,
         alignSelf: 'center',
     },
     text:{
