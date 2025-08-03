@@ -2,39 +2,53 @@ import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedSearchableDropdown from '@/components/ThemedSearchableDropdown'
 import ThemedText from '@/components/ThemedText'
-import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
-const JoinHousehold = () => {
-  const [hhnum, setHhnum] = useState()
+const JoinHouseFam = () => {
+  const residents = [
+    { "label": "Juan Dela Cruz", "value": "1234" },
+    { "label": "Maria Santos", "value": "5678" },
+    { "label": "Juan Dela Cruz", "value": "1234" },
+    { "label": "Maria Santos", "value": "5678" },
+    { "label": "Juan Dela Cruz", "value": "1234" },
+    { "label": "Maria Santos", "value": "5678" },
+    { "label": "Juan Dela Cruz", "value": "1234" },
+    { "label": "Maria Santos", "value": "5678" },
+  ]
 
+  const [res, setRes] = useState()
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
-        title='Join a Household'
+        title='Join Household & Family Unit'
+        showNotif={false}
+        showProfile={false}
       />
       <ThemedKeyboardAwareScrollView>
         <View>
-          <ThemedTextInput
-            placeholder='Household Number'
-            value={hhnum}
-            onChangeText={setHhnum}
+          <ThemedSearchableDropdown
+            searchplaceholder={'Search Household Number / Household Head'}
+            dropdwonplaceholder={'Select your respective household'}
+            data={residents}
           />
 
-          <Spacer height={10}/>
+          <Spacer height={50}/>
 
-          <ThemedTextInput
-            placeholder='Family Number'
-            value={hhnum}
-            onChangeText={setHhnum}
+          <ThemedSearchableDropdown
+            searchplaceholder={'Search Family Number / Family Head'}
+            dropdwonplaceholder={'Select your respective family unit'}
+            data={residents}
+            order={1}
           />
         </View>
+
         <View>
           <ThemedButton>
-            <ThemedText btn={true}>Continue</ThemedText>
+            <ThemedText btn={true}>Join</ThemedText>
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>
@@ -42,10 +56,6 @@ const JoinHousehold = () => {
   )
 }
 
-export default JoinHousehold
+export default JoinHouseFam
 
-const styles = StyleSheet.create({
-  text: {
-    textAlign: 'center',
-  },
-})
+const styles = StyleSheet.create({})
