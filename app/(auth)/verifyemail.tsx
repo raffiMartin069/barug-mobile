@@ -1,12 +1,12 @@
+import { resendVerificationEmail } from '@/api/authApi'; // 🔥 create this API call
 import Spacer from '@/components/Spacer';
+import ThemedButton from '@/components/ThemedButton';
 import ThemedCard from '@/components/ThemedCard';
 import ThemedText from '@/components/ThemedText';
 import ThemedView from '@/components/ThemedView';
-import ThemedButton from '@/components/ThemedButton';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, StyleSheet } from 'react-native';
-import { resendVerificationEmail } from '@/api/authApi'; // 🔥 create this API call
 
 const VerifyEmail = () => {
   const { email } = useLocalSearchParams<{ email: string }>();
