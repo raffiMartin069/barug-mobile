@@ -20,7 +20,7 @@ const Request = () => {
 
       <ThemedKeyboardAwareScrollView>
         <View>
-          <View style={styles.row}>
+          {/* <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Household Head:</ThemedText>
             <ThemedText subtitle={true}>Enchong Dee</ThemedText>
           </View>
@@ -33,7 +33,7 @@ const Request = () => {
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Household Address:</ThemedText>
             <ThemedText style={styles.addressText} subtitle={true}>Enchong Dee Enchong Dee Enchong Dee</ThemedText>
-          </View>
+          </View> */}
 
           <Spacer height={10}/>
 

@@ -236,6 +236,14 @@ const ResidentProfile = () => {
         </View>
       
         </ThemedCard>
+
+        <Spacer height={15}/>
+
+        <View style={{paddingHorizontal: 15}}>
+          <ThemedButton submit={false}>
+            <ThemedText non_btn={true}>Logout</ThemedText>
+          </ThemedButton>
+        </View>
         <Spacer height={20}/>
       </ThemedKeyboardAwareScrollView>
 

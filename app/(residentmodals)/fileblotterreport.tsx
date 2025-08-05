@@ -1,5 +1,6 @@
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
+import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
@@ -21,7 +22,9 @@ const FileBlotterReport = () => {
       <ThemedKeyboardAwareScrollView>
         <View>
           <ThemedCard>
-
+            <ThemedButton>
+              <ThemedText btn={true}>Submit</ThemedText>
+            </ThemedButton>
           </ThemedCard>
 
           <Spacer height={20}/>

@@ -20,26 +20,64 @@ const BarangayCases = () => {
         <ScrollView>
           <Spacer height={15}/>
 
+
+           <View style={[styles.row, {paddingHorizontal: 25,}]}>
+            <ThemedText style={styles.title}>Active Barangay Cases</ThemedText>
+            <ThemedText link={true}>View All</ThemedText>
+          </View>
+
+          <View>
+            <Spacer height={10}/>
+            <ThemedText style={styles.no} subtitle={true}>No active barangay cases.</ThemedText>
+          </View>
+
           <ThemedCard>
-            <View style={styles.row}>
-              <ThemedText style={styles.title}>Active Barangay Cases</ThemedText>
-              <ThemedText link={true}>View All</ThemedText>
+            <View>
+              <View>
+                <ThemedText>BC#23-03-14</ThemedText>
+                <ThemedText>Physical Injury</ThemedText>
+              </View>
+              <View>
+                
+              </View>
             </View>
+
             <Spacer height={10}/>
+
             <ThemedDivider/>
+
             <Spacer height={10}/>
+            <View>
+              <View style={styles.row}>
+                <ThemedText>Your Role</ThemedText>
+                <ThemedText>Complainant</ThemedText>
+              </View>
+              <View style={styles.row}>
+                <ThemedText>Date & Time Filed</ThemedText>
+                <ThemedText>03-03-2023</ThemedText>
+              </View>
+              <View style={styles.row}>
+                <ThemedText>Next Hearing</ThemedText>
+                <ThemedText>03-03-2023</ThemedText>
+              </View>
+            </View>
           </ThemedCard>
 
           <Spacer height={20}/>
 
+
+          <View style={[styles.row, {paddingHorizontal: 25,}]}>
+            <ThemedText style={styles.title}>Barangay Cases History</ThemedText>
+            <ThemedText link={true}>View All</ThemedText>
+          </View>
+
+          <View>
+            <Spacer height={10}/>
+            <ThemedText style={styles.no} subtitle={true}>No barangay cases history.</ThemedText>
+          </View>
+
           <ThemedCard>
-            <View style={styles.row}>
-              <ThemedText style={styles.title}>Barangay Cases History</ThemedText>
-              <ThemedText link={true}>View All</ThemedText>
-            </View>
-            <Spacer height={10}/>
-            <ThemedDivider/>
-            <Spacer height={10}/>
+            
           </ThemedCard>
 
           <Spacer height={15}/>
@@ -71,10 +109,15 @@ const styles = StyleSheet.create({
     fontSize: 20, 
     fontWeight: 'bold'
   },  
+  no: {
+    textAlign: 'center', 
+    fontWeight: 400, 
+    color: '#808080',
+  },
   fab: {
     position: 'absolute',
     bottom: 20,
     right: 20,
     zIndex: 999,
-  }
+  },
 })
