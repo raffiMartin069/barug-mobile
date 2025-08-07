@@ -4,7 +4,7 @@ import { useNavigation, useRouter } from 'expo-router'
 import React from 'react'
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 
-const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = true, showNotif = true, showProfile = true,  ...props}) => {
+const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = true, showNotif = true, showProfile = true, showSettings = false, ...props}) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
   const navigation = useNavigation()
@@ -36,9 +36,15 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
         )}
   
         {showProfile && (
-            <TouchableOpacity onPress={() => router.push('/residentprofile')}>
-                <Ionicons name='person' size={20} color={theme.background}/>
-            </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/residentprofile')}>
+              <Ionicons name='person' size={20} color={theme.background}/>
+          </TouchableOpacity>
+        )}
+
+        {showSettings && (
+          <TouchableOpacity onPress={() => router.push('/settings')}>
+            <Ionicons name='settings-outline' size={20} color={theme.background}/>
+          </TouchableOpacity>
         )}
       </View>
     </View>

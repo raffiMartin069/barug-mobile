@@ -1,10 +1,5 @@
-import { Link } from "expo-router";
-import { View } from "react-native";
+import { Redirect } from "expo-router";
 
 export default function Index() {
-  return (
-    <View>
-       <Link href='/login'>About</Link>
-    </View>
-  );
+  return <Redirect href="/login" />;
 }
