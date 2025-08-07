@@ -4,6 +4,7 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedSearchableDropdown from '@/components/ThemedSearchableDropdown'
 import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -21,6 +22,7 @@ const JoinHouseFam = () => {
   ]
 
   const [res, setRes] = useState()
+  const [resYrs, setResYrs] = useState()
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
@@ -36,13 +38,22 @@ const JoinHouseFam = () => {
             data={residents}
           />
 
-          <Spacer height={50}/>
+          <Spacer/>
 
           <ThemedSearchableDropdown
             searchplaceholder={'Search Family Number / Family Head'}
             dropdwonplaceholder={'Select your respective family unit'}
             data={residents}
             order={1}
+          />
+
+          <Spacer/>
+
+          <ThemedTextInput
+            placeholder='Years of Residency'
+            value={resYrs}
+            onChangeText={setResYrs}
+            keyboardType= 'numeric'
           />
         </View>
 
