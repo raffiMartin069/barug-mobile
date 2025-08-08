@@ -23,6 +23,8 @@ const ResidentProfile = () => {
       <ThemedAppBar
         title='Profile'
         showProfile={false}
+        showNotif={false}
+        showSettings={true}
       />
 
       <ThemedKeyboardAwareScrollView>

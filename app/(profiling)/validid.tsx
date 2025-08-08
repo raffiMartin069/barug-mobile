@@ -73,7 +73,27 @@ const ValidId = () => {
           <ThemedText subtitle={true}>Upload a Valid ID:</ThemedText>
 
           <ThemedFileInput
-            placeholder="Select a valid ID"
+            placeholder="Front of the ID"
+            selectedFile={selectedFile}
+            onFileSelected={handleFileSelected}
+            onFileRemoved={handleRemoveFile}
+          />
+
+          <Spacer height={10}/>
+
+          <ThemedFileInput
+            placeholder="Back of the ID"
+            selectedFile={selectedFile}
+            onFileSelected={handleFileSelected}
+            onFileRemoved={handleRemoveFile}
+          />
+
+          <Spacer height={15}/>
+          
+          <ThemedText subtitle={true}>Upload a Selfie Holding the Valid ID:</ThemedText>
+
+          <ThemedFileInput
+            placeholder="Selfie Holding the ID"
             selectedFile={selectedFile}
             onFileSelected={handleFileSelected}
             onFileRemoved={handleRemoveFile}

@@ -81,7 +81,7 @@ const AddMember = () => {
                             onRemove={() => removeField(index)}
                         />
 
-                        <Spacer height={10 }/>
+                        <Spacer height={10}/>
 
                         <ThemedDropdown
                             items={[]}
@@ -91,7 +91,7 @@ const AddMember = () => {
                             order={0}
                         />
 
-                        <Spacer height={10 }/>
+                        <Spacer height={10}/>
 
                         <ThemedDropdown
                             items={[]}
