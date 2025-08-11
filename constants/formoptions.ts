@@ -84,90 +84,170 @@ export const religionMap = {
   10: 'Others',
 };
 
+
 // ✅ Educational Attainment Options
 export const educAttainmentOptions = [
   { label: 'No Formal Education', value: '1' },
-  { label: 'Elementary', value: '2' },
-  { label: 'High School', value: '3' },
-  { label: 'Vocational', value: '4' },
-  { label: 'College', value: '5' },
-  { label: 'Postgraduate', value: '6' },
+  { label: 'Elementary Level', value: '2' },
+  { label: 'Elementary Graduate', value: '3' },
+  { label: 'High School Level', value: '4' },
+  { label: 'High School Graduate', value: '5' },
+  { label: 'Vocational', value: '6' },
+  { label: 'College Level', value: '7' },
+  { label: 'College Graduate', value: '8' },
+  { label: 'Postgraduate', value: '9' },
 ];
+
 
 export const educAttainmentMap = {
   1: 'No Formal Education',
-  2: 'Elementary',
-  3: 'High School',
-  4: 'Vocational',
-  5: 'College',
-  6: 'Postgraduate',
+  2: 'Elementary Level',
+  3: 'Elementary Graduate',
+  4: 'High School Level',
+  5: 'High School Graduate',
+  6: 'Vocational',
+  7: 'College Level',
+  8: 'College Graduate',
+  9: 'Postgraduate',
 };
+
 
 // ✅ Employment Status Options
 export const empStatOptions = [
   { label: 'Employed', value: '1' },
   { label: 'Unemployed', value: '2' },
-  { label: 'Self-Employed', value: '3' },
+  { label: 'OFW', value: '3' },
   { label: 'Student', value: '4' },
   { label: 'Retired', value: '5' },
+  { label: 'Self-Employed', value: '6' },
+  { label: 'Pensioner', value: '7' },
+  { label: 'Housewife', value: '8' },
+  { label: 'Freelancer', value: '9' },
+  { label: 'Disabled', value: '10' },
+  { label: 'Looking for Work', value: '11' },
+  { label: 'Part-Time', value: '12' },
+  { label: 'Full-Time', value: '13' },
+  { label: 'Underemployed', value: '14' },
 ];
 
+// ✅ Employment Status Map
 export const empStatMap = {
   1: 'Employed',
   2: 'Unemployed',
-  3: 'Self-Employed',
+  3: 'OFW',
   4: 'Student',
   5: 'Retired',
+  6: 'Self-Employed',
+  7: 'Pensioner',
+  8: 'Housewife',
+  9: 'Freelancer',
+  10: 'Disabled',
+  11: 'Looking for Work',
+  12: 'Part-Time',
+  13: 'Full-Time',
+  14: 'Underemployed',
 };
+
 
 // ✅ Monthly Personal Income Options
 export const mnthlyPerosonalIncomeOptions = [
   { label: 'Below ₱5,000', value: '1' },
-  { label: '₱5,000 - ₱10,000', value: '2' },
-  { label: '₱10,001 - ₱20,000', value: '3' },
-  { label: '₱20,001 - ₱50,000', value: '4' },
-  { label: 'Above ₱50,000', value: '5' },
+  { label: '₱5,001 - ₱10,000', value: '2' },
+  { label: '₱10,001 - ₱15,000', value: '3' },
+  { label: '₱15,001 - ₱20,000', value: '4' },
+  { label: '₱20,001 - ₱30,000', value: '5' },
+  { label: '₱30,001 - ₱50,000', value: '6' },
+  { label: '₱50,001 - ₱75,000', value: '7' },
+  { label: '₱75,001 - ₱100,000', value: '8' },
+  { label: 'Above ₱100,000', value: '9' },
 ];
 
+// ✅ Monthly Personal Income Map
 export const mnthlyPersonalIncomeMap = {
   1: 'Below ₱5,000',
-  2: '₱5,000 - ₱10,000',
-  3: '₱10,001 - ₱20,000',
-  4: '₱20,001 - ₱50,000',
-  5: 'Above ₱50,000',
+  2: '₱5,001 - ₱10,000',
+  3: '₱10,001 - ₱15,000',
+  4: '₱15,001 - ₱20,000',
+  5: '₱20,001 - ₱30,000',
+  6: '₱30,001 - ₱50,000',
+  7: '₱50,001 - ₱75,000',
+  8: '₱75,001 - ₱100,000',
+  9: 'Above ₱100,000',
 };
+
+
 
 // ✅ Government Programs Options
 export const govProgOptions = [
+  { label: 'None', value: '7' },
   { label: '4Ps', value: '1' },
-  { label: 'Senior Citizen Pension', value: '2' },
-  { label: 'PWD Assistance', value: '3' },
-  { label: 'Other Programs', value: '4' },
+  { label: 'GSIS', value: '2' },
+  { label: 'PhilHealth', value: '3' },
+  { label: 'PWD', value: '4' },
+  { label: 'Senior Citizen', value: '5' },
+  { label: 'SSS', value: '6' },
 ];
 
+
+// ✅ Government Programs Map
 export const govProgMap = {
   1: '4Ps',
-  2: 'Senior Citizen Pension',
-  3: 'PWD Assistance',
-  4: 'Other Programs',
+  2: 'GSIS',
+  3: 'PhilHealth',
+  4: 'PWD',
+  5: 'Senior Citizen',
+  6: 'SSS',
+  7: 'None',
 };
 
-// ✅ ID Type Options
+
+
+// ✅ ID Type Options (matches document_type table)
 export const idTypeOptions = [
-  { label: 'National ID', value: '1' },
-  { label: 'Driver’s License', value: '2' },
-  { label: 'Passport', value: '3' },
-  { label: 'Voter’s ID', value: '4' },
-  { label: 'Barangay ID', value: '5' },
+  { label: 'PHILIPPINE PASSPORT', value: '1' },
+  { label: 'PHILIPPINE NATIONAL ID', value: '2' },
+  { label: 'SSS/UMID CARD', value: '3' },
+  { label: 'GSIS ECARD', value: '4' },
+  { label: 'PRC ID', value: '5' },
+  { label: 'DRIVER\'S LICENSE', value: '6' },
+  { label: 'PHILHEALTH ID', value: '7' },
+  { label: 'VOTER\'S ID', value: '8' },
+  { label: 'POSTAL ID', value: '9' },
+  { label: 'SENIOR CITIZEN ID', value: '10' },
+  { label: 'PWD ID', value: '11' },
+  { label: 'OWWA ID', value: '12' },
+  { label: 'IBP ID', value: '13' },
+  { label: 'TIN ID', value: '14' },
+  { label: 'BIRTH CERTIFICATE', value: '15' },
+  { label: 'BARANGAY CERTIFICATE', value: '16' },
+  { label: 'SCHOOL ID', value: '17' },
+  { label: 'RESIDENT PICTURE', value: '18' },
+  { label: 'RESIDENT SELFIE', value: '19' },
 ];
 
-export const idTypeMap = {
-  1: 'National ID',
-  2: 'Driver’s License',
-  3: 'Passport',
-  4: 'Voter’s ID',
-  5: 'Barangay ID',
+export const idTypeMap: Record<number, string> = {
+  1: 'PHILIPPINE PASSPORT',
+  2: 'PHILIPPINE NATIONAL ID',
+  3: 'SSS/UMID CARD',
+  4: 'GSIS ECARD',
+  5: 'PRC ID',
+  6: 'DRIVER\'S LICENSE',
+  7: 'PHILHEALTH ID',
+  8: 'VOTER\'S ID',
+  9: 'POSTAL ID',
+  10: 'SENIOR CITIZEN ID',
+  11: 'PWD ID',
+  12: 'OWWA ID',
+  13: 'IBP ID',
+  14: 'TIN ID',
+  15: 'BIRTH CERTIFICATE',
+  16: 'BARANGAY CERTIFICATE',
+  17: 'SCHOOL ID',
+  18: 'RESIDENT PICTURE',
+  19: 'RESIDENT SELFIE',
 };
+
+
 
 export const relationshipOptions = [
 

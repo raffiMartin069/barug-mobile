@@ -23,7 +23,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-<<<<<<< HEAD
   const handleSubmit = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password.');
@@ -76,11 +75,6 @@ const Login = () => {
 
 
   };
-=======
-  const handleSubmit = () => {
-    router.push('/residenthome')
-  }
->>>>>>> 3e804421dd25f5d56df26d64e302f04c64bc176e
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
