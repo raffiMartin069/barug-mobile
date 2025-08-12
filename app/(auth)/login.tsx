@@ -14,7 +14,7 @@ const Login = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/residenthome')
+    router.push('/bhwhome')
   }
 
   return (

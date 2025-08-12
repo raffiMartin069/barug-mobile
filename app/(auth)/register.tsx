@@ -43,10 +43,17 @@ const Register = () => {
                     <Text style={styles.stepText}>Personal Information</Text>
                     </View>
 
-
                     <View style={styles.stepItem}>
                     <View style={styles.circle}>
                         <Text style={styles.circleText}>2</Text>
+                    </View>
+                    <Text style={styles.stepText}>Socioeconomic Information</Text>
+                    </View>
+
+
+                    <View style={styles.stepItem}>
+                    <View style={styles.circle}>
+                        <Text style={styles.circleText}>3</Text>
                     </View>
                     <Text style={styles.stepText}>Valid ID</Text>
                     </View>
