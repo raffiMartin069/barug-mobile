@@ -12,7 +12,7 @@ import { StyleSheet, View } from 'react-native';
 
 type AddrParams = { street?: string; brgy?: string; city?: string; puroksitio?: string };
 
-const ResidentAddress = () => {
+const ResidentAddress2 = () => {
   const router = useRouter();
   const { street: pStreet = '', brgy: pBrgy = '', city: pCity = '', puroksitio: pPurok = '' } =
     useLocalSearchParams<AddrParams>();
@@ -38,12 +38,12 @@ const ResidentAddress = () => {
   const submitAddress = () => {
     setAddress({ street: streetState, puroksitio: pPurok || purokState, brgy: brgyState, city: cityState });
     // Replace current screen with personal info; state persists via store
-    router.replace('/personalinfo');
+    router.replace('/personalinfo2');
   };
 
   return (
     <ThemedView safe={true}>
-      <ThemedAppBar title="Home Address" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Home Address 2" showNotif={false} showProfile={false} />
       <ThemedKeyboardAwareScrollView>
         <View>
           <ThemedTextInput placeholder="Street" value={streetState} onChangeText={setStreet} />
@@ -65,7 +65,7 @@ const ResidentAddress = () => {
   );
 };
 
-export default ResidentAddress;
+export default ResidentAddress2;
 
 const styles = StyleSheet.create({
   text: { textAlign: 'center' },

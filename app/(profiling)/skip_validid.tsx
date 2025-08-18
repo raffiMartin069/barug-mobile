@@ -93,7 +93,7 @@ const ValidId = () => {
       id_back_uri: backUri ?? null,
       id_selfie_uri: selfieUri,
     })
-    router.push('/reviewinputs')
+    router.push('/bhw_reviewinputs')
   }
 
   const skipAndContinue = () => {
@@ -180,11 +180,11 @@ const ValidId = () => {
           {/* Skip = pass none */}
           {/* <ThemedButton submit={false} onPress={skipAndContinue}>
             <ThemedText non_btn>Skip</ThemedText>
-          </ThemedButton> */}
+          </ThemedButton>*/}
 
           <ThemedButton onPress={saveAndContinue}>
             <ThemedText btn>Continue</ThemedText>
-          </ThemedButton>
+          </ThemedButton> 
         </View>
       </ThemedKeyboardAwareScrollView>
 

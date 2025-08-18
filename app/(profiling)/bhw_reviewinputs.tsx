@@ -4,9 +4,11 @@ import ThemedButton from '@/components/ThemedButton';
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
 import ThemedProgressBar from '@/components/ThemedProgressBar';
 import ThemedText from '@/components/ThemedText';
+import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
 
-import { requestPersonVerification } from '@/api/profilingApi';
+import { loginBhw } from '@/api/authApi';
+import { registerResidentWithVerificationBHW } from '@/api/profilingApi';
 import { useProfilingWizard } from '@/store/profilingWizard';
 import { useRegistrationStore } from '@/store/registrationStore';
 
@@ -16,15 +18,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import {
-  civilStatusMap,
-  educAttainmentMap,
-  empStatMap,
-  genderMap,
-  govProgMap,
-  idTypeMap,
-  mnthlyPersonalIncomeMap,
-  nationalityMap,
-  religionMap,
+    civilStatusMap,
+    educAttainmentMap,
+    empStatMap,
+    genderMap,
+    govProgMap,
+    mnthlyPersonalIncomeMap,
+    nationalityMap,
+    religionMap
 } from '../../constants/formoptions';
 
 async function compress(uri: string) {
@@ -63,16 +64,17 @@ function normalizeDateYMD(v: any): string {
 
 const ReviewInputs = () => {
   const router = useRouter();
-  const { personal, socio, validId, setPersonal } = useProfilingWizard();
+  const { personal, socio, validId, clear, setPersonal } = useProfilingWizard();
   const reg = useRegistrationStore();
 
   const [submitting, setSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [bhwUser, setBhwUser] = useState('');
+  const [bhwPass, setBhwPass] = useState('');
 
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerSrc, setViewerSrc] = useState<string | null>(null);
 
-  // Seed from registration store if personal empty
   useEffect(() => {
     if (personal) return;
     const hasReg = reg.fname || reg.lname || reg.email || reg.street || reg.brgy || reg.city;
@@ -113,6 +115,15 @@ const ReviewInputs = () => {
   const backUri = useMemo(() => validId?.id_back_uri || '', [validId?.id_back_uri]);
   const selfieUri = useMemo(() => validId?.id_selfie_uri || '', [validId?.id_selfie_uri]);
 
+  if (!personal) {
+    return (
+      <ThemedView safe>
+        <ThemedAppBar title="Review Details" showNotif={false} showProfile={false} />
+        <ThemedText>Missing data. Please go back to Personal Info.</ThemedText>
+      </ThemedView>
+    )
+  }
+
   const openViewer = (uri?: string | null) => { if (uri) { setViewerSrc(uri); setViewerOpen(true); } };
 
   const ImageRow = ({ label, uri }: { label: string; uri?: string }) => (
@@ -129,62 +140,104 @@ const ReviewInputs = () => {
     </View>
   );
 
-  // ---- ONLY the keys your API expects (+ names for OCR) ----
-  const buildVerificationFormData = async () => {
+  // ------------ BUILD REGISTER FORMDATA (with FILES + LOGS) ------------
+  const buildRegisterFormData = async (bhwStaffId?: number) => {
     const fd = new FormData();
+    const debug: Record<string, any> = {};
+    const fileDebug: Record<string, any> = {};
 
-    const add = (k: string, v: any) => {
+    const add = (k: string, v: any, opts?: { mask?: boolean }) => {
       if (v === undefined || v === null || v === '') return;
-      fd.append(k, String(v));
+      const s = String(v);
+      fd.append(k, s);
+      debug[k] = opts?.mask ? `${'*'.repeat(Math.min(s.length, 12))} (${s.length})` : s;
     };
 
-    // Required non-image fields
-    add('education_id', socio?.educ_attainment_id);
+    // Fields
+    add('email', personal.email);
+    add('password', personal.password, { mask: true });
+
+    add('first_name', personal.first_name);
+    add('middle_name', personal.middle_name);
+    add('last_name', personal.last_name);
+    add('suffix', personal.suffix);
+
+    add('date_of_birth', normalizeDateYMD(personal.date_of_birth));
+    add('mobile_number', personal.mobile_number);
+    add('sex_id', personal.sex_id);
+    add('civil_status_id', personal.civil_status_id);
+    add('nationality_id', personal.nationality_id);
+    add('religion_id', personal.religion_id);
+
+    add('city', personal.city);
+    add('barangay', personal.barangay);
+    add('purok', personal.purok);
+    add('street', personal.street);
+
+    add('is_bhw_registration', true);
+    if (bhwStaffId != null) add('added_by_id', bhwStaffId);
+
+    add('education_level_id', socio?.educ_attainment_id);
     add('employment_status_id', socio?.employment_status_id);
     add('occupation', socio?.occupation);
     add('gov_mem_prog_id', socio?.gov_program_id);
     add('mnthly_personal_income_id', socio?.monthly_personal_income_id);
-    add('doc_type_id', validId?.id_type_id);
 
-    // Names to assist OCR matching (not required but used by backend)
-    add('first_name', personal.first_name);
-    add('last_name', personal.last_name);
-    add('middle_name', personal.middle_name ?? '');
+    add('id_type_id', validId?.id_type_id);
+    add('id_number', validId?.id_number);
 
-    // Files: expected keys
-    const addImg = async (key: 'id_front' | 'id_back' | 'id_selfie', uri?: string) => {
+    // Files — keys expected by your DRF view:
+    //  - person_img
+    //  - front_doc
+    //  - back_doc
+    //  - selfie
+    const addFile = async (key: 'person_img' | 'front_doc' | 'back_doc' | 'selfie', uri?: string) => {
       if (!uri) return;
       const c = await compress(uri);
-      // @ts-expect-error RN FormData file shape for React Native
-      fd.append(key, { uri: c, name: `${key}.jpg`, type: 'image/jpeg' } as RNFile);
+      const file: any = { uri: c, name: `${key}.jpg`, type: 'image/jpeg' } as RNFile;
+      // @ts-expect-error RN FormData file shape
+      fd.append(key, file);
+      fileDebug[key] = { name: file.name, type: file.type, uri: c };
     };
 
-    await addImg('id_front', frontUri); // required
-    await addImg('id_back', backUri);
-    await addImg('id_selfie', selfieUri);
+    await addFile('front_doc', frontUri);
+    await addFile('back_doc', backUri);
+    await addFile('selfie', selfieUri);
+
+    // If you want a profile image and you don’t have a separate one,
+    // reuse selfie as person_img:
+    // await addFile('person_img', selfieUri);
+
+    console.log('🧾 Register FormData (fields):', debug);
+    console.log('🖼️ Register FormData (files):', fileDebug);
 
     return fd;
   };
 
   const onConfirmAndSubmit = async () => {
     try {
-      // Client-side guard for the required fields
-      if (!frontUri) {
-        Alert.alert('Missing ID Front', 'Please upload the front image of the ID.');
+      if (!bhwUser.trim() || !bhwPass.trim()) {
+        Alert.alert('BHW Login Required', 'Please enter your BHW username and password.');
         return;
       }
 
       setSubmitting(true);
-      const formData = await buildVerificationFormData();
 
-      // ✅ Use this API
-      await requestPersonVerification(formData);
+      const staffId = await loginBhw(bhwUser.trim(), bhwPass.trim());
+      console.log('✅ BHW staff_id:', staffId);
 
-      Alert.alert('Success', 'Verification request submitted successfully.');
-      router.push('/residenthome'); // adjust destination as needed
+      const fdReg = await buildRegisterFormData(staffId);
+      console.log('➡️ Calling registerResidentWithVerificationBHW…');
+      await registerResidentWithVerificationBHW(fdReg); // must POST multipart/form-data
+      console.log('✅ Registration call finished');
+
+      Alert.alert('Success', 'Registration submitted successfully.');
+      const email = personal.email;
+
+      router.push({ pathname: '/login', params: { email } });
     } catch (err: any) {
-      console.error('❌ Verification submit failed:', err);
-      const msg = err?.response?.data?.error || err?.error || err?.message || 'Verification failed';
+      console.error('❌ Submit failed:', err);
+      const msg = err?.response?.data?.error || err?.error || err?.message || 'Submission failed';
       Alert.alert('Submit Failed', String(msg));
     } finally {
       setSubmitting(false);
@@ -195,7 +248,7 @@ const ReviewInputs = () => {
   return (
     <ThemedView safe>
       <ThemedAppBar title="Review Details" showNotif={false} showProfile={false} />
-      <ThemedProgressBar step={4} totalStep={4} />
+      <ThemedProgressBar step={3} totalStep={3} />
 
       <ThemedKeyboardAwareScrollView>
         <View>
@@ -227,17 +280,6 @@ const ReviewInputs = () => {
           <Row label="Government Program" value={govProgMap[String(socio?.gov_program_id ?? '')]} />
           {socio?.gov_program_other ? <Row label="Gov Program (Other)" value={socio.gov_program_other} /> : null}
 
-          <Spacer height={20} />
-          <ThemedText title>Valid ID</ThemedText>
-          <Row label="ID Type" value={validId?.id_type_id ? idTypeMap[String(validId.id_type_id)] : 'Not Provided'} />
-          {validId?.id_number ? <Row label="ID Number" value={String(validId.id_number)} /> : null}
-
-          <Spacer height={10} />
-          <ImageRow label="Front of the ID" uri={frontUri} />
-          <Spacer height={10} />
-          <ImageRow label="Back of the ID" uri={backUri} />
-          <Spacer height={10} />
-          <ImageRow label="Selfie with ID" uri={selfieUri} />
         </View>
 
         <Spacer height={16} />
@@ -261,13 +303,19 @@ const ReviewInputs = () => {
         </View>
       </Modal>
 
-      {/* Simple confirmation */}
+      {/* Confirmation + BHW re-auth */}
       <Modal visible={confirmOpen} transparent animationType="fade" onRequestClose={() => setConfirmOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <ThemedText style={{ fontWeight: '700' }}>Please confirm</ThemedText>
             <Spacer height={6} />
-            <ThemedText>Do you confirm that all information is true and correct?</ThemedText>
+            <ThemedText>
+              Do you confirm that all information is true and correct? Enter BHW credentials to proceed.
+            </ThemedText>
+            <Spacer height={12} />
+            <ThemedTextInput placeholder="BHW Username" value={bhwUser} onChangeText={setBhwUser} />
+            <Spacer height={8} />
+            <ThemedTextInput placeholder="BHW Password" value={bhwPass} onChangeText={setBhwPass} secureTextEntry />
             <Spacer height={16} />
             <ThemedButton onPress={onConfirmAndSubmit} disabled={submitting}>
               <ThemedText btn>{submitting ? 'Submitting…' : 'Confirm & Submit'}</ThemedText>

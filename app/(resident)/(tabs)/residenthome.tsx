@@ -44,7 +44,6 @@ const ResidentHome = () => {
       pathname: '/residentprofile',
       params: {
         // identity
-        // resident_id: String(profile?.user_id ?? ''), - NONE
         first_name: profile?.first_name ?? '',
         middle_name: profile?.middle_name ?? '',
         last_name: profile?.last_name ?? '',
@@ -87,6 +86,79 @@ const ResidentHome = () => {
     })
   }
 
+  // ---- Dynamic action card logic based on verification status ----
+  const normalize = (v: any) => (v ?? '').toString().trim().toLowerCase()
+
+  const rawStatus =
+    profile?.verification_status_name ??
+    profile?.verification_status ??
+    profile?.acc_status_name ?? ''
+
+  const status = normalize(rawStatus)
+
+  // Broad heuristics to handle various backend wordings
+  const isVerified = status.includes('verified') || profile?.is_verified === true
+  const isPending = status.includes('pending')
+  const isApproved = status.includes('approved')
+
+  const actionCard = (() => {
+    if (isVerified) {
+      return (
+        <ThemedCard>
+          <View style={{ alignItems: 'center', paddingVertical: 15 }}>
+            <ThemedIcon name="ribbon" iconColor="#6a1b9a" bgColor="#e1bee7" />
+            <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
+              Congrats — you’re verified!
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: '#555' }}>
+              Enjoy full access to barangay services.
+            </ThemedText>
+          </View>
+        </ThemedCard>
+      )
+    }
+
+    if (isPending) {
+      return (
+        <ThemedCard>
+          <TouchableOpacity
+            style={{ alignItems: 'center', paddingVertical: 15 }}
+            onPress={() => router.push('/identityprofiling')}
+          >
+            <ThemedIcon name="checkmark-circle" iconColor="#2e7d32" bgColor="#c8e6c9" />
+            <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
+              Verify Residency
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: '#555' }}>
+              Status: Pending Verification
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedCard>
+      )
+    }
+
+    if (isApproved) {
+      return (
+        <ThemedCard>
+          <TouchableOpacity
+            style={{ alignItems: 'center', paddingVertical: 15 }}
+            onPress={() => router.push('/joinhousehold')}
+          >
+            <ThemedIcon name="home" iconColor="#1e88e5" bgColor="#bbdefb" />
+            <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
+              Join Household
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, color: '#555' }}>
+              Your verification was approved. Complete household linking.
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedCard>
+      )
+    }
+
+    return null
+  })()
+
   if (loading) {
     return (
       <ThemedView safe={true} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -102,12 +174,11 @@ const ResidentHome = () => {
         showBack={false}
         showNotif={true}
         showProfile={true}
-        onPressProfile={pushProfile}   // ← tap person icon to open profile with params
+        onPressProfile={pushProfile}
       />
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-
           {/* Header: Welcome + Avatar (from fetched profile) */}
           <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
             <ThemedText title={true}>
@@ -123,23 +194,8 @@ const ResidentHome = () => {
             />
           </View>
 
-          {/* 🔹 TEMPORARY VERIFY RESIDENCY ACTION — REMOVE WHEN REAL FLOW IS IMPLEMENTED */}
-          <ThemedCard>
-            <TouchableOpacity
-              style={{ alignItems: 'center', paddingVertical: 15 }}
-              onPress={() => router.push('/identityprofiling')}
-            >
-              <ThemedIcon
-                name={'checkmark-circle'}
-                iconColor={'#2e7d32'}
-                bgColor={'#c8e6c9'}
-              />
-              <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
-                Verify Residency
-              </ThemedText>
-            </TouchableOpacity>
-          </ThemedCard>
-          {/* 🔹 END OF TEMPORARY VERIFY RESIDENCY ACTION */}
+          {/* Dynamic Action Card based on verification status */}
+          {actionCard}
 
           <Spacer height={5} />
 
@@ -261,7 +317,6 @@ const ResidentHome = () => {
               <ThemedText style={{ textAlign: 'center' }}>{error}</ThemedText>
             </>
           ) : null}
-
         </ScrollView>
       </KeyboardAvoidingView>
 

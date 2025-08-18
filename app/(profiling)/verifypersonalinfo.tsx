@@ -11,21 +11,23 @@ import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native'
 
 import {
-    civilStatusOptions,
-    genderOptions,
-    nationalityOptions,
-    religionOptions,
+  civilStatusOptions,
+  genderOptions,
+  nationalityOptions,
+  religionOptions,
 } from '@/constants/formoptions'
 
 import { fetchResidentProfile } from '@/api/residentApi'
+import { useProfilingWizard } from '@/store/profilingWizard'
 
 type Opt = { label: string; value: string }
 
 const VerifyPersonalInfo = () => {
   const router = useRouter()
+  const { personal, setPersonal } = useProfilingWizard()
 
   // ---------- Local state (editable) ----------
   const [fname, setFname] = useState('')
@@ -38,27 +40,61 @@ const VerifyPersonalInfo = () => {
   const [nationality, setNationality] = useState<string>('')   // dropdown value
   const [religion, setReligion] = useState<string>('')         // dropdown value
   const [haddress, setHAddress] = useState('')
+
+  // keep granular address too
+  const [street, setStreet] = useState('')
+  const [purok, setPurok] = useState('')
+  const [barangay, setBarangay] = useState('')
+  const [city, setCity] = useState('')
+
   const [mobnum, setMobNum] = useState('')
   const [email, setEmail] = useState('')
 
-  // loading states
+  // loading / ui states
   const [profileLoading, setProfileLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [confirmVisible, setConfirmVisible] = useState(false)
 
   // ---------- Helper: map API id/name -> dropdown value ----------
   const pickOptionValue = (idLike: any, nameLike: any, options: Opt[]) => {
-    // 1) Prefer *_id if present
     if (idLike !== undefined && idLike !== null && idLike !== '') {
       const idStr = String(idLike)
       if (options.some(o => String(o.value) === idStr)) return idStr
     }
-    // 2) Fallback: match by label (case-insensitive)
     if (nameLike) {
       const label = String(nameLike).trim().toLowerCase()
       const hit = options.find(o => o.label.trim().toLowerCase() === label)
       if (hit) return String(hit.value)
     }
     return ''
+  }
+
+  // Build payload for wizard.personal
+  const buildPersonalPayload = () => {
+    const toInt = (s: string) => {
+      const n = parseInt(s || '0', 10)
+      return Number.isFinite(n) && n > 0 ? n : undefined
+    }
+
+    return {
+      first_name: fname.trim(),
+      middle_name: mname.trim() || null,
+      last_name: lname.trim(),
+      suffix: suffix.trim() || null,
+      date_of_birth: dob ? dob.toISOString() : null,
+      email: (email || '').trim() || null,
+      mobile_number: (mobnum || '').trim() || null,
+      sex_id: gender === 'male' ? 1 : 2,
+      civil_status_id: toInt(civilStatus),
+      nationality_id: toInt(nationality),
+      religion_id: toInt(religion),
+      // address (both granular and composed)
+      street: street || null,
+      purok: purok || null,
+      barangay: barangay || null,
+      city: city || null,
+      haddress: haddress || null,
+    }
   }
 
   // ---------- Fetch profile and prefill ----------
@@ -81,7 +117,8 @@ const VerifyPersonalInfo = () => {
 
         // DOB
         const rawDob = p.birthdate ?? p.date_of_birth ?? ''
-        setDob(rawDob ? new Date(rawDob) : null)
+        const dobDate = rawDob ? new Date(rawDob) : null
+        setDob(dobDate)
 
         // Dropdown values (IDs preferred, fallback to label)
         setCivilStatus(
@@ -95,17 +132,42 @@ const VerifyPersonalInfo = () => {
         )
 
         // Address
-        const street = p.street ?? p.street_name ?? ''
-        const purok = p.purok ?? p.purok_sitio ?? p.purok_sitio_name ?? ''
-        const brgy = p.barangay ?? p.barangay_name ?? ''
-        const city = p.city ?? p.city_name ?? ''
-        const addrParts = [street, purok, brgy, city].filter(Boolean)
+        const _street = p.street ?? p.street_name ?? ''
+        const _purok = p.purok ?? p.purok_sitio ?? p.purok_sitio_name ?? ''
+        const _brgy  = p.barangay ?? p.barangay_name ?? ''
+        const _city  = p.city ?? p.city_name ?? ''
+        setStreet(_street)
+        setPurok(_purok)
+        setBarangay(_brgy)
+        setCity(_city)
+
+        const addrParts = [_street, _purok, _brgy, _city].filter(Boolean)
         setHAddress(addrParts.join(', '))
 
-        // Contact (force to string to avoid RN warning)
-        setMobNum(p.mobile_num != null ? String(p.mobile_num) : '');
-        // Email (force to string to avoid RN warning)
+        // Contact
+        setMobNum(p.mobile_num != null ? String(p.mobile_num) : '')
         setEmail(p.email != null ? String(p.email) : '')
+
+        // Seed wizard.personal with fetched values
+        setPersonal({
+          ...(personal ?? {}),
+          first_name: p.first_name ?? '',
+          middle_name: p.middle_name ?? null,
+          last_name: p.last_name ?? '',
+          suffix: p.suffix ?? null,
+          date_of_birth: dobDate ? dobDate.toISOString() : null,
+          email: p.email ?? null,
+          mobile_number: p.mobile_num != null ? String(p.mobile_num) : null,
+          sex_id: sexRaw.startsWith('f') ? 2 : 1,
+          civil_status_id: p.civil_status_id ?? undefined,
+          nationality_id: p.nationality_id ?? undefined,
+          religion_id: p.religion_id ?? undefined,
+          street: _street || null,
+          purok: _purok || null,
+          barangay: _brgy || null,
+          city: _city || null,
+          haddress: addrParts.join(', ') || null,
+        })
       } catch (e) {
         console.error('Failed to load resident profile:', e)
         Alert.alert('Error', 'Failed to load your profile. Please try again.')
@@ -116,14 +178,15 @@ const VerifyPersonalInfo = () => {
     return () => {
       mounted = false
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ---------- Validators ----------
   const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
   const validateMobileNumber = (n: string) => /^(09\d{9}|\+639\d{9})$/.test(n)
 
+  // Validate then show confirm modal
   const handleContinue = async () => {
-    // Trim
     const tF = fname.trim()
     const tM = mname.trim()
     const tL = lname.trim()
@@ -132,7 +195,6 @@ const VerifyPersonalInfo = () => {
     const tMOB = mobnum.trim()
     const tAddr = haddress.trim()
 
-    // Validate
     if (!tF || /[^a-zA-Z\s]/.test(tF)) {
       Alert.alert('Validation Error', 'Please enter a valid first name (letters only).')
       return
@@ -178,22 +240,30 @@ const VerifyPersonalInfo = () => {
       return
     }
 
+    setConfirmVisible(true)
+  }
+
+  const proceedToNext = () => {
+    // persist latest edits into wizard.personal
+    setPersonal({ ...(personal ?? {}), ...buildPersonalPayload() })
+
+    setConfirmVisible(false)
     setSaving(true)
     try {
       router.push({
-        pathname: '/socioeconomicinfo', // TODO: change if different
+        pathname: '/socioeconomicinfo',
         params: {
-          fname: tF,
-          mname: tM,
-          lname: tL,
-          suffix: tS,
+          fname: fname.trim(),
+          mname: mname.trim(),
+          lname: lname.trim(),
+          suffix: suffix.trim(),
           gender,
           dob: dob?.toISOString?.() ?? '',
           civilStatus,
           nationality,
           religion,
-          mobnum: tMOB,
-          email: tE,
+          mobnum: mobnum.trim(),
+          email: email.trim(),
         },
       })
     } finally {
@@ -201,13 +271,21 @@ const VerifyPersonalInfo = () => {
     }
   }
 
+  const goEditProfile = () => {
+    setConfirmVisible(false)
+    router.push({ pathname: '/profile', params: { returnTo: '/verifypersonalinfo' } })
+  }
+
   const handleHomeAddress = () => {
     router.push({
       pathname: '/mapaddress',
       params: {
         returnTo: '/verifypersonalinfo',
-        // pass current selections so they persist on return
-        fname, mname, lname, suffix, gender, dob: dob?.toISOString?.() ?? '', civilStatus, nationality, religion, mobnum, email,
+        // carry current values
+        fname, mname, lname, suffix, gender,
+        dob: dob?.toISOString?.() ?? '',
+        civilStatus, nationality, religion,
+        mobnum, email,
       },
     })
   }
@@ -223,7 +301,7 @@ const VerifyPersonalInfo = () => {
   return (
     <ThemedView safe={true}>
       <ThemedAppBar title="Verify Personal Info" showNotif={false} showProfile={false} />
-      <ThemedProgressBar step={1} totalStep={3} />
+      <ThemedProgressBar step={1} totalStep={4} />
 
       <ThemedKeyboardAwareScrollView>
         <View>
@@ -292,22 +370,22 @@ const VerifyPersonalInfo = () => {
           </Pressable>
           <Spacer height={10} />
 
-            <ThemedTextInput
+          <ThemedTextInput
             placeholder="Mobile Number"
             value={mobnum}
             onChangeText={setMobNum}
             keyboardType="phone-pad"
-            />
+          />
 
           <Spacer height={10} />
 
           <ThemedTextInput
             placeholder="Email Address"
             value={`Current Email: ${email}`}
-            onChangeText={setEmail} // will be ignored if editable={false}
+            onChangeText={setEmail}
             color="gray"
             keyboardType="email-address"
-            editable={false} // makes it read-only
+            editable={false}
           />
         </View>
 
@@ -318,6 +396,40 @@ const VerifyPersonalInfo = () => {
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>
+
+      {/* Confirmation Modal */}
+      <Modal
+        visible={confirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setConfirmVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <ThemedText title={true} style={{ textAlign: 'center' }}>
+              Confirm Personal Information
+            </ThemedText>
+            <Spacer height={8} />
+            <ThemedText style={{ textAlign: 'center' }}>
+              Is the personal information you’ve provided correct?{'\n'}
+              If not, please update it in your Profile page first.
+            </ThemedText>
+            <Spacer height={16} />
+            <View style={styles.modalActions}>
+              <View style={{ flex: 1, marginRight: 6 }}>
+                <ThemedButton onPress={goEditProfile}>
+                  <ThemedText btn={true}>No, Edit Profile</ThemedText>
+                </ThemedButton>
+              </View>
+              <View style={{ flex: 1, marginLeft: 6 }}>
+                <ThemedButton onPress={proceedToNext}>
+                  <ThemedText btn={true}>Yes, Continue</ThemedText>
+                </ThemedButton>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   )
 }
@@ -326,4 +438,23 @@ export default VerifyPersonalInfo
 
 const styles = StyleSheet.create({
   text: { textAlign: 'center' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    elevation: 4,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 })

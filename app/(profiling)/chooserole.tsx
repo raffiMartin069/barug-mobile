@@ -13,29 +13,33 @@ const ChooseRole = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/personalinfo')
+    if (role === 'resident') {
+      router.push('/choose-verification') // <-- new screen
+    } else {
+      router.push('/personalinfo')        // <-- adjust to your actual business flow
+    }
   }
   return (
     <ThemedView>
-        <ThemedCard>
-            <ThemedText subtitle={true}>Choose Role</ThemedText>
-            <Spacer height={5}/>
-            <ThemedText>
-                If you’re a business owner but also live in Barangay Sto. Niño, please select <ThemedText style={styles.bold}>Resident</ThemedText>.
-            </ThemedText>
-            <Spacer height={10}/>
-            <ThemedRadioButton
-                value={role}
-                onChange={setRole}
-                options={[
-                    {label: 'Resident', value: 'resident'},
-                    {label: 'Business Owner', value: 'businessowner'},
-                ]}
-            />
-            <ThemedButton onPress={handleSubmit}>
-                <ThemedText btn={true}>Continue</ThemedText>
-            </ThemedButton>
-        </ThemedCard>
+      <ThemedCard>
+        <ThemedText subtitle={true}>Choose Role</ThemedText>
+        <Spacer height={5} />
+        <ThemedText>
+          If you’re a business owner but also live in Barangay Sto. Niño, please select <ThemedText style={styles.bold}>Resident</ThemedText>.
+        </ThemedText>
+        <Spacer height={10} />
+        <ThemedRadioButton
+          value={role}
+          onChange={setRole}
+          options={[
+            { label: 'Resident', value: 'resident' },
+            { label: 'Business Owner', value: 'businessowner' },
+          ]}
+        />
+        <ThemedButton onPress={handleSubmit}>
+          <ThemedText btn={true}>Continue</ThemedText>
+        </ThemedButton>
+      </ThemedCard>
     </ThemedView>
   )
 }
@@ -43,7 +47,7 @@ const ChooseRole = () => {
 export default ChooseRole
 
 const styles = StyleSheet.create({
-    bold: {
+  bold: {
     fontWeight: 'bold',
   },
 })

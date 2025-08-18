@@ -12,6 +12,18 @@ export const registerResidentWithVerification = async (formData: FormData) => {
   }
 };
 
+export const registerResidentWithVerificationBHW = async (formData: FormData) => {
+  try {
+    const response = await apiClient.post('/v1/residents/register-bhw/', formData, {
+
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Registration API error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Registration failed' };
+  }
+};
+
 
 export const requestPersonVerification = async (formData: FormData) => {
   try {

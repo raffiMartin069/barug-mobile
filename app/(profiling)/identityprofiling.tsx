@@ -47,7 +47,13 @@ const IdentityProfiling = () => {
                             <View style={styles.circle}>
                                 <Text style={styles.circleText}>1</Text>
                             </View>
-                            <Text style={styles.stepText}>Personal Information</Text>
+                            <View style={{ flexShrink: 1 }}>
+                                <Text style={styles.stepText}>Personal Information</Text>
+                                {/* Added note */}
+                                <Text style={styles.lockNote}>
+                                    Make sure it's correct and update it in the profile page.
+                                </Text>
+                            </View>
                         </View>
 
                         {/* 2. Socioeconomic Information */}
@@ -136,7 +142,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
 
-    // Locked step styles
+    // Locked/Note styles
     circleDisabled: {
         backgroundColor: '#cfcfcf',
     },

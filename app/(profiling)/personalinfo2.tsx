@@ -1,18 +1,21 @@
-import { registerResidentWithVerificationBHW } from '@/api/profilingApi';
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedButton from '@/components/ThemedButton';
 import ThemedDatePicker from '@/components/ThemedDatePicker';
 import ThemedDropdown from '@/components/ThemedDropdown';
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
+import ThemedProgressBar from '@/components/ThemedProgressBar';
 import ThemedRadioButton from '@/components/ThemedRadioButton';
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
+
+import { useProfilingWizard } from '@/store/profilingWizard';
 import { useRegistrationStore } from '@/store/registrationStore';
+
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import {
   civilStatusOptions,
@@ -23,7 +26,7 @@ import {
 
 type AddrParams = { street?: string; puroksitio?: string; brgy?: string; city?: string };
 
-const PersonalInfo = () => {
+const PersonalInfo2 = () => {
   const router = useRouter();
   const { street: pStreet = '', puroksitio: pPurok = '', brgy: pBrgy = '', city: pCity = '' } =
     useLocalSearchParams<AddrParams>();
@@ -36,7 +39,10 @@ const PersonalInfo = () => {
     setField, setAddress,
   } = useRegistrationStore();
 
-  // --- WRAPPERS: make store setters behave like React state setters ---
+  const { personal, setPersonal } = useProfilingWizard();
+
+  const [useEmail, setUseEmail] = useState<boolean>(() => Boolean(email?.trim()));
+
   const setCivilStatusState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
     return (valOrFn) => {
       const prev = useRegistrationStore.getState().civilStatus;
@@ -44,7 +50,6 @@ const PersonalInfo = () => {
       setField('civilStatus', next);
     };
   }, [setField]);
-
   const setNationalityState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
     return (valOrFn) => {
       const prev = useRegistrationStore.getState().nationality;
@@ -52,7 +57,6 @@ const PersonalInfo = () => {
       setField('nationality', next);
     };
   }, [setField]);
-
   const setReligionState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
     return (valOrFn) => {
       const prev = useRegistrationStore.getState().religion;
@@ -60,140 +64,125 @@ const PersonalInfo = () => {
       setField('religion', next);
     };
   }, [setField]);
-  // --------------------------------------------------------------------
 
-  // If address params are present (coming back from address flow), persist them
   useEffect(() => {
     if (pStreet || pPurok || pBrgy || pCity) {
       setAddress({ street: pStreet, puroksitio: pPurok, brgy: pBrgy, city: pCity });
+      setPersonal({
+        ...(personal ?? {}),
+        street: pStreet || street,
+        purok: pPurok || puroksitio,
+        barangay: pBrgy || brgy,
+        city: pCity || city,
+      });
     }
-  }, [pStreet, pPurok, pBrgy, pCity, setAddress]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pStreet, pPurok, pBrgy, pCity]);
 
-  const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const validateEmail = (eml: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eml);
   const validateMobileNumber = (n: string) => /^(09\d{9}|\+639\d{9})$/.test(n);
 
-  const handleSubmit = async () => {
+  // keep only a-z0-9
+  const slugName = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  // Auto username: firstname+lastname@user. Falls back to 'user@user' if both empty (UI-only; submit requires names)
+  const derivedUsername = (() => {
+    const first = slugName(fname);
+    const last = slugName(lname);
+    const local = first || last ? [first, last].filter(Boolean).join('.') : 'user';
+    return `${local}@user`;
+  })();
+
+  const mapRegToWizard = () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedMobile = mobnum.trim();
+
+    return {
+      first_name: fname.trim(),
+      middle_name: mname.trim() || null,
+      last_name: lname.trim(),
+      suffix: suffix.trim() || null,
+      date_of_birth: dob,
+      email: useEmail ? (trimmedEmail || null) : null, // only when useEmail
+      mobile_number: trimmedMobile || null,            // optional
+      sex_id: gender === 'male' ? 1 : 2,
+      civil_status_id: parseInt(civilStatus || '0') || undefined,
+      nationality_id: parseInt(nationality || '0') || undefined,
+      religion_id: parseInt(religion || '0') || undefined,
+      street,
+      purok: puroksitio,
+      barangay: brgy,
+      city,
+      username: useEmail ? trimmedEmail : derivedUsername, // non-editable fallback
+      password: password.trim(),
+    };
+  };
+
+  const handleSubmit = () => {
     const trimmedFname = fname.trim();
     const trimmedMname = mname.trim();
     const trimmedLname = lname.trim();
     const trimmedSuffix = suffix.trim();
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const trimmedMobnum = mobnum.trim();
     const trimmedPassword = password.trim();
     const trimmedCPassword = cpassword.trim();
     const trimmedHAddress = haddress.trim();
 
-    // ---- validations ----
-    if (!trimmedFname || /[^a-zA-Z\s]/.test(trimmedFname)) {
-      Alert.alert('Validation Error', 'Please enter a valid first name (letters only).');
+    if (!trimmedFname || /[^a-zA-Z\s]/.test(trimmedFname)) { Alert.alert('Validation Error','Please enter a valid first name (letters only).'); return; }
+    if (!trimmedLname || /[^a-zA-Z\s]/.test(trimmedLname)) { Alert.alert('Validation Error','Please enter a valid last name (letters only).'); return; }
+    if (trimmedMname && /[^a-zA-Z\s]/.test(trimmedMname)) { Alert.alert('Validation Error','Middle name must contain letters only.'); return; }
+    if (trimmedSuffix && !/^(JR|SR|III|IV|V)$/i.test(trimmedSuffix)) { Alert.alert('Validation Error','Suffix must be JR, SR, III, IV, or V.'); return; }
+    if (!dob || new Date(dob) > new Date()) { Alert.alert('Validation Error','Please select a valid date of birth.'); return; }
+    if (!civilStatus) { Alert.alert('Validation Error','Please select your civil status.'); return; }
+    if (!nationality) { Alert.alert('Validation Error','Please select your nationality.'); return; }
+    if (!religion) { Alert.alert('Validation Error','Please select your religion.'); return; }
+    if (!trimmedHAddress) { Alert.alert('Validation Error','Please set your complete home address.'); return; }
+
+    // Optional mobile: validate only if provided
+    if (trimmedMobnum && !validateMobileNumber(trimmedMobnum)) {
+      Alert.alert('Validation Error','Mobile number must be 09XXXXXXXXX or +639XXXXXXXXX.');
       return;
     }
-    if (!trimmedLname || /[^a-zA-Z\s]/.test(trimmedLname)) {
-      Alert.alert('Validation Error', 'Please enter a valid last name (letters only).');
-      return;
+
+    // If using email, require valid email
+    if (useEmail) {
+      if (!trimmedEmail) { Alert.alert('Validation Error','Please enter your email address.'); return; }
+      if (!validateEmail(trimmedEmail)) { Alert.alert('Validation Error','Please enter a valid email address.'); return; }
     }
-    if (trimmedMname && /[^a-zA-Z\s]/.test(trimmedMname)) {
-      Alert.alert('Validation Error', 'Middle name must contain letters only.');
-      return;
-    }
-    if (trimmedSuffix && !/^(JR|SR|III|IV|V)$/i.test(trimmedSuffix)) {
-      Alert.alert('Validation Error', 'Suffix must be JR, SR, III, IV, or V.');
-      return;
-    }
-    if (!dob || new Date(dob) > new Date()) {
-      Alert.alert('Validation Error', 'Please select a valid date of birth.');
-      return;
-    }
-    if (!civilStatus) {
-      Alert.alert('Validation Error', 'Please select your civil status.');
-      return;
-    }
-    if (!nationality) {
-      Alert.alert('Validation Error', 'Please select your nationality.');
-      return;
-    }
-    if (!religion) {
-      Alert.alert('Validation Error', 'Please select your religion.');
-      return;
-    }
-    if (!trimmedHAddress) {
-      Alert.alert('Validation Error', 'Please set your complete home address.');
-      return;
-    }
-    if (!trimmedMobnum || !validateMobileNumber(trimmedMobnum)) {
-      Alert.alert('Validation Error', 'Mobile number must be 09XXXXXXXXX or +639XXXXXXXXX.');
-      return;
-    }
-    if (!trimmedEmail || !validateEmail(trimmedEmail)) {
-      Alert.alert('Validation Error', 'Please enter a valid email address.');
-      return;
-    }
+
     if (!trimmedPassword || trimmedPassword.length < 8 || /\s/.test(trimmedPassword)) {
-      Alert.alert('Validation Error', 'Password must be at least 8 characters long and contain no spaces.');
+      Alert.alert('Validation Error','Password must be at least 8 characters and contain no spaces.');
       return;
     }
     if (trimmedPassword !== trimmedCPassword) {
-      Alert.alert('Validation Error', 'Passwords do not match.');
+      Alert.alert('Validation Error','Passwords do not match.');
       return;
     }
 
-    // ---- payload -> FormData (backend uses MultiPartParser) ----
-    const fd = new FormData();
-    const add = (k: string, v: any) => {
-      if (v === undefined || v === null || v === '') return;
-      fd.append(k, typeof v === 'string' ? v : String(v));
-    };
-
-    add('first_name', trimmedFname);
-    add('middle_name', trimmedMname || null);
-    add('last_name', trimmedLname);
-    add('suffix', trimmedSuffix || null);
-    add('date_of_birth', typeof dob === 'string' ? dob : new Date(dob).toISOString().slice(0, 10));
-    add('email', trimmedEmail);
-    add('mobile_number', trimmedMobnum);
-    add('sex_id', gender === 'male' ? 1 : 2);
-    add('civil_status_id', parseInt(civilStatus));
-    add('nationality_id', parseInt(nationality));
-    add('religion_id', parseInt(religion));
-    add('city', city);
-    add('barangay', brgy);
-    add('purok', puroksitio);
-    add('street', street);
-    // username = email for online flow
-    add('username', trimmedEmail);
-    add('password', trimmedPassword);
-
-    try {
-      const response = await registerResidentWithVerificationBHW(fd); // multipart
-      console.log('✅ Registered:', response);
-      Alert.alert('Success', 'Resident registered successfully.');
-      router.push({ pathname: '/verifyemail', params: { email: trimmedEmail } });
-    } catch (error: any) {
-      console.error('❌ Registration API error:', error);
-      let code = 'UNKNOWN';
-      let reason = 'Something went wrong during registration.';
-      if (typeof error?.error === 'string') {
-        try {
-          const fixedErrorString = error.error.replace(/'/g, '"').replace(/\bNone\b/g, 'null');
-          const backendError = JSON.parse(fixedErrorString);
-          code = backendError?.code || code;
-          reason = backendError?.message || reason;
-        } catch {}
-      } else if (typeof error === 'object') {
-        code = error?.code || code;
-        reason = error?.message || reason;
-      }
-      Alert.alert('Registration Failed', `[${code}] ${reason}`);
-    }
+    setPersonal({ ...(personal ?? {}), ...mapRegToWizard() });
+    router.push('/bhw_socioeconomic');
   };
 
   const handleHomeAddress = () => {
-    router.push({ pathname: '/mapaddress', params: { returnTo: '/residentaddress' } });
+    router.push({ pathname: '/mapaddress2', params: { returnTo: '/residentaddress2' } });
   };
+
+  const Checkbox = ({ checked, onPress }: { checked: boolean; onPress: () => void }) => (
+    <TouchableOpacity onPress={onPress} style={styles.checkboxRow} activeOpacity={0.7}>
+      <View style={[styles.checkboxBox, checked && styles.checkboxChecked]}>
+        {checked ? <Text style={styles.checkboxTick}>✓</Text> : null}
+      </View>
+      <Text style={styles.checkboxLabel}>I have an email address</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <ThemedView safe>
       <ThemedAppBar title="Personal Information" showNotif={false} showProfile={false} />
+      <ThemedProgressBar step={1} totalStep={3} />
+
+
       <ThemedKeyboardAwareScrollView>
         <View>
           <ThemedTextInput placeholder="First Name" value={fname} onChangeText={(v) => setField('fname', v)} />
@@ -237,21 +226,33 @@ const PersonalInfo = () => {
             />
           </Pressable>
 
+          <Spacer height={12} />
+          <Checkbox checked={useEmail} onPress={() => setUseEmail((p) => !p)} />
+          <Spacer height={8} />
+
+          {useEmail ? (
+            <ThemedTextInput
+              placeholder="Email Address"
+              value={email}
+              onChangeText={(v) => setField('email', v)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          ) : (
+            <ThemedTextInput
+              placeholder="Username (auto-generated)"
+              value={derivedUsername}
+              editable={false}
+            />
+          )}
+
           <Spacer height={10} />
           <ThemedTextInput
-            placeholder="Mobile Number"
+            placeholder="Mobile Number (optional)"
             value={mobnum}
             onChangeText={(v) => setField('mobnum', v)}
             keyboardType="numeric"
-          />
-          <Spacer height={10} />
-          <ThemedTextInput
-            placeholder="Email Address"
-            value={email}
-            onChangeText={(v) => setField('email', v)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
           />
           <Spacer height={10} />
           <ThemedTextInput placeholder="Password" value={password} onChangeText={(v) => setField('password', v)} secureTextEntry />
@@ -270,10 +271,19 @@ const PersonalInfo = () => {
   );
 };
 
-export default PersonalInfo;
+export default PersonalInfo2;
 
 const styles = StyleSheet.create({
   image: { width: '100%', height: 70, alignSelf: 'center' },
   text: { textAlign: 'center' },
   link: { textAlign: 'right' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center' },
+  checkboxBox: {
+    width: 20, height: 20, borderRadius: 4,
+    borderWidth: 1.5, borderColor: '#666',
+    justifyContent: 'center', alignItems: 'center', marginRight: 8,
+  },
+  checkboxChecked: { backgroundColor: '#4a0000', borderColor: '#4a0000' },
+  checkboxTick: { color: '#fff', fontWeight: 'bold', fontSize: 14, lineHeight: 14 },
+  checkboxLabel: { fontSize: 14, color: '#333' },
 });

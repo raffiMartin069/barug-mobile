@@ -80,13 +80,13 @@ const SocioeconomicInfo = () => {
     })
 
     // 👉 Move to the next step
-    router.push('/validid')
+    router.push('/bhw_reviewinputs')
   }
 
   return (
     <ThemedView safe>
       <ThemedAppBar title='Socioeconomic Information' showNotif={false} showProfile={false} />
-      <ThemedProgressBar step={2} totalStep={4} />
+      <ThemedProgressBar step={2} totalStep={3} />
 
       <ThemedKeyboardAwareScrollView>
         <View>

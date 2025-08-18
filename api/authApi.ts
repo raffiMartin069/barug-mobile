@@ -22,6 +22,25 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 
+export const loginBhw = async (username: string, password: string) => {
+  try {
+    const res = await apiClient.post('/auth/bhw-field-login/', {
+      username,
+      password,
+    });
+    const { staff_id } = res.data || {};
+    if (!staff_id) throw { message: 'Invalid credentials' };
+
+    // optional: keep for later use
+    await AsyncStorage.setItem('bhw_staff_id', String(staff_id));
+
+    return staff_id;
+  } catch (error: any) {
+    console.error('BHW login error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'BHW login failed' };
+  }
+};
+
 // export const loginUser = async (email: string, password: string) => {
 //   try {
 //     const response = await apiClient.post('/auth/login/', {
