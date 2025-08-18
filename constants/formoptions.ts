@@ -93,7 +93,7 @@ export const religionOptions = [
 ];
 
 export const religionMap = {
-  1: 'Roman Catholic',
+  13: 'Roman Catholic',
   2: 'Iglesia Ni Cristo',
   3: 'Born Again',
   4: 'Islam',

@@ -1,6 +1,6 @@
 // api/authApi.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import apiClient, { clearTokens, setTokens } from './apiClient';
+import apiClient, { setTokens, clearTokens } from './apiClient';
 
 type User = { user_id: number; username: string; role: string };
 type Staff = { staff_id: number; username: string; role: 'BHW' };
@@ -33,7 +33,7 @@ export const loginUser = async (email: string, password: string) => {
 
     await AsyncStorage.setItem('current_user', JSON.stringify(user));
 
-    return { token, refresh, user: user as User };
+    return { token, refresh, user as User };
   } catch (error: any) {
     console.error('Login error:', error.response?.data || error.message);
     throw error.response?.data || { message: 'Login failed' };
