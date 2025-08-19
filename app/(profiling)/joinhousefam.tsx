@@ -17,6 +17,7 @@ import ThemedButton from "@/components/ThemedButton";
 import ThemedKeyboardAwareScrollView from "@/components/ThemedKeyboardAwareScrollView";
 import { Colors } from "react-native/Libraries/NewAppScreen";
 import { APICaller } from "@/src/infra/api/server_call";
+import { AuthTokenUtil } from "@/utils/authTokenUtil";
 
 type Option = { label: string; value: string | number };
 
@@ -70,9 +71,6 @@ const JoinHouseFam = () => {
     const [searchText, setSearchText] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // NOTE: don't hardcode tokens in production
-    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyODcsInVzZXJuYW1lIjoiam9lbEBnbWFpbC5jb20iLCJyb2xlIjoiUEVSU09OIiwiZXhwIjoxNzU1NjI4NDIxfQ.UF_fKOUvTquBJ_J6hOGKK-FdJUonsZMUQuVzwDxEL-o";
-
     // Guards to ignore stale async responses (race-safe)
     const searchSeqRef = useRef(0);
     const familySeqRef = useRef(0);
@@ -106,6 +104,7 @@ const JoinHouseFam = () => {
             (async () => {
                 setLoading(true);
                 try {
+                    const token = await AuthTokenUtil.getToken();
                     const result = await APICaller.get(
                         "/api/v1/residents/households/search/",
                         { q: trimmed },
@@ -144,6 +143,7 @@ const JoinHouseFam = () => {
 
     const familyData = async (householdId: string | number) => {
         const mySeq = ++familySeqRef.current;
+        const token = await AuthTokenUtil.getToken();
         try {
             const result = await APICaller.get(
                 "/api/v1/residents/fetch/families/",
@@ -194,6 +194,7 @@ const JoinHouseFam = () => {
                 household_head_relationship: householdRelationship,
                 family_head_relationship: familyRelationship,
             };
+            const token = await AuthTokenUtil.getToken();
 
             await APICaller.post("/api/v1/residents/family-membership/", payload, token);
             Alert.alert("Success", "Membership successfully submitted!");
