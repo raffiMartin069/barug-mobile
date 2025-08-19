@@ -70,6 +70,7 @@ const JoinHouseFam = () => {
     const [state, setState] = useState(initialState);
     const [searchText, setSearchText] = useState("");
     const [loading, setLoading] = useState(false);
+    const [yearsOfResidency, setYearsOfResidency] = useState<string>("");
 
     // Guards to ignore stale async responses (race-safe)
     const searchSeqRef = useRef(0);
@@ -193,6 +194,7 @@ const JoinHouseFam = () => {
                 family_id: selectedFamily.value,
                 household_head_relationship: householdRelationship,
                 family_head_relationship: familyRelationship,
+                years_of_residency: Number(yearsOfResidency),
             };
             const token = await AuthTokenUtil.getToken();
 
@@ -309,6 +311,26 @@ const JoinHouseFam = () => {
                             <Picker.Item key={key} label={label} value={Number(key)} />
                         ))}
                     </Picker>
+
+                    <Text style={{ marginTop: 12, fontWeight: "bold", color: theme.text }}>
+                        Years of Residency
+                    </Text>
+                    <TextInput
+                        placeholder="Enter years of residency"
+                        value={yearsOfResidency}
+                        onChangeText={setYearsOfResidency}
+                        keyboardType="numeric"
+                        style={{
+                            color: theme.text,
+                            flex: 1,
+                            paddingVertical: 12,
+                            backgroundColor: "white",
+                            borderColor: "black",
+                            borderBottomWidth: 2,
+                            paddingHorizontal: 12,
+                            marginTop: 8,
+                        }}
+                    />
 
                     <ThemedButton
                         style={{ marginTop: 12, opacity: state.selectedHousehold && state.selectedFamily && state.householdRelationship && state.familyRelationship ? 1 : 0.7 }}
