@@ -14,7 +14,8 @@ export class APICall {
             });
             return response.data;
         } catch (error) {
-            throw error;
+            console.error("Base API Call Error:", error.response.data);
+            throw error.response
         }
     }
 
@@ -29,8 +30,8 @@ export class APICall {
             })
             return response.data
         } catch(error) {
-            throw error;
+            console.error("Base API Call Error:", error.response.data);
+            throw error.response
         }
     }
-
 }
