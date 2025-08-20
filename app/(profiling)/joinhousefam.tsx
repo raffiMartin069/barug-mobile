@@ -11,7 +11,7 @@ import ThemedView from '@/components/ThemedView'
 import { useDropdownValueStore } from '@/store/dropdownValueStore'
 import { useTextSearch } from '@/store/textStore'
 import React, { use, useEffect, useState } from 'react'
-import { StyleSheet, View, Text } from 'react-native'
+import { StyleSheet, View, Text, Alert } from 'react-native'
 
 type Household = {
   id: string
@@ -24,14 +24,12 @@ type Family = {
 }
 
 type FamilyMembership = {
-  householdId: string
-  familyId: string
-  householdHeadRelationship: string
-  familyHeadRelationship: string
-  yearsOfResidency: number
+  household_id: string
+  family_id: string
+  household_head_relationship: string
+  family_head_relationship: string
+  years_of_residency: number
 }
-
-
 
 
 const JoinHouseFam = () => {
@@ -64,22 +62,28 @@ const JoinHouseFam = () => {
     { label: "Other Relative", value: "19" },
     { label: "Non-Relative", value: "20" },
   ]
-
-
   const [res, setRes] = useState()
   const [resYrs, setResYrs] = useState()
   const householdSearchText = useTextSearch((state) => state.searchTexts["households"] || "")
   const familySearchText = useTextSearch((state) => state.searchTexts["families"] || "")
-  const household_id = useDropdownValueStore((state) => state.value)
+  const household_id = useDropdownValueStore((state) => state.householdId)
   const [households, setHouseholds] = useState<Household[]>([])
   const [families, setFamilies] = useState<Family[]>([])
   const [householRelation, setHouseholdRelation] = useState<string>("")
   const [familyRelation, setFamilyRelation] = useState<string>("")
   const [joinFamily, setJoinFamily] = useState<FamilyMembership>({})
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyODcsInVzZXJuYW1lIjoiam9lbEBnbWFpbC5jb20iLCJyb2xlIjoiUEVSU09OIiwiZXhwIjoxNzU1Njk4MjgzfQ.8XGGafSCBJGIi2OgK9jbs0KuY15RafXgemFWHnutHPo"
+  const familyId = useDropdownValueStore((state) => state.familyId)
+  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyODcsInVzZXJuYW1lIjoiam9lbEBnbWFpbC5jb20iLCJyb2xlIjoiUEVSU09OIiwiZXhwIjoxNzU1NzAxOTI5fQ.NAQF1dHNBD_XWEnvcRTN9swdGAKfQ28LjuLuw7nrpfw"
 
-  const joinFamilyHandler = (data: FamilyMembership) => {
-    console.info('Joining family: ', data)
+  const joinFamilyHandler = async (data: FamilyMembership) => {
+    try {
+      const result = await APICall.post('/api/v1/residents/family-membership/', data, token);
+      console.info('Request for joining family is successful! ', JSON.stringify(result));
+    } catch (error) {
+      console.warn("Error joining family:", error)
+      const message = error?.response?.data?.error || "Something went wrong"
+      Alert.alert(message)
+    }
   }
 
   useEffect(() => {
@@ -144,6 +148,7 @@ const JoinHouseFam = () => {
             dropdwonplaceholder={'Select your respective household'}
             data={households}
             searchKey="households"
+            dropdownType="household"
           />
 
           <Spacer />
@@ -164,6 +169,7 @@ const JoinHouseFam = () => {
             data={families}
             order={2}
             searchKey="families"
+            dropdownType="family"
           />
 
           <Spacer />
@@ -190,11 +196,11 @@ const JoinHouseFam = () => {
           <ThemedButton
             onPress={() => {
               const familyMembership: FamilyMembership = {
-                householdId: household_id,
-                familyId: families.find((family) => family.value === familyRelation)?.value || "",
-                householdHeadRelationship: householRelation,
-                familyHeadRelationship: familyRelation,
-                yearsOfResidency: parseInt(resYrs || "0", 10),
+                household_id: household_id,
+                family_id: familyId,
+                household_head_relationship: householRelation,
+                family_head_relationship: familyRelation,
+                years_of_residency: parseInt(resYrs || "0", 10),
               }
               console.log("Joining Family Membership:", familyMembership)
               joinFamilyHandler(familyMembership)

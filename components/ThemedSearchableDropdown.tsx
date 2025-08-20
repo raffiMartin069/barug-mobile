@@ -6,7 +6,13 @@ import DropDownPicker from 'react-native-dropdown-picker'
 import Spacer from './Spacer'
 import { useDropdownValueStore } from '@/store/dropdownValueStore'
 
-const ThemedSearchableDropdown = ({ style = null, searchplaceholder, dropdwonplaceholder, order = 0, data, searchKey, }) => {
+const ThemedSearchableDropdown = ({ 
+  style = null, 
+  searchplaceholder, 
+  dropdwonplaceholder, 
+  order = 0, 
+  data, searchKey, 
+  dropdownType }) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
 
@@ -21,8 +27,11 @@ const ThemedSearchableDropdown = ({ style = null, searchplaceholder, dropdwonpla
   const searchText = useTextSearch((state) => state.searchTexts[searchKey] || "")
   const setSearchText = useTextSearch((state) => state.setSearchText)
 
-  const dropdownValue = useDropdownValueStore((state) => state.value)
-  const setDropdownValue = useDropdownValueStore((state) => state.setValue)
+  // const dropdownValue = useDropdownValueStore((state) => state.value)
+  // const setDropdownValue = useDropdownValueStore((state) => state.setValue)
+
+  const setHouseholdId = useDropdownValueStore((state) => state.setHouseholdId)
+  const setFamilyId = useDropdownValueStore((state) => state.setFamilyId)
 
   useEffect(() => {
     const trimmed = searchText.trim()
@@ -71,7 +80,11 @@ const ThemedSearchableDropdown = ({ style = null, searchplaceholder, dropdwonpla
         setItems={() => {}}
         onSelectItem={(item) => {
           setValue(item.value)
-          setDropdownValue(item.value)
+          if (dropdownType === "household") {
+            setHouseholdId(item.value)
+          } else if (dropdownType === "family") {
+            setFamilyId(item.value)
+          }
         }}
         listMode="SCROLLVIEW"
         zIndex={computedZIndex}
