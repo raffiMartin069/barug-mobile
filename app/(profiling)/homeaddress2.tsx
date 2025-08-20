@@ -30,7 +30,7 @@ const HomeAddress2 = () => {
 
   return (
     <ThemedView safe={true}>
-      <ThemedAppBar title="Home Address 2" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Home Address" showNotif={false} showProfile={false} />
       <ThemedKeyboardAwareScrollView>
         <View>
           <ThemedTextInput placeholder="House Number" value={hnum} onChangeText={setHNum} />

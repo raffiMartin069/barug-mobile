@@ -10,3 +10,13 @@ export const fetchResidentProfile = async () => {
   }
 };
 
+
+export const updateUnverifiedBasicInfo = async (formData: FormData) => {
+  try {
+    const response = await apiClient.post('/v1/residents/unverified/update/', formData);
+    return response.data; // response with message and result
+  } catch (error: any) {
+    console.error('Unverified update error:', error.response?.data || error.message);
+    throw error.response?.data || { message: 'Failed to update unverified info' };
+  }
+};

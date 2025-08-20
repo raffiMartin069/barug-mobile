@@ -10,7 +10,7 @@ const MapAddress2 = () => {
   const { returnTo = '/homeaddress2' } = useLocalSearchParams<Params>();
   return (
     <ThemedView safe={true}>
-      <ThemedAppBar title="Map 2" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Map" showNotif={false} showProfile={false} />
       <ThemedMapAddress route={returnTo} />
     </ThemedView>
   );

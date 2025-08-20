@@ -129,6 +129,7 @@ const ResidentHome = () => {
           </TouchableOpacity>
         </ThemedCard>
       )
+
     }
 
     if (isApproved) {
@@ -136,7 +137,7 @@ const ResidentHome = () => {
         <ThemedCard>
           <TouchableOpacity
             style={{ alignItems: 'center', paddingVertical: 15 }}
-            onPress={() => router.push('/joinhousehold')}
+            onPress={() => router.push('/joinhousefam')}
           >
             <ThemedIcon name="home" iconColor="#1e88e5" bgColor="#bbdefb" />
             <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
@@ -149,6 +150,7 @@ const ResidentHome = () => {
         </ThemedCard>
       )
     }
+
 
     return null
   })()
@@ -214,9 +216,23 @@ const ResidentHome = () => {
 
           <Spacer height={10} />
 
+          <ThemedCard>
+            <TouchableOpacity
+              style={{ alignItems: 'center', paddingVertical: 15 }}
+              onPress={() => router.push('/updateprofile')}  // Navigate to update profile page
+            >
+              <ThemedIcon name="pencil" iconColor="#2e7d32" bgColor="#c8e6c9" />
+              <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>Update Profile</ThemedText>
+              <ThemedText style={{ fontSize: 12, color: '#555' }}>
+                Modify your profile details and preferences.
+              </ThemedText>
+            </TouchableOpacity>
+          </ThemedCard>
+          <Spacer height={10} />
+
           {/* ===== Test: Verification & Profiling ===== */}
           <ThemedCard>
-            <ThemedText style={styles.text} subtitle={true}>Test: Verification & Profiling</ThemedText>
+            <ThemedText style={styles.text} subtitle={true}>Test: Verification & Profiling 2</ThemedText>
 
             {/* Row: Verify Email */}
             <View style={styles.testRow}>

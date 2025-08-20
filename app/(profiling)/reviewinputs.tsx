@@ -115,19 +115,21 @@ const ReviewInputs = () => {
 
   const openViewer = (uri?: string | null) => { if (uri) { setViewerSrc(uri); setViewerOpen(true); } };
 
-  const ImageRow = ({ label, uri }: { label: string; uri?: string }) => (
-    <View style={styles.block}>
-      <ThemedText subtitle>{label}</ThemedText>
-      {uri ? (
-        <TouchableOpacity activeOpacity={0.85} onPress={() => openViewer(uri)}>
-          <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
-          <ThemedText style={styles.tapHint}>Tap to view</ThemedText>
-        </TouchableOpacity>
-      ) : (
-        <ThemedText subtitle>No Image Uploaded</ThemedText>
-      )}
-    </View>
-  );
+const ImageRow = ({ label, uri }) => (
+  <View style={styles.block}>
+    <Row label={label} />
+    <Spacer height={10} />
+    {uri ? (
+      <TouchableOpacity activeOpacity={0.85} onPress={() => openViewer(uri)}>
+        <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
+        <ThemedText style={styles.tapHint}>Tap to view</ThemedText>
+      </TouchableOpacity>
+    ) : (
+      <ThemedText subtitle>No Image Uploaded</ThemedText>
+    )}
+  </View>
+);
+
 
   // ---- ONLY the keys your API expects (+ names for OCR) ----
   const buildVerificationFormData = async () => {
@@ -232,7 +234,6 @@ const ReviewInputs = () => {
           <Row label="ID Type" value={validId?.id_type_id ? idTypeMap[String(validId.id_type_id)] : 'Not Provided'} />
           {validId?.id_number ? <Row label="ID Number" value={String(validId.id_number)} /> : null}
 
-          <Spacer height={10} />
           <ImageRow label="Front of the ID" uri={frontUri} />
           <Spacer height={10} />
           <ImageRow label="Back of the ID" uri={backUri} />
@@ -265,9 +266,13 @@ const ReviewInputs = () => {
       <Modal visible={confirmOpen} transparent animationType="fade" onRequestClose={() => setConfirmOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <ThemedText style={{ fontWeight: '700' }}>Please confirm</ThemedText>
-            <Spacer height={6} />
-            <ThemedText>Do you confirm that all information is true and correct?</ThemedText>
+            <ThemedText style={{ fontSize: 20, fontWeight: '700', textAlign: 'center'}}>Submission Confirmation</ThemedText>
+            <Spacer height={10} />
+      <ThemedText style={{ fontSize: 15, textAlign: 'center', lineHeight: 20 }}>
+        Please review your details before proceeding.  
+        By confirming, you acknowledge that all information provided is accurate 
+        and truthful to the best of your knowledge.
+      </ThemedText>
             <Spacer height={16} />
             <ThemedButton onPress={onConfirmAndSubmit} disabled={submitting}>
               <ThemedText btn>{submitting ? 'Submitting…' : 'Confirm & Submit'}</ThemedText>
