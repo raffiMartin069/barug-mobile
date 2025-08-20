@@ -8,69 +8,27 @@ import ThemedSearchableDropdown from '@/components/ThemedSearchableDropdown'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { RELATIONSHIPS } from '@/constants/relationships'
+import { useFamilies } from '@/hooks/useFamilies'
+import { useHouseholds } from '@/hooks/useHouseholds'
 import { useDropdownValueStore } from '@/store/dropdownValueStore'
 import { useTextSearch } from '@/store/textStore'
 import { FamilyMembership } from '@/types/family_membership'
 import { AuthTokenUtil } from '@/utilities/authTokenUtility'
 import { MembershipException } from '@/utilities/exceptions/membership_exceptions'
 import { FamilyMembershipValidator } from '@/utilities/membership_validators'
-import React, { use, useEffect, useState } from 'react'
-import { StyleSheet, View, Text, Alert } from 'react-native'
-
-type Household = {
-  id: string
-  head: string
-}
-
-type Family = {
-  id: string
-  head: string
-}
-
-
+import React, { useState } from 'react'
+import { StyleSheet, View, Alert } from 'react-native'
 
 const JoinHouseFam = () => {
-  const residents = [
-    { label: "Juan Dela Cruz", value: "1234-1" },
-    { label: "Maria Santos", value: "5678-1" },
-    { label: "Juan Dela Cruz", value: "1234-2" },
-    { label: "Maria Santos", value: "5678-2" },
-  ]
-
-  const relationships = [
-    { label: "Household Head", value: "1" },
-    { label: "Family Head", value: "2" },
-    { label: "Spouse", value: "3" },
-    { label: "Son", value: "4" },
-    { label: "Daughter", value: "5" },
-    { label: "Parent", value: "6" },
-    { label: "Sibling", value: "7" },
-    { label: "Grandchild", value: "8" },
-    { label: "Grandparent", value: "9" },
-    { label: "Nephew", value: "10" },
-    { label: "Niece", value: "11" },
-    { label: "Uncle", value: "12" },
-    { label: "Aunt", value: "13" },
-    { label: "Cousin", value: "14" },
-    { label: "In-Law", value: "15" },
-    { label: "Boarder", value: "16" },
-    { label: "Renter", value: "17" },
-    { label: "Domestic Helper", value: "18" },
-    { label: "Other Relative", value: "19" },
-    { label: "Non-Relative", value: "20" },
-  ]
-  const [res, setRes] = useState()
   const [resYrs, setResYrs] = useState()
-  const householdSearchText = useTextSearch((state) => state.searchTexts["households"] || "")
-  const familySearchText = useTextSearch((state) => state.searchTexts["families"] || "")
-  const household_id = useDropdownValueStore((state) => state.householdId)
-  const [households, setHouseholds] = useState<Household[]>([])
-  const [families, setFamilies] = useState<Family[]>([])
+  const householdSearchText = useTextSearch((state: { searchTexts: Record<string, string> }) => state.searchTexts["households"] || "")
+  const household_id = useDropdownValueStore((state: { householdId: string }) => state.householdId)
   const [householRelation, setHouseholdRelation] = useState<string>("")
   const [familyRelation, setFamilyRelation] = useState<string>("")
-  const [joinFamily, setJoinFamily] = useState<FamilyMembership>({})
-  const familyId = useDropdownValueStore((state) => state.familyId)
-  
+  const familyId = useDropdownValueStore((state: { familyId: string }) => state.familyId)
+  const households = useHouseholds(householdSearchText) || []
+  const families = useFamilies(household_id) || []
 
   const joinFamilyHandler = async (data: FamilyMembership) => {
     try {
@@ -81,76 +39,15 @@ const JoinHouseFam = () => {
       console.info('Request for joining family is successful! ', JSON.stringify(result));
     } catch (error) {
       if (error instanceof MembershipException) {
-        Alert.alert(error.message)
+        Alert.alert("Something went wrong.", error.message)
         return;
       }
       console.warn("Error joining family:", error)
       const message = error?.response?.data?.error || error
-      Alert.alert(message)
+      Alert.alert("Something went wrong.", message)
     }
   }
-
-  useEffect(() => {
-    const fetchFamily = async (val: string) => {
-      try {
-        const token = await AuthTokenUtil.getToken();
-        const result = await APICall.get('/api/v1/residents/fetch/families/', { q: val }, token)
-        console.info('Request for fetching family data is successful!')
-        return result
-      } catch (error) {
-        console.warn("Error fetching family data");
-        const message = error?.response?.data?.error || "Something went wrong"
-        console.error(message)
-        Alert.alert("Something went wrong, please contact Barangay Support for more information.")
-      }
-    }
-    (async () => {
-      if (!household_id) return;
-      const res = await fetchFamily(household_id)
-      const mapped = res.message.family_data.map((family) => ({
-        label: `${family.person.first_name} ${family.person.middle_name ? family.person.middle_name : ''} ${family.person.last_name}`,
-        value: family.family_id
-      }))
-      setFamilies(mapped)
-    })();
-  }, [household_id])
-
-  useEffect(() => {
-    const trimmed = householdSearchText.trim();
-    console.log("Household Search Text:", trimmed);
-    if (!trimmed) {
-      setHouseholds([]);
-      setFamilies([]);
-      useDropdownValueStore.getState().setHouseholdId("");
-      useDropdownValueStore.getState().setFamilyId("");
-      return
-    };
-    const fetchHousehold = async (text: string) => {
-      try {
-        const token = await AuthTokenUtil.getToken();
-        const result = await APICall.get('/api/v1/residents/households/search/', { q: text }, token)
-        console.info('Request for fetching household data is successful!')
-        return result
-      } catch (error) {
-        console.warn("Error fetching household data");
-        const message = error?.response?.data?.error || "Something went wrong"
-        console.error(message)
-        Alert.alert("Something went wrong, please contact Barangay Support for more information.")
-      }
-    }
-    (async () => {
-      const result = await fetchHousehold(trimmed)
-      if (!result) return
-      const mapped = result.message.map((household) => ({
-        label: household.household_head_name,
-        value: household.household_id
-      }))
-      setHouseholds(mapped)
-    })()
-
-  }, [householdSearchText])
-
-
+  
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
@@ -172,7 +69,7 @@ const JoinHouseFam = () => {
 
           <ThemedDropdown
             placeholder={'Select Household Head Relationship'}
-            items={relationships}
+            items={RELATIONSHIPS}
             value={householRelation}
             order={1}
             setValue={(val: string) => setHouseholdRelation(val)}
@@ -193,7 +90,7 @@ const JoinHouseFam = () => {
 
           <ThemedDropdown
             placeholder={'Select Family Head Relationship'}
-            items={relationships}
+            items={RELATIONSHIPS}
             value={familyRelation}
             setValue={(val: string) => { setFamilyRelation(val) }}
             order={3}
@@ -232,5 +129,3 @@ const JoinHouseFam = () => {
 }
 
 export default JoinHouseFam
-
-const styles = StyleSheet.create({})
