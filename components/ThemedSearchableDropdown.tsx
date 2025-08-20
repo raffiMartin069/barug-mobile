@@ -20,18 +20,12 @@ const ThemedSearchableDropdown = ({
   const computedZIndex = baseZIndex - order
 
   const [open, setOpen] = useState(false)
-  // const [searchText, setSearchText] = useState('')
   const [value, setValue] = useState()
   const [filteredItems, setFilteredItems] = useState([])
-
-  const searchText = useTextSearch((state) => state.searchTexts[searchKey] || "")
-  const setSearchText = useTextSearch((state) => state.setSearchText)
-
-  // const dropdownValue = useDropdownValueStore((state) => state.value)
-  // const setDropdownValue = useDropdownValueStore((state) => state.setValue)
-
-  const setHouseholdId = useDropdownValueStore((state) => state.setHouseholdId)
-  const setFamilyId = useDropdownValueStore((state) => state.setFamilyId)
+  const searchText = useTextSearch((state: { searchTexts: Record<string, string> }) => state.searchTexts[searchKey] || "")
+  const setSearchText = useTextSearch((state: { setSearchText: (key: string, value: string) => void }) => state.setSearchText)
+  const setHouseholdId = useDropdownValueStore((state: { setHouseholdId: (id: any) => void }) => state.setHouseholdId)
+  const setFamilyId = useDropdownValueStore((state: { setFamilyId: (id: any) => void }) => state.setFamilyId)
 
   useEffect(() => {
     const trimmed = searchText.trim()
