@@ -53,8 +53,8 @@ const BhwLayout = () => {
         />
 
         <Tabs.Screen
-          name='(tabs)/requests'
-          options={{title: 'Requests', tabBarIcon: ({focused}) => (
+          name='(tabs)/householdvisit'
+          options={{title: 'Household Visit', tabBarIcon: ({focused}) => (
             <Ionicons
               name={focused ? 'newspaper' : 'newspaper-outline'}
               size={20}

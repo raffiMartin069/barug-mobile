@@ -21,7 +21,6 @@ const JoinHouseFam = () => {
     { "label": "Maria Santos", "value": "5678" },
   ]
 
-  const [res, setRes] = useState()
   const [resYrs, setResYrs] = useState()
   return (
     <ThemedView safe={true}>
