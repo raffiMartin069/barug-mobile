@@ -10,6 +10,10 @@ import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useDropdownValueStore } from '@/store/dropdownValueStore'
 import { useTextSearch } from '@/store/textStore'
+import { FamilyMembership } from '@/types/family_membership'
+import { AuthTokenUtil } from '@/utilities/authTokenUtility'
+import { MembershipException } from '@/utilities/exceptions/membership_exceptions'
+import { FamilyMembershipValidator } from '@/utilities/membership_validators'
 import React, { use, useEffect, useState } from 'react'
 import { StyleSheet, View, Text, Alert } from 'react-native'
 
@@ -23,13 +27,6 @@ type Family = {
   head: string
 }
 
-type FamilyMembership = {
-  household_id: string
-  family_id: string
-  household_head_relationship: string
-  family_head_relationship: string
-  years_of_residency: number
-}
 
 
 const JoinHouseFam = () => {
@@ -73,52 +70,72 @@ const JoinHouseFam = () => {
   const [familyRelation, setFamilyRelation] = useState<string>("")
   const [joinFamily, setJoinFamily] = useState<FamilyMembership>({})
   const familyId = useDropdownValueStore((state) => state.familyId)
-  const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyODcsInVzZXJuYW1lIjoiam9lbEBnbWFpbC5jb20iLCJyb2xlIjoiUEVSU09OIiwiZXhwIjoxNzU1NzAxOTI5fQ.NAQF1dHNBD_XWEnvcRTN9swdGAKfQ28LjuLuw7nrpfw"
+  
 
   const joinFamilyHandler = async (data: FamilyMembership) => {
     try {
+      const token = await AuthTokenUtil.getToken();
+      if (!token) throw new Error("No authentication token found");
+      FamilyMembershipValidator.validate(data)
       const result = await APICall.post('/api/v1/residents/family-membership/', data, token);
       console.info('Request for joining family is successful! ', JSON.stringify(result));
     } catch (error) {
+      if (error instanceof MembershipException) {
+        Alert.alert(error.message)
+        return;
+      }
       console.warn("Error joining family:", error)
-      const message = error?.response?.data?.error || "Something went wrong"
+      const message = error?.response?.data?.error || error
       Alert.alert(message)
     }
   }
 
   useEffect(() => {
     const fetchFamily = async (val: string) => {
-      const result = await APICall.get('/api/v1/residents/fetch/families/', { q: val }, token)
-      console.info('Request for fetching family data is successful!')
-      return result
+      try {
+        const token = await AuthTokenUtil.getToken();
+        const result = await APICall.get('/api/v1/residents/fetch/families/', { q: val }, token)
+        console.info('Request for fetching family data is successful!')
+        return result
+      } catch (error) {
+        console.warn("Error fetching family data");
+        const message = error?.response?.data?.error || "Something went wrong"
+        console.error(message)
+        Alert.alert("Something went wrong, please contact Barangay Support for more information.")
+      }
     }
     (async () => {
-      console.info(household_id)
       if (!household_id) return;
       const res = await fetchFamily(household_id)
       const mapped = res.message.family_data.map((family) => ({
         label: `${family.person.first_name} ${family.person.middle_name ? family.person.middle_name : ''} ${family.person.last_name}`,
         value: family.family_id
       }))
-      console.log("Mapped Families:", mapped)
       setFamilies(mapped)
-      // console.info(families)
     })();
-
   }, [household_id])
 
   useEffect(() => {
     const trimmed = householdSearchText.trim();
     console.log("Household Search Text:", trimmed);
-    if (!trimmed) return;
+    if (!trimmed) {
+      setHouseholds([]);
+      setFamilies([]);
+      useDropdownValueStore.getState().setHouseholdId("");
+      useDropdownValueStore.getState().setFamilyId("");
+      return
+    };
     const fetchHousehold = async (text: string) => {
       try {
+        const token = await AuthTokenUtil.getToken();
         const result = await APICall.get('/api/v1/residents/households/search/', { q: text }, token)
         console.info('Request for fetching household data is successful!')
         return result
       } catch (error) {
         console.warn("Error fetching household data");
-        console.error(error);
+        const message = error?.response?.data?.error || "Something went wrong"
+        console.error(message)
+        Alert.alert("Something went wrong, please contact Barangay Support for more information.")
       }
     }
     (async () => {
