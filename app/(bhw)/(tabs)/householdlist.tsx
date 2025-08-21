@@ -45,7 +45,6 @@ type Household = {
 const HouseholdList = () => {
   const router = useRouter()
 
-  // ----------- static sample household data -----------
   const household: Household = {
     id: 'HH-2024-001',
     householdNum: 'HH-2024-001',

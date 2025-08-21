@@ -27,7 +27,6 @@ const Avatar = ({ name }: { name: string }) => {
   )
 }
 
-/* ------------ Types ------------- */
 type Member = {
   id: string
   name: string
@@ -61,7 +60,6 @@ type Request = {
   families: Family[]
 }
 
-/* -------- Member Details Modal (simple) -------- */
 function MemberDetailsModal({
   visible, onClose, member, family,
 }: {
@@ -111,7 +109,7 @@ const HouseholdVisit = () => {
 
   const req: Request = {
     id: 'REQ-000187',
-    name: 'Juan Dela Cruz',
+    name: 'Household Number',
     status: 'Pending',
     submittedAt: '2025-08-09 14:12',
     address: 'Purok 3, Sitio San Roque',
@@ -326,10 +324,23 @@ const HouseholdVisit = () => {
                       ) : (
                         <ThemedText style={{ color: '#64748b', fontStyle: 'italic' }}>There is no family member in this family.</ThemedText>
                       )}
+                      <ThemedText style={{ marginLeft: 10, marginTop: 10, color: '#475569', fontStyle: 'italic' }}>{req.reason}</ThemedText>
                     </View>
                   ))}
+
+                  
                 </ScrollView>
               </View>
+
+              <View style={styles.row}>
+                <ThemedButton submit={false} style={styles.button}>
+                  <ThemedText non_btn={true}>Reject</ThemedText>
+                </ThemedButton>
+                <ThemedButton style={styles.button}>
+                  <ThemedText btn={true}>Approve</ThemedText>
+                </ThemedButton>
+              </View>
+
             </ScrollView>
           </View>
         )}
@@ -349,8 +360,17 @@ const HouseholdVisit = () => {
 
 export default HouseholdVisit
 
-/* ------------------- styles ------------------- */
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between', // distributes buttons evenly
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  button: {
+    flex: 1,            // make them equal width
+    marginHorizontal: 5, // spacing between buttons    // optional rounded corners
+  },
   avatar: {
     height: 40, width: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
@@ -374,8 +394,8 @@ const styles = StyleSheet.create({
   kvItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',          // keeps rows tight
-    paddingVertical: 6,            // small, consistent spacing
+    alignItems: 'center',         
+    paddingVertical: 6,           
     gap: 12,
   },
   kvRow: {
