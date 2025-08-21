@@ -1,4 +1,4 @@
-import { APICall } from '@/api/api'
+import apiClient from '@/api/apiClient'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
@@ -32,18 +32,17 @@ const JoinHouseFam = () => {
 
   const joinFamilyHandler = async (data: FamilyMembership) => {
     try {
-      const token = await AuthTokenUtil.getToken();
-      if (!token) throw new Error("No authentication token found");
       FamilyMembershipValidator.validate(data)
-      const result = await APICall.post('/api/v1/residents/family-membership/', data, token);
-      console.info('Request for joining family is successful! ', JSON.stringify(result));
+      const result = await apiClient.post('/v1/residents/family-membership/', data);
+      console.info('Request for joining family is successful! ', JSON.stringify(result.data));
+      Alert.alert("Success", "You have successfully joined the family unit.")
     } catch (error) {
       if (error instanceof MembershipException) {
         Alert.alert("Something went wrong.", error.message)
         return;
       }
-      console.warn("Error joining family:", error)
-      const message = error?.response?.data?.error || error
+      console.warn("Error joining family - Join Family Handler: ", error)
+      const message = error?.response?.data?.error || error.message || "Unknown error"
       Alert.alert("Something went wrong.", message)
     }
   }
