@@ -9,7 +9,14 @@ export const useHouseholds = (searchText: string) => {
 
     useEffect(() => {
         if (!searchText.trim()) return setHouseholds([])
-
+        /**
+       * If something goes wrong when joining a family, is it because of this logic.
+       * Currently I am unable to test the new JWT because it was not yet pushed in the 
+       * servers develop branch. Once it will be available then I will be able to check
+       * of how this endpoint behaves especially when handling JWT.
+       *
+       * I will leave this for now and revisit it later once the new JWT is available for testing.
+       */
         const fetchHouseholds = async () => {
             try {
                 const res = await apiClient.get('/v1/residents/households/search/', { params: { q: searchText } });
