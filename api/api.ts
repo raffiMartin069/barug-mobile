@@ -4,6 +4,16 @@ export class APICall {
 
     private static BASE_URL = 'https://barug-dev.onrender.com'
 
+    static async refreshToken(token: string) {
+        try {
+            const response = await axios.post(`${this.BASE_URL}/auth/refresh/`, { token });
+            return response.data;
+        } catch(error) {
+            console.error("Refresh Token Error:", error);
+            throw error;
+        }
+    }
+  
     static async post(url: string, payload: object, token: string) {
         try {
             const response = await axios.post(this.BASE_URL + url, payload, {
