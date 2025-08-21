@@ -13,7 +13,7 @@ export class APICall {
             throw error;
         }
     }
-
+  
     static async post(url: string, payload: object, token: string) {
         try {
             const response = await axios.post(this.BASE_URL + url, payload, {

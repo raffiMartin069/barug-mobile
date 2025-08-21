@@ -43,7 +43,6 @@ const JoinHouseFam = () => {
       }
       console.warn("Error joining family - Join Family Handler: ", error)
       const message = error?.response?.data?.error || error.message || "Unknown error"
-      Alert.alert("Something went wrong.", message)
     }
   }
   

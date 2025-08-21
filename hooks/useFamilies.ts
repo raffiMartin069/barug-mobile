@@ -7,7 +7,6 @@ export const useFamilies = (householdId: string) => {
 
     useEffect(() => {
         if (!householdId) return setFamilies([])
-
         const fetchFamilies = async () => {
             try {
                 const res = await apiClient.get('/v1/residents/fetch/families/', { params: { q: householdId } })
@@ -21,9 +20,7 @@ export const useFamilies = (householdId: string) => {
                 setFamilies([]);
             }
         }
-
         fetchFamilies()
     }, [householdId])
-
     return families
 }
