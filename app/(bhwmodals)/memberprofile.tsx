@@ -104,17 +104,52 @@ const MemberProfile = () => {
           <Spacer height={15} />
 
           {/* Documents */}
-          <ThemedText title={true}>Documents</ThemedText>
-          <Spacer height={10} />
-          <View style={styles.row}>
-            <ThemedText style={styles.bold} subtitle={true}>ID Type:</ThemedText>
-            <ThemedText subtitle={true}>Voter's ID</ThemedText>
-          </View>
+<ThemedText title={true}>Documents</ThemedText>
+<Spacer height={10} />
 
-          <View style={styles.row}>
-            <ThemedText style={styles.bold} subtitle={true}>Document Status:</ThemedText>
-            <ThemedText subtitle={true}>Verified</ThemedText>
-          </View>
+<View style={styles.row}>
+  <ThemedText style={styles.bold} subtitle={true}>ID Type:</ThemedText>
+  <ThemedText subtitle={true}>Voter's ID</ThemedText>
+</View>
+
+<Spacer height={10} />
+
+{/* Carousel of documents */}
+<ThemedView>
+  <ThemedKeyboardAwareScrollView 
+    horizontal 
+    showsHorizontalScrollIndicator={false}
+    pagingEnabled
+    style={{ flexDirection: 'row' }}
+  >
+    {/* Front of ID */}
+    <View style={styles.docContainer}>
+      <ThemedImage
+        src={require('@/assets/images/favicon.png')}
+        size={220}
+      />
+      <ThemedText subtitle={true} style={styles.caption}>Front of ID</ThemedText>
+    </View>
+
+    {/* Back of ID */}
+    <View style={styles.docContainer}>
+      <ThemedImage
+        src={require('@/assets/images/favicon.png')}
+        size={220}
+      />
+      <ThemedText subtitle={true} style={styles.caption}>Back of ID</ThemedText>
+    </View>
+
+    {/* Selfie with ID */}
+    <View style={styles.docContainer}>
+      <ThemedImage
+        src={require('@/assets/images/favicon.png')}
+        size={220}
+      />
+      <ThemedText subtitle={true} style={styles.caption}>Selfie w/ ID</ThemedText>
+    </View>
+  </ThemedKeyboardAwareScrollView>
+</ThemedView>
 
           <Spacer height={20} />
         </ThemedCard>
@@ -135,5 +170,14 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: '600',
+  },
+  docContainer: {
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  caption: {
+    marginTop: 5,
+    textAlign: 'center',
+    color: '#6b6b6b',
   },
 });

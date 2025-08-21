@@ -188,7 +188,9 @@ const HouseholdVisit = () => {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
-      <ThemedAppBar/>
+      <ThemedAppBar
+        title='Task'
+      />
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
@@ -215,11 +217,11 @@ const HouseholdVisit = () => {
               </View>
 
               <Spacer height={10}/>
-              <Pressable onPress={() => openSheet(req)}>
-                <ThemedButton submit={false}>
-                  <ThemedText non_btn>View Details</ThemedText>
-                </ThemedButton>
-              </Pressable>
+
+              <ThemedButton submit={false} onPress={() => openSheet(req)}>
+                <ThemedText non_btn>View Details</ThemedText>
+              </ThemedButton>
+
             </ThemedCard>
           </Pressable>
 
@@ -251,27 +253,27 @@ const HouseholdVisit = () => {
             >
               {/* Household */}
               <View style={{ marginTop: 6 }}>
-                <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>Household</ThemedText>
+                <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>Household </ThemedText>
                   <View>
                     <View style={styles.kvRow}>
-                      <ThemedText compact style={styles.kvKey}>Household Head</ThemedText>
-                      <ThemedText compact style={styles.kvVal}>{selected.householdHead}</ThemedText>
+                      <ThemedText style={styles.kvKey}>Household Head</ThemedText>
+                      <ThemedText style={styles.kvVal}>{selected.householdHead}</ThemedText>
                     </View>
                     <View style={styles.kvRow}>
-                      <ThemedText compact style={styles.kvKey}>Household No.</ThemedText>
-                      <ThemedText compact style={styles.kvVal}>{selected.householdNum}</ThemedText>
+                      <ThemedText style={styles.kvKey}>Household No.</ThemedText>
+                      <ThemedText style={styles.kvVal}>{selected.householdNum}</ThemedText>
                     </View>
                     <View style={styles.kvRow}>
-                      <ThemedText compact style={styles.kvKey}>House Type</ThemedText>
-                      <ThemedText compact style={styles.kvVal}>{selected.houseType}</ThemedText>
+                      <ThemedText style={styles.kvKey}>House Type</ThemedText>
+                      <ThemedText style={styles.kvVal}>{selected.houseType}</ThemedText>
                     </View>
                     <View style={styles.kvRow}>
-                      <ThemedText compact style={styles.kvKey}>House Ownership</ThemedText>
-                      <ThemedText compact style={styles.kvVal}>{selected.houseOwnership}</ThemedText>
+                      <ThemedText style={styles.kvKey}>House Ownership</ThemedText>
+                      <ThemedText style={styles.kvVal}>{selected.houseOwnership}</ThemedText>
                     </View>
                     <View style={styles.kvRow}>
-                      <ThemedText compact style={styles.kvKey}>Home Address</ThemedText>
-                      <ThemedText compact style={styles.kvVal} numberOfLines={2}>
+                      <ThemedText style={styles.kvKey}>Home Address</ThemedText>
+                      <ThemedText style={styles.kvVal} numberOfLines={2}>
                         {selected.address}
                       </ThemedText>
                     </View>
@@ -296,9 +298,7 @@ const HouseholdVisit = () => {
                   {selected.families.map((fam) => (
                     <View key={fam.familyNum} style={{ width: SCREEN_WIDTH - 32, paddingRight: 16 }}>
                       <View style={styles.familyCover}>
-                        <View style={styles.coverIcon}>
-                          <Ionicons name="home-outline" size={20} color="#475569" />
-                        </View>
+                        <Ionicons name="home-outline" size={20} color="#475569" />
                         <View style={{ flex: 1 }}>
                           <ThemedText style={styles.familyTitle}>{fam.familyNum}</ThemedText>
                           <ThemedText style={{ color: '#64748b', marginTop: 2 }}>
