@@ -28,9 +28,7 @@ export const useFamilies = (householdId: string) => {
                 setFamilies([]);
             }
         }
-
         fetchFamilies()
     }, [householdId])
-
     return families
 }

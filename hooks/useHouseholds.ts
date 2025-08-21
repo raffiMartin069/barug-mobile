@@ -30,7 +30,6 @@ export const useHouseholds = (searchText: string) => {
                 if (err.response?.status === 401) {
                     Alert.alert("Session expired", err.response.data?.error || 'Please log in again.')
                 }
-
                 setHouseholds([]);
             }
         }
