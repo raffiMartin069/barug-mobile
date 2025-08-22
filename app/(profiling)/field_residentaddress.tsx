@@ -68,7 +68,7 @@ const ResidentAddress = () => {
     setAddress({ street: s, puroksitio: p, brgy: b, city: c });
 
     // Navigate back to personal info
-    router.replace('/personalinfo');
+    router.replace('/field_personalinfo');
   };
 
   return (

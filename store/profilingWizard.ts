@@ -16,11 +16,14 @@ type Socio = {
 };
 
 type ValidID = {
-  id_type_id?: number | null;
-  id_number?: string | null;
-  id_front_uri?: string | null;
-  id_back_uri?: string | null;
-  id_selfie_uri?: string | null; // ⬅️ add this
+  id_type_id: number | null
+  id_number: string | null
+  id_front_uri: string | null
+  id_front_name: string | null      // NEW
+  id_back_uri: string | null
+  id_back_name: string | null       // NEW
+  id_selfie_uri: string | null
+  id_selfie_name: string | null     // NEW
 };
 
 type State = {

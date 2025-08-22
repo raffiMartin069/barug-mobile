@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // --- CONFIG ---
-const BASE_URL = 'http://192.168.1.4:8000/api';
+const BASE_URL = 'http://10.184.82.83:8000/api';
 
 // Keys for storage
 const ACCESS_KEY = 'jwt_access';

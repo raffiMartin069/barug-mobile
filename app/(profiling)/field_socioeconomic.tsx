@@ -80,7 +80,7 @@ const SocioeconomicInfo = () => {
     })
 
     // 👉 Move to the next step
-    router.push('/bhw_reviewinputs')
+    router.push('/field_reviewinputs')
   }
 
   return (

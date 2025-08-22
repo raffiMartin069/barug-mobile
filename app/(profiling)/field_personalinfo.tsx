@@ -22,6 +22,7 @@ import {
   genderOptions,
   nationalityOptions,
   religionOptions,
+  suffixOptions,
 } from '../../constants/formoptions';
 
 type AddrParams = { street?: string; puroksitio?: string; brgy?: string; city?: string };
@@ -50,6 +51,7 @@ const PersonalInfo2 = () => {
       setField('civilStatus', next);
     };
   }, [setField]);
+
   const setNationalityState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
     return (valOrFn) => {
       const prev = useRegistrationStore.getState().nationality;
@@ -57,6 +59,7 @@ const PersonalInfo2 = () => {
       setField('nationality', next);
     };
   }, [setField]);
+
   const setReligionState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
     return (valOrFn) => {
       const prev = useRegistrationStore.getState().religion;
@@ -82,15 +85,26 @@ const PersonalInfo2 = () => {
   const validateEmail = (eml: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eml);
   const validateMobileNumber = (n: string) => /^(09\d{9}|\+639\d{9})$/.test(n);
 
+  // Auto username: firstname+lastname@user. Falls back to 'user@user' if both empty (UI-only; submit requires names)
+  // Format date of birth into MMDDYY
+  const formatDob = (dobStr?: string) => {
+    if (!dobStr) return '';
+    const dobDate = new Date(dobStr);
+    if (isNaN(dobDate.getTime())) return '';
+    const mm = String(dobDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(dobDate.getDate()).padStart(2, '0');
+    const yy = String(dobDate.getFullYear()).slice(-2);
+    return `${mm}${dd}${yy}`;
+  };
+
   // keep only a-z0-9
   const slugName = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  // Auto username: firstname+lastname@user. Falls back to 'user@user' if both empty (UI-only; submit requires names)
   const derivedUsername = (() => {
-    const first = slugName(fname);
     const last = slugName(lname);
-    const local = first || last ? [first, last].filter(Boolean).join('.') : 'user';
-    return `${local}@user`;
+    const dobPart = formatDob(dob);
+    const local = last || 'user';
+    return `${local}.${dobPart || '000000'}@user`;
   })();
 
   const mapRegToWizard = () => {
@@ -101,7 +115,7 @@ const PersonalInfo2 = () => {
       first_name: fname.trim(),
       middle_name: mname.trim() || null,
       last_name: lname.trim(),
-      suffix: suffix.trim() || null,
+      suffix: suffix?.trim() || null,
       date_of_birth: dob,
       email: useEmail ? (trimmedEmail || null) : null, // only when useEmail
       mobile_number: trimmedMobile || null,            // optional
@@ -122,50 +136,50 @@ const PersonalInfo2 = () => {
     const trimmedFname = fname.trim();
     const trimmedMname = mname.trim();
     const trimmedLname = lname.trim();
-    const trimmedSuffix = suffix.trim();
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedMobnum = mobnum.trim();
     const trimmedPassword = password.trim();
     const trimmedCPassword = cpassword.trim();
     const trimmedHAddress = haddress.trim();
 
-    if (!trimmedFname || /[^a-zA-Z\s]/.test(trimmedFname)) { Alert.alert('Validation Error','Please enter a valid first name (letters only).'); return; }
-    if (!trimmedLname || /[^a-zA-Z\s]/.test(trimmedLname)) { Alert.alert('Validation Error','Please enter a valid last name (letters only).'); return; }
-    if (trimmedMname && /[^a-zA-Z\s]/.test(trimmedMname)) { Alert.alert('Validation Error','Middle name must contain letters only.'); return; }
-    if (trimmedSuffix && !/^(JR|SR|III|IV|V)$/i.test(trimmedSuffix)) { Alert.alert('Validation Error','Suffix must be JR, SR, III, IV, or V.'); return; }
-    if (!dob || new Date(dob) > new Date()) { Alert.alert('Validation Error','Please select a valid date of birth.'); return; }
-    if (!civilStatus) { Alert.alert('Validation Error','Please select your civil status.'); return; }
-    if (!nationality) { Alert.alert('Validation Error','Please select your nationality.'); return; }
-    if (!religion) { Alert.alert('Validation Error','Please select your religion.'); return; }
-    if (!trimmedHAddress) { Alert.alert('Validation Error','Please set your complete home address.'); return; }
+    if (!trimmedFname || /[^a-zA-Z\s]/.test(trimmedFname)) { Alert.alert('Validation Error', 'Please enter a valid first name (letters only).'); return; }
+    if (!trimmedLname || /[^a-zA-Z\s]/.test(trimmedLname)) { Alert.alert('Validation Error', 'Please enter a valid last name (letters only).'); return; }
+    if (trimmedMname && /[^a-zA-Z\s]/.test(trimmedMname)) { Alert.alert('Validation Error', 'Middle name must contain letters only.'); return; }
+    // Removed suffix regex validation — dropdown already constrains allowed values.
+
+    if (!dob || new Date(dob) > new Date()) { Alert.alert('Validation Error', 'Please select a valid date of birth.'); return; }
+    if (!civilStatus) { Alert.alert('Validation Error', 'Please select your civil status.'); return; }
+    if (!nationality) { Alert.alert('Validation Error', 'Please select your nationality.'); return; }
+    if (!religion) { Alert.alert('Validation Error', 'Please select your religion.'); return; }
+    if (!trimmedHAddress) { Alert.alert('Validation Error', 'Please set your complete home address.'); return; }
 
     // Optional mobile: validate only if provided
     if (trimmedMobnum && !validateMobileNumber(trimmedMobnum)) {
-      Alert.alert('Validation Error','Mobile number must be 09XXXXXXXXX or +639XXXXXXXXX.');
+      Alert.alert('Validation Error', 'Mobile number must be 09XXXXXXXXX or +639XXXXXXXXX.');
       return;
     }
 
     // If using email, require valid email
     if (useEmail) {
-      if (!trimmedEmail) { Alert.alert('Validation Error','Please enter your email address.'); return; }
-      if (!validateEmail(trimmedEmail)) { Alert.alert('Validation Error','Please enter a valid email address.'); return; }
+      if (!trimmedEmail) { Alert.alert('Validation Error', 'Please enter your email address.'); return; }
+      if (!validateEmail(trimmedEmail)) { Alert.alert('Validation Error', 'Please enter a valid email address.'); return; }
     }
 
     if (!trimmedPassword || trimmedPassword.length < 8 || /\s/.test(trimmedPassword)) {
-      Alert.alert('Validation Error','Password must be at least 8 characters and contain no spaces.');
+      Alert.alert('Validation Error', 'Password must be at least 8 characters and contain no spaces.');
       return;
     }
     if (trimmedPassword !== trimmedCPassword) {
-      Alert.alert('Validation Error','Passwords do not match.');
+      Alert.alert('Validation Error', 'Passwords do not match.');
       return;
     }
 
     setPersonal({ ...(personal ?? {}), ...mapRegToWizard() });
-    router.push('/bhw_socioeconomic');
+    router.push('/field_socioeconomic');
   };
 
   const handleHomeAddress = () => {
-    router.push({ pathname: '/mapaddress2', params: { returnTo: '/residentaddress2' } });
+    router.push({ pathname: '/field_mapaddress', params: { returnTo: '/field_residentaddress' } });
   };
 
   const Checkbox = ({ checked, onPress }: { checked: boolean; onPress: () => void }) => (
@@ -182,7 +196,6 @@ const PersonalInfo2 = () => {
       <ThemedAppBar title="Personal Information" showNotif={false} showProfile={false} />
       <ThemedProgressBar step={1} totalStep={3} />
 
-
       <ThemedKeyboardAwareScrollView>
         <View>
           <ThemedTextInput placeholder="First Name" value={fname} onChangeText={(v) => setField('fname', v)} />
@@ -191,7 +204,15 @@ const PersonalInfo2 = () => {
           <Spacer height={10} />
           <ThemedTextInput placeholder="Last Name" value={lname} onChangeText={(v) => setField('lname', v)} />
           <Spacer height={10} />
-          <ThemedTextInput placeholder="Suffix" value={suffix} onChangeText={(v) => setField('suffix', v)} />
+
+          {/* Suffix as dropdown */}
+          <ThemedDropdown
+            items={suffixOptions}
+            value={suffix}
+            setValue={(val) => setField('suffix', val)}
+            placeholder="Suffix"
+            order={0}
+          />
           <Spacer height={10} />
 
           <ThemedText subtitle>Sex</ThemedText>
@@ -207,11 +228,11 @@ const PersonalInfo2 = () => {
           />
           <Spacer height={10} />
 
-          <ThemedDropdown items={civilStatusOptions} value={civilStatus} setValue={setCivilStatusState} placeholder="Civil Status" order={0} />
+          <ThemedDropdown items={civilStatusOptions} value={civilStatus} setValue={setCivilStatusState} placeholder="Civil Status" order={1} />
           <Spacer height={10} />
-          <ThemedDropdown items={nationalityOptions} value={nationality} setValue={setNationalityState} placeholder="Nationality" order={1} />
+          <ThemedDropdown items={nationalityOptions} value={nationality} setValue={setNationalityState} placeholder="Nationality" order={2} />
           <Spacer height={10} />
-          <ThemedDropdown items={religionOptions} value={religion} setValue={setReligionState} placeholder="Religion" order={2} />
+          <ThemedDropdown items={religionOptions} value={religion} setValue={setReligionState} placeholder="Religion" order={3} />
           <Spacer height={10} />
 
           <Pressable onPress={handleHomeAddress}>

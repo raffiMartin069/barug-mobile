@@ -67,8 +67,8 @@ const ResidentAddress = () => {
     // Save to store
     setAddress({ street: s, puroksitio: p, brgy: b, city: c });
 
-    // Navigate back to personal info
-    router.replace('/personalinfo');
+    // Navigate back to update profile
+    router.replace('/updateprofile');
   };
 
   return (

@@ -7,7 +7,7 @@ import React from 'react';
 type Params = { returnTo?: string };
 
 const MapAddress2 = () => {
-  const { returnTo = '/homeaddress2' } = useLocalSearchParams<Params>();
+  const { returnTo = '/field_homeaddress' } = useLocalSearchParams<Params>();
   return (
     <ThemedView safe={true}>
       <ThemedAppBar title="Map" showNotif={false} showProfile={false} />

@@ -215,7 +215,7 @@ const VerifyPersonalInfo = () => {
     };
 
     const handleHomeAddress = () => {
-        router.push({ pathname: '/mapaddress', params: { returnTo: '/verifypersonalinfo' } })
+        router.push({ pathname: '/update_mapaddress', params: { returnTo: '/update_profile' } })
     }
 
     if (profileLoading) {

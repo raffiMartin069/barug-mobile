@@ -35,7 +35,7 @@ export const loginUser = async (email: string, password: string) => {
 
     return { token, refresh, user: user as User };
   } catch (error: any) {
-    console.error('Login error:', error.response?.data || error.message);
+    // console.error('Login error:', error.response?.data || error.message);
     throw error.response?.data || { message: 'Login failed' };
   }
 };

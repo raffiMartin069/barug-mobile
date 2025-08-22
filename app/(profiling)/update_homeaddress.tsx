@@ -23,7 +23,7 @@ const HomeAddress2 = () => {
 
   const submitAddress = () => {
     router.navigate({
-      pathname: '/personalinfo2',
+      pathname: '/update_profile',
       params: { hnum, street: streetState, puroksitio, brgy: brgyState, city: cityState },
     });
   };

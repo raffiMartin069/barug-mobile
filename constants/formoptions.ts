@@ -105,6 +105,16 @@ export const religionMap = {
   10: 'Others',
 };
 
+// Local suffix options (values stored uppercase for backend consistency)
+export const suffixOptions = [
+  { label: 'None', value: '' },
+  { label: 'Jr.', value: 'JR' },
+  { label: 'Sr.', value: 'SR' },
+  { label: 'III', value: 'III' },
+  { label: 'IV', value: 'IV' },
+  { label: 'V', value: 'V' },
+];
+
 
 // ✅ Educational Attainment Options
 export const educAttainmentOptions = [

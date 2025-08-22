@@ -127,7 +127,7 @@ const ResidentProfile = () => {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
-      <ThemedAppBar title="Profile 2" showProfile={false} showNotif={false} showSettings={true} />
+      <ThemedAppBar title="Profile" showProfile={false} showNotif={false} showSettings={true} />
 
       <ThemedKeyboardAwareScrollView>
         <Spacer height={20} />

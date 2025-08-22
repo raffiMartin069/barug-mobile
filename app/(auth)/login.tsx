@@ -23,57 +23,103 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Extract {code, message} from many possible error shapes
+  const extractError = (err: any): { code?: string; message?: string } => {
+    // 1) If axios: err.response.data
+    const data = err?.response?.data ?? err?.data ?? undefined;
+    if (data) {
+      if (typeof data === 'object') {
+        // e.g. {message, code, ...}
+        if (data.message || data.code) return { code: data.code, message: data.message || data.detail };
+        // sometimes backend nests it one level deeper
+        if (data.error && (data.error.message || data.error.code)) {
+          return { code: data.error.code, message: data.error.message };
+        }
+      } else if (typeof data === 'string') {
+        try {
+          const parsed = JSON.parse(data.replace(/'/g, '"').replace(/\bNone\b/g, 'null'));
+          if (parsed?.message || parsed?.code) {
+            return { code: parsed.code, message: parsed.message };
+          }
+        } catch {}
+      }
+    }
+
+    // 2) Some libs throw the server object directly: err = {message, code, ...}
+    if (typeof err === 'object' && (err.message || err.code)) {
+      return { code: err.code, message: err.message };
+    }
+
+    // 3) String in err.message (possibly JSON-like string)
+    if (typeof err?.message === 'string') {
+      const msg = err.message.trim();
+      if (msg.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(msg.replace(/'/g, '"').replace(/\bNone\b/g, 'null'));
+          return { code: parsed?.code, message: parsed?.message };
+        } catch {}
+      }
+      return { message: err.message };
+    }
+
+    // 4) String thrown directly
+    if (typeof err === 'string') {
+      try {
+        const parsed = JSON.parse(err.replace(/'/g, '"').replace(/\bNone\b/g, 'null'));
+        return { code: parsed?.code, message: parsed?.message };
+      } catch {
+        return { message: err };
+      }
+    }
+
+    return {};
+  };
+
   const handleSubmit = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!trimmedEmail || !trimmedPassword) {
       Alert.alert('Error', 'Please enter both email and password.');
       return;
     }
 
     setLoading(true);
-    try {
-      // Call API
-      const response = await loginUser(email, password);
+    Keyboard.dismiss();
 
-      // Save token to AsyncStorage
+    try {
+      const response = await loginUser(trimmedEmail, trimmedPassword);
+
       await AsyncStorage.setItem('userToken', response.token);
 
-      // Navigate to resident home
       router.push('/residenthome');
-    }
-
-    catch (err: any) {
-      // Don’t show red error box in production
+    } catch (err: any) {
       if (__DEV__) {
         console.log('Login failed:', err);
       }
 
-      let errorCode = '';
-      try {
-        if (typeof err.message === 'string' && err.message.startsWith('{')) {
-          const parsedError = JSON.parse(
-            err.message.replace(/'/g, '"').replace(/ None/g, ' null')
-          );
-          errorCode = parsedError.code;
-        }
-      } catch (parseErr) {
-        if (__DEV__) {
-          console.warn('Error parsing backend error:', parseErr);
-        }
+      const { code, message } = extractError(err);
+      const codeNorm = (code || '').toString().toUpperCase();
+      const msgNorm = (message || '').toLowerCase();
+
+      // Redirect to verify screen for "email not verified" cases:
+      // - explicit codes: P5040, P6071
+      // - OR message contains "not verified"
+      if (codeNorm === 'P5040' || codeNorm === 'P6071' || msgNorm.includes('not verified')) {
+        router.push({ pathname: '/verifyemail', params: { email: trimmedEmail } });
+        return;
       }
 
-      if (errorCode === 'P6071') {
-        // Redirect user to verify email page
-        router.push({ pathname: '/verifyemail', params: { email } });
-        return; // Prevent further error handling
-      }
+      const friendly =
+        message ||
+        (err?.response?.status === 0
+          ? 'Network error. Please check your connection.'
+          : 'Login failed. Please try again.');
 
-      Alert.alert('Login Failed', 'Invalid credentials');
+      Alert.alert('Login Failed', friendly);
     } finally {
       setLoading(false);
     }
-
-
-
   };
 
   return (
@@ -101,6 +147,8 @@ const Login = () => {
             placeholder="Email or Username"
             value={email}
             onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
 
           <Spacer height={10} />

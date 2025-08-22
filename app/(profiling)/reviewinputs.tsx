@@ -1,3 +1,4 @@
+// app/(profiling)/reviewinputs.tsx
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedButton from '@/components/ThemedButton';
@@ -115,21 +116,20 @@ const ReviewInputs = () => {
 
   const openViewer = (uri?: string | null) => { if (uri) { setViewerSrc(uri); setViewerOpen(true); } };
 
-const ImageRow = ({ label, uri }) => (
-  <View style={styles.block}>
-    <Row label={label} />
-    <Spacer height={10} />
-    {uri ? (
-      <TouchableOpacity activeOpacity={0.85} onPress={() => openViewer(uri)}>
-        <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
-        <ThemedText style={styles.tapHint}>Tap to view</ThemedText>
-      </TouchableOpacity>
-    ) : (
-      <ThemedText subtitle>No Image Uploaded</ThemedText>
-    )}
-  </View>
-);
-
+  const ImageRow: React.FC<{ label: string; uri?: string }> = ({ label, uri }) => (
+    <View style={styles.block}>
+      <Row label={label} />
+      <Spacer height={10} />
+      {uri ? (
+        <TouchableOpacity activeOpacity={0.85} onPress={() => openViewer(uri)}>
+          <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
+          <ThemedText style={styles.tapHint}>Tap to view</ThemedText>
+        </TouchableOpacity>
+      ) : (
+        <ThemedText subtitle>No Image Uploaded</ThemedText>
+      )}
+    </View>
+  );
 
   // ---- ONLY the keys your API expects (+ names for OCR) ----
   const buildVerificationFormData = async () => {
@@ -262,22 +262,57 @@ const ImageRow = ({ label, uri }) => (
         </View>
       </Modal>
 
-      {/* Simple confirmation */}
+      {/* Confirmation checklist modal */}
       <Modal visible={confirmOpen} transparent animationType="fade" onRequestClose={() => setConfirmOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <ThemedText style={{ fontSize: 20, fontWeight: '700', textAlign: 'center'}}>Submission Confirmation</ThemedText>
-            <Spacer height={10} />
-      <ThemedText style={{ fontSize: 15, textAlign: 'center', lineHeight: 20 }}>
-        Please review your details before proceeding.  
-        By confirming, you acknowledge that all information provided is accurate 
-        and truthful to the best of your knowledge.
-      </ThemedText>
+            <ThemedText style={{ fontSize: 20, fontWeight: '700', textAlign: 'center' }}>
+              Submission Confirmation
+            </ThemedText>
+
+            <Spacer height={12} />
+
+            <ThemedText style={{ fontSize: 15, textAlign: 'center', lineHeight: 20 }}>
+              Before submitting, please review and confirm the following:
+            </ThemedText>
+
+            <Spacer height={12} />
+
+            {/* Checklist */}
+            <View style={styles.list}>
+              <View style={styles.listRow}>
+                <ThemedText style={styles.listNum}>1.</ThemedText>
+                <ThemedText style={styles.listText}>
+                  Please make sure your <ThemedText style={{ fontWeight: '700' }}>full name</ThemedText> exactly matches the name on your
+                  valid ID (including middle name/initial and suffix, if any).
+                </ThemedText>
+              </View>
+
+              <View style={styles.listRow}>
+                <ThemedText style={styles.listNum}>2.</ThemedText>
+                <ThemedText style={styles.listText}>
+                  Ensure the documents you attached are <ThemedText style={{ fontWeight: '700' }}>clear and readable</ThemedText> (no glare,
+                  not cropped, and all details visible).
+                </ThemedText>
+              </View>
+
+              <View style={styles.listRow}>
+                <ThemedText style={styles.listNum}>3.</ThemedText>
+                <ThemedText style={styles.listText}>
+                  Confirm that all information provided is <ThemedText style={{ fontWeight: '700' }}>correct, accurate, and truthful</ThemedText>{' '}
+                  to the best of your knowledge.
+                </ThemedText>
+              </View>
+            </View>
+
             <Spacer height={16} />
+
             <ThemedButton onPress={onConfirmAndSubmit} disabled={submitting}>
               <ThemedText btn>{submitting ? 'Submitting…' : 'Confirm & Submit'}</ThemedText>
             </ThemedButton>
+
             <Spacer height={8} />
+
             <ThemedButton onPress={() => setConfirmOpen(false)}>
               <ThemedText btn>Cancel</ThemedText>
             </ThemedButton>
@@ -303,17 +338,41 @@ const Row = ({ label, value }: { label: string; value?: any }) => {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginVertical: 5, borderBottomWidth: 2, borderBottomColor: 'black', paddingBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 5,
+    borderBottomWidth: 2,
+    borderBottomColor: 'black',
+    paddingBottom: 8,
   },
   block: { marginVertical: 6 },
   preview: { width: '100%', height: 180, borderRadius: 12 },
   tapHint: { fontSize: 12, opacity: 0.7, textAlign: 'center', marginTop: 4 },
 
-  viewerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 },
-  viewerFrame: { width: '100%', maxWidth: 900, aspectRatio: 3 / 4, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
+  viewerBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  viewerFrame: {
+    width: '100%',
+    maxWidth: 900,
+    aspectRatio: 3 / 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
   viewerImage: { width: '100%', height: '100%' },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 20 },
   modalCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16 },
+
+  // checklist styles
+  list: { gap: 10 },
+  listRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  listNum: { fontSize: 15, lineHeight: 20, fontWeight: '700', width: 18, textAlign: 'right' },
+  listText: { flex: 1, fontSize: 15, lineHeight: 20 },
 });

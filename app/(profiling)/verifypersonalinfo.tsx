@@ -300,7 +300,7 @@ const VerifyPersonalInfo = () => {
 
   return (
     <ThemedView safe={true}>
-      <ThemedAppBar title="Verify Personal Info" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Verify Personal Info TSX" showNotif={false} showProfile={false} />
       <ThemedProgressBar step={1} totalStep={4} />
 
       <ThemedKeyboardAwareScrollView>

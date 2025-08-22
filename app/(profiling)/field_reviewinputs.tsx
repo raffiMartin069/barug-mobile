@@ -18,14 +18,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Image, Modal, Pressable, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import {
-    civilStatusMap,
-    educAttainmentMap,
-    empStatMap,
-    genderMap,
-    govProgMap,
-    mnthlyPersonalIncomeMap,
-    nationalityMap,
-    religionMap
+  civilStatusMap,
+  educAttainmentMap,
+  empStatMap,
+  genderMap,
+  govProgMap,
+  mnthlyPersonalIncomeMap,
+  nationalityMap,
+  religionMap
 } from '../../constants/formoptions';
 
 async function compress(uri: string) {

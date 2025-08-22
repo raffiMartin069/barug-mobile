@@ -1,7 +1,6 @@
 import { fetchResidentProfile } from '@/api/residentApi'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedIcon from '@/components/ThemedIcon'
@@ -42,11 +41,10 @@ const ResidentHome = () => {
   const pushProfile = () => {
     if (!profile) return
     router.push({
-      pathname: '/residentprofile', // make sure this matches your file path
+      pathname: '/residentprofile',
       params: {
         profile: JSON.stringify({
           ...profile,
-          // ensure an image is present; your RPC sample had selfie_with_id
           profile_picture: profile?.profile_picture ?? profile?.selfie_with_id ?? null,
         }),
       },
@@ -64,23 +62,12 @@ const ResidentHome = () => {
   const status = normalize(rawStatus)
 
   // Broad heuristics to handle various backend wordings
-  const isVerified = status.includes('verified') || profile?.is_verified === true
-  const isPending = status.includes('pending')
-  const isApproved = status.includes('approved')
+  const isVerified = status.includes('approved') || profile?.is_verified === true
 
   // Email + ID flags (with tolerant field names)
-  const isEmailVerified = !!(profile?.is_email_verified ?? profile?.email_verified ?? false)
   const isIdValid = !!(profile?.is_id_valid ?? profile?.id_valid ?? false)
 
-  // Lightweight completeness heuristics for testing
-  const socioComplete = !!(
-    profile?.employment_status ||
-    profile?.employment_status_name ||
-    profile?.occupation ||
-    profile?.personal_income ||
-    profile?.personal_income_name
-  )
-
+  // (Optional) household info – not used in the new logic, but kept for possible UI display
   const householdLinked = !!(
     profile?.household_num ||
     profile?.household_head_name ||
@@ -88,51 +75,27 @@ const ResidentHome = () => {
     profile?.family_head_name
   )
 
-  const StatusChip = ({ ok, trueLabel = 'True', falseLabel = 'False' }: { ok: boolean; trueLabel?: string; falseLabel?: string }) => (
-    <View style={[styles.badge, { backgroundColor: ok ? '#c8e6c9' : '#ffcdd2' }]}>
-      <ThemedText style={styles.badgeText}>{ok ? trueLabel : falseLabel}</ThemedText>
-    </View>
-  )
-
-  // ---- Dynamic action card based on verification status ----
+  // ---- Dynamic action card per your requirement ----
   const actionCard = (() => {
-    if (isVerified) {
-      return (
-        <ThemedCard>
-          <View style={{ alignItems: 'center', paddingVertical: 15 }}>
-            <ThemedIcon name="ribbon" iconColor="#6a1b9a" bgColor="#e1bee7" />
-            <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
-              Congrats — you’re verified!
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: '#555' }}>
-              Enjoy full access to barangay services.
-            </ThemedText>
-          </View>
-        </ThemedCard>
-      )
-    }
-
-    if (isPending) {
+    // 1) Unverified → prompt to start profiling (/socioeconomicinfo)
+    if (!isVerified) {
       return (
         <ThemedCard>
           <TouchableOpacity
             style={{ alignItems: 'center', paddingVertical: 15 }}
-            onPress={() => router.push('/identityprofiling')}
+            onPress={() => router.push('/socioeconomicinfo')}
           >
             <ThemedIcon name="checkmark-circle" iconColor="#2e7d32" bgColor="#c8e6c9" />
-            <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
-              Verify Residency
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: '#555' }}>
-              Status: Pending Verification
+            <ThemedText style={{ marginTop: 10, fontWeight: 'bold', textAlign: 'center' }}>
+              Be a verified resident now and complete the profiling process
             </ThemedText>
           </TouchableOpacity>
         </ThemedCard>
       )
-
     }
 
-    if (isApproved) {
+    // 2) Verified + valid ID → prompt to complete household profiling (/joinhousefam)
+    if (isVerified && isIdValid) {
       return (
         <ThemedCard>
           <TouchableOpacity
@@ -140,41 +103,17 @@ const ResidentHome = () => {
             onPress={() => router.push('/joinhousefam')}
           >
             <ThemedIcon name="home" iconColor="#1e88e5" bgColor="#bbdefb" />
-            <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>
-              Join Household
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: '#555' }}>
-              Your verification was approved. Complete household linking.
+            <ThemedText style={{ marginTop: 10, fontWeight: 'bold', textAlign: 'center' }}>
+              Step 3: You're now close to being a verified resident, please complete household profiling
             </ThemedText>
           </TouchableOpacity>
         </ThemedCard>
       )
     }
 
-
+    // Otherwise, no action card (e.g., verified but ID not valid yet)
     return null
   })()
-
-  // ---- Handlers for the new test buttons ----
-  const handleVerifyEmail = () => {
-    // For testing, just navigate to a screen where you’ll wire the API call
-    router.push({
-      pathname: '/verifyemail',
-      params: { email: profile?.email ?? '' },
-    })
-  }
-
-  const handleVerifyID = () => {
-    router.push('/identityprofiling')
-  }
-
-  const handleOpenSocio = () => {
-    router.push('/identityprofiling')
-  }
-
-  const handleOpenHousehold = () => {
-    router.push('/profiling/household')
-  }
 
   if (loading) {
     return (
@@ -211,105 +150,8 @@ const ResidentHome = () => {
             />
           </View>
 
-          {/* Dynamic Action Card */}
+          {/* Simplified Dynamic Action Card */}
           {actionCard}
-
-          <Spacer height={10} />
-
-          <ThemedCard>
-            <TouchableOpacity
-              style={{ alignItems: 'center', paddingVertical: 15 }}
-              onPress={() => router.push('/updateprofile')}  // Navigate to update profile page
-            >
-              <ThemedIcon name="pencil" iconColor="#2e7d32" bgColor="#c8e6c9" />
-              <ThemedText style={{ marginTop: 10, fontWeight: 'bold' }}>Update Profile</ThemedText>
-              <ThemedText style={{ fontSize: 12, color: '#555' }}>
-                Modify your profile details and preferences.
-              </ThemedText>
-            </TouchableOpacity>
-          </ThemedCard>
-          <Spacer height={10} />
-
-          {/* ===== Test: Verification & Profiling ===== */}
-          <ThemedCard>
-            <ThemedText style={styles.text} subtitle={true}>Test: Verification & Profiling 2</ThemedText>
-
-            {/* Row: Verify Email */}
-            <View style={styles.testRow}>
-              <ThemedIcon name="mail" iconColor="#1565c0" bgColor="#bbdefb" shape="square" containerSize={44} size={18} />
-              <View style={styles.testDetails}>
-                <ThemedText style={styles.activityTitle}>Verify Email</ThemedText>
-                <ThemedText style={styles.activitySubtext}>
-                  is_email_verified: {String(isEmailVerified)}
-                </ThemedText>
-              </View>
-              <StatusChip ok={isEmailVerified} trueLabel="Verified" falseLabel="Unverified" />
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <ThemedButton label="Open Email Verification" onPress={handleVerifyEmail} />
-            </View>
-
-            <Spacer height={12} />
-            <ThemedDivider />
-            <Spacer height={12} />
-
-            {/* Row: Verify ID */}
-            <View style={styles.testRow}>
-              <ThemedIcon name="card" iconColor="#2e7d32" bgColor="#c8e6c9" shape="square" containerSize={44} size={18} />
-              <View style={styles.testDetails}>
-                <ThemedText style={styles.activityTitle}>Verify ID</ThemedText>
-                <ThemedText style={styles.activitySubtext}>
-                  is_id_valid: {String(isIdValid)}
-                </ThemedText>
-              </View>
-              <StatusChip ok={isIdValid} trueLabel="Valid" falseLabel="Not valid" />
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <ThemedButton label="Open ID Verification" onPress={handleVerifyID} />
-            </View>
-
-            <Spacer height={12} />
-            <ThemedDivider />
-            <Spacer height={12} />
-
-            {/* Row: Profiling Step 1 - Socio */}
-            <View style={styles.testRow}>
-              <ThemedIcon name="list" iconColor="#6b4c3b" bgColor="#f2e5d7" shape="square" containerSize={44} size={18} />
-              <View style={styles.testDetails}>
-                <ThemedText style={styles.activityTitle}>Profiling Step 1 — Socioeconomic</ThemedText>
-                <ThemedText style={styles.activitySubtext}>
-                  is_id_valid: {String(isIdValid)}
-                </ThemedText>
-                <ThemedText style={styles.activitySubtext}>
-                  complete: {String(socioComplete)}
-                </ThemedText>
-
-              </View>
-              <StatusChip ok={socioComplete} trueLabel="Complete" falseLabel="Incomplete" />
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <ThemedButton label="Open Socio Profiling" onPress={handleOpenSocio} />
-            </View>
-
-            <Spacer height={12} />
-            <ThemedDivider />
-            <Spacer height={12} />
-
-            {/* Row: Profiling Step 2 - Household */}
-            <View style={styles.testRow}>
-              <ThemedIcon name="home" iconColor="#4e6151" bgColor="#dce5dc" shape="square" containerSize={44} size={18} />
-              <View style={styles.testDetails}>
-                <ThemedText style={styles.activityTitle}>Profiling Step 2 — Household</ThemedText>
-                <ThemedText style={styles.activitySubtext}>
-                  linked: {String(householdLinked)}
-                </ThemedText>
-              </View>
-              <StatusChip ok={householdLinked} trueLabel="Linked" falseLabel="Unlinked" />
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <ThemedButton label="Open Household Profiling" onPress={handleOpenHousehold} />
-            </View>
-          </ThemedCard>
 
           <Spacer height={10} />
 
@@ -497,15 +339,5 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#333',
-  },
-  testRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  testDetails: {
-    flex: 1,
-    paddingHorizontal: 6,
   },
 })

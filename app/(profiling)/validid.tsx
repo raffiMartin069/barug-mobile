@@ -39,23 +39,36 @@ const ValidId = () => {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerSrc, setViewerSrc] = useState<string | null>(null)
 
-  // 🔁 Prefill from store if user navigates back here
-  useEffect(() => {
-    if (validId) {
-      setIdType(validId.id_type_id ? String(validId.id_type_id) : '')
-      if (validId.id_front_uri) setFrontId({ uri: validId.id_front_uri })
-      if (validId.id_back_uri) setBackId({ uri: validId.id_back_uri })
-      if (validId.id_selfie_uri) setSelfieId({ uri: validId.id_selfie_uri })
-    }
-  }, [validId])
-
+  // ---------- helpers ----------
   const getUri = (file: Picked) => {
     if (!file) return null
     if (file.base64) {
-      const mt = file.mimeType || file.type || 'image/jpeg'
+      const mt = file?.mimeType || file?.type || 'image/jpeg'
       return `data:${mt};base64,${file.base64}`
     }
-    return file.uri || file.path || null
+    return file?.uri || file?.path || null
+  }
+
+  const deriveNameFromUri = (uri?: string | null) => {
+    if (!uri) return undefined
+    try {
+      // Try to extract last path segment for file-ish uris
+      const clean = decodeURIComponent(uri)
+      const parts = clean.split(/[\/\\]/)
+      const last = parts[parts.length - 1] || ''
+      if (last && last.includes('.')) return last
+      // content:// or data: fallback
+      if (clean.startsWith('content://')) return 'selected-image.jpg'
+      if (clean.startsWith('data:')) return 'inline-image.jpg'
+      return last || 'image.jpg'
+    } catch {
+      return 'image.jpg'
+    }
+  }
+
+  const getDisplayName = (file: Picked) => {
+    if (!file) return undefined
+    return file.name || (file as any).fileName || deriveNameFromUri(getUri(file))
   }
 
   const openViewer = (file: Picked) => {
@@ -66,9 +79,16 @@ const ValidId = () => {
   }
 
   const handleFileSelected = (slot: 'front' | 'back' | 'selfie', file: any | null) => {
-    if (slot === 'front') setFrontId(file)
-    if (slot === 'back') setBackId(file)
-    if (slot === 'selfie') setSelfieId(file)
+    // Ensure we always keep a name for display
+    const withName = file
+      ? {
+          ...file,
+          name: file?.name || file?.fileName || deriveNameFromUri(file?.uri || file?.path),
+        }
+      : null
+    if (slot === 'front') setFrontId(withName)
+    if (slot === 'back') setBackId(withName)
+    if (slot === 'selfie') setSelfieId(withName)
   }
 
   const handleRemoveFile = (slot: 'front' | 'back' | 'selfie') => {
@@ -81,32 +101,68 @@ const ValidId = () => {
   const backUri  = useMemo(() => getUri(backId), [backId])
   const selfieUri= useMemo(() => getUri(selfieId), [selfieId])
 
+  // ---------- prefill from store ----------
+  useEffect(() => {
+    if (validId) {
+      setIdType(validId.id_type_id ? String(validId.id_type_id) : '')
+      if (validId.id_front_uri) {
+        setFrontId({
+          uri: validId.id_front_uri,
+          name: validId.id_front_name || deriveNameFromUri(validId.id_front_uri),
+        })
+      }
+      if (validId.id_back_uri) {
+        setBackId({
+          uri: validId.id_back_uri,
+          name: validId.id_back_name || deriveNameFromUri(validId.id_back_uri),
+        })
+      }
+      if (validId.id_selfie_uri) {
+        setSelfieId({
+          uri: validId.id_selfie_uri,
+          name: validId.id_selfie_name || deriveNameFromUri(validId.id_selfie_uri),
+        })
+      }
+    }
+  }, [validId])
+
+  // ---------- save ----------
   const saveAndContinue = () => {
     if (!frontUri || !selfieUri) {
       Alert.alert('Upload required', 'Please upload at least the Front ID and a Selfie holding the ID.')
       return
     }
+
     setValidId({
       id_type_id: idType ? parseInt(idType) : null,
-      id_number: null,                 // you can add an input if needed
+      id_number: null, // add an input later if needed
+
       id_front_uri: frontUri,
+      id_front_name: getDisplayName(frontId),
+
       id_back_uri: backUri ?? null,
+      id_back_name: backUri ? getDisplayName(backId) : null,
+
       id_selfie_uri: selfieUri,
+      id_selfie_name: getDisplayName(selfieId),
     })
+
     router.push('/reviewinputs')
   }
 
-  const skipAndContinue = () => {
-    // "Skip" means pass none
-    setValidId({
-      id_type_id: null,
-      id_number: null,
-      id_front_uri: null,
-      id_back_uri: null,
-      id_selfie_uri: null,
-    })
-    router.push('/reviewinputs')
-  }
+  // const skipAndContinue = () => {
+  //   setValidId({
+  //     id_type_id: null,
+  //     id_number: null,
+  //     id_front_uri: null,
+  //     id_front_name: null,
+  //     id_back_uri: null,
+  //     id_back_name: null,
+  //     id_selfie_uri: null,
+  //     id_selfie_name: null,
+  //   })
+  //   router.push('/reviewinputs')
+  // }
 
   const Preview = ({ file }: { file: Picked }) => {
     const uri = getUri(file)
@@ -116,7 +172,9 @@ const ValidId = () => {
         <TouchableOpacity activeOpacity={0.8} onPress={() => openViewer(file)}>
           <Image source={{ uri }} style={styles.preview} resizeMode="cover" />
         </TouchableOpacity>
-        <ThemedText style={styles.tapHint}>Tap image to view</ThemedText>
+        <ThemedText style={styles.tapHint}>
+          {'Tap image to view'}
+        </ThemedText>
       </View>
     )
   }
@@ -177,11 +235,6 @@ const ValidId = () => {
         <Spacer height={15} />
 
         <View>
-          {/* Skip = pass none */}
-          {/* <ThemedButton submit={false} onPress={skipAndContinue}>
-            <ThemedText non_btn>Skip</ThemedText>
-          </ThemedButton> */}
-
           <ThemedButton onPress={saveAndContinue}>
             <ThemedText btn>Continue</ThemedText>
           </ThemedButton>
@@ -210,7 +263,7 @@ const styles = StyleSheet.create({
   text: { textAlign: 'center' },
   previewWrap: { marginTop: 8, marginBottom: 4 },
   preview: { width: '100%', height: 180, borderRadius: 12 },
-  tapHint: { fontSize: 12, opacity: 0.7, textAlign: 'center', marginTop: 2 },
+  tapHint: { fontSize: 12, opacity: 0.7, textAlign: 'center', marginTop: 6 },
   viewerBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 },
   viewerFrame: { width: '100%', maxWidth: 900, aspectRatio: 3/4, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
   viewerImage: { width: '100%', height: '100%' },

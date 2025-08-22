@@ -19,7 +19,7 @@ const ChooseVerification = () => {
       router.push({ pathname: '/personalinfo', params: { mode: 'online' } })
     } else {
       // No BHW credential submission here — handled at the final step
-      router.push({ pathname: '/personalinfo2', params: { mode: 'bhw' } })
+      router.push({ pathname: '/field_personalinfo', params: { mode: 'bhw' } })
     }
   }
 

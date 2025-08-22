@@ -11,7 +11,7 @@ import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
 import { useRegistrationStore } from '@/store/registrationStore';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import {
@@ -19,6 +19,7 @@ import {
   genderOptions,
   nationalityOptions,
   religionOptions,
+  suffixOptions,
 } from '../../constants/formoptions';
 
 type AddrParams = { street?: string; puroksitio?: string; brgy?: string; city?: string };
@@ -35,6 +36,9 @@ const PersonalInfo = () => {
     street, puroksitio, brgy, city, haddress,
     setField, setAddress,
   } = useRegistrationStore();
+
+  // NEW: simple submitting state for the button text swap
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- WRAPPERS: make store setters behave like React state setters ---
   const setCivilStatusState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
@@ -60,6 +64,15 @@ const PersonalInfo = () => {
       setField('religion', next);
     };
   }, [setField]);
+
+  // NEW: suffix as dropdown
+  const setSuffixState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
+    return (valOrFn) => {
+      const prev = useRegistrationStore.getState().suffix || '';
+      const next = typeof valOrFn === 'function' ? (valOrFn as (p: string) => string)(prev) : valOrFn;
+      setField('suffix', next ?? '');
+    };
+  }, [setField]);
   // --------------------------------------------------------------------
 
   // If address params are present (coming back from address flow), persist them
@@ -73,10 +86,12 @@ const PersonalInfo = () => {
   const validateMobileNumber = (n: string) => /^(09\d{9}|\+639\d{9})$/.test(n);
 
   const handleSubmit = async () => {
+    if (isSubmitting) return; // prevent double taps
+
     const trimmedFname = fname.trim();
     const trimmedMname = mname.trim();
     const trimmedLname = lname.trim();
-    const trimmedSuffix = suffix.trim();
+    const trimmedSuffix = (suffix || '').trim(); // now from dropdown
     const trimmedEmail = email.trim();
     const trimmedMobnum = mobnum.trim();
     const trimmedPassword = password.trim();
@@ -96,8 +111,12 @@ const PersonalInfo = () => {
       Alert.alert('Validation Error', 'Middle name must contain letters only.');
       return;
     }
-    if (trimmedSuffix && !/^(JR|SR|III|IV|V)$/i.test(trimmedSuffix)) {
-      Alert.alert('Validation Error', 'Suffix must be JR, SR, III, IV, or V.');
+    // keep a safety net: suffix must be allowed value (or empty)
+    if (
+      trimmedSuffix &&
+      !['JR', 'SR', 'III', 'IV', 'V'].includes(trimmedSuffix.toUpperCase())
+    ) {
+      Alert.alert('Validation Error', 'Suffix must be Jr., Sr., III, IV, or V.');
       return;
     }
     if (!dob || new Date(dob) > new Date()) {
@@ -147,7 +166,7 @@ const PersonalInfo = () => {
     add('first_name', trimmedFname);
     add('middle_name', trimmedMname || null);
     add('last_name', trimmedLname);
-    add('suffix', trimmedSuffix || null);
+    add('suffix', trimmedSuffix || null); // dropdown value
     add('date_of_birth', typeof dob === 'string' ? dob : new Date(dob).toISOString().slice(0, 10));
     add('email', trimmedEmail);
     add('mobile_number', trimmedMobnum);
@@ -164,6 +183,7 @@ const PersonalInfo = () => {
     add('password', trimmedPassword);
 
     try {
+      setIsSubmitting(true);
       const response = await registerResidentWithVerificationBHW(fd); // multipart
       console.log('✅ Registered:', response);
       Alert.alert('Success', 'Resident registered successfully.');
@@ -184,6 +204,8 @@ const PersonalInfo = () => {
         reason = error?.message || reason;
       }
       Alert.alert('Registration Failed', `[${code}] ${reason}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -202,7 +224,15 @@ const PersonalInfo = () => {
           <Spacer height={10} />
           <ThemedTextInput placeholder="Last Name" value={lname} onChangeText={(v) => setField('lname', v)} />
           <Spacer height={10} />
-          <ThemedTextInput placeholder="Suffix" value={suffix} onChangeText={(v) => setField('suffix', v)} />
+
+          {/* Suffix as dropdown */}
+          <ThemedDropdown
+            items={suffixOptions}
+            value={suffix || ''}
+            setValue={setSuffixState}
+            placeholder="Suffix (optional)"
+            order={-1} // keep near name fields; order is just for your ThemedDropdown sorting if used
+          />
           <Spacer height={10} />
 
           <ThemedText subtitle>Sex</ThemedText>
@@ -261,8 +291,8 @@ const PersonalInfo = () => {
 
         <Spacer height={15} />
         <View>
-          <ThemedButton onPress={handleSubmit}>
-            <ThemedText btn>Continue</ThemedText>
+          <ThemedButton onPress={handleSubmit} disabled={isSubmitting}>
+            <ThemedText btn>{isSubmitting ? 'Registering…' : 'Continue'}</ThemedText>
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>
