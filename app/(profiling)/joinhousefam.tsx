@@ -1,24 +1,31 @@
-import apiClient from '@/api/apiClient'
-import Spacer from '@/components/Spacer'
-import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedButton from '@/components/ThemedButton'
-import ThemedDropdown from '@/components/ThemedDropdown'
-import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
-import ThemedSearchableDropdown from '@/components/ThemedSearchableDropdown'
-import ThemedText from '@/components/ThemedText'
-import ThemedTextInput from '@/components/ThemedTextInput'
-import ThemedView from '@/components/ThemedView'
-import { RELATIONSHIPS } from '@/constants/relationships'
-import { useFamilies } from '@/hooks/useFamilies'
-import { useHouseholds } from '@/hooks/useHouseholds'
-import { useDropdownValueStore } from '@/store/dropdownValueStore'
-import { useTextSearch } from '@/store/textStore'
-import { FamilyMembership } from '@/types/family_membership'
-import { AuthTokenUtil } from '@/utilities/authTokenUtility'
-import { MembershipException } from '@/utilities/exceptions/membership_exceptions'
-import { FamilyMembershipValidator } from '@/utilities/membership_validators'
-import React, { useState } from 'react'
-import { StyleSheet, View, Alert } from 'react-native'
+import React, { useState } from 'react';
+import { Text, View, Alert } from 'react-native';
+import { Link } from 'expo-router';
+
+import apiClient from '@/api/apiClient';
+
+import Spacer from '@/components/Spacer';
+import ThemedAppBar from '@/components/ThemedAppBar';
+import ThemedButton from '@/components/ThemedButton';
+import ThemedDropdown from '@/components/ThemedDropdown';
+import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
+import ThemedSearchableDropdown from '@/components/ThemedSearchableDropdown';
+import ThemedText from '@/components/ThemedText';
+import ThemedTextInput from '@/components/ThemedTextInput';
+import ThemedView from '@/components/ThemedView';
+
+import { RELATIONSHIPS } from '@/constants/relationships';
+
+import { useFamilies } from '@/hooks/useFamilies';
+import { useHouseholds } from '@/hooks/useHouseholds';
+
+import { useDropdownValueStore } from '@/store/dropdownValueStore';
+import { useTextSearch } from '@/store/textStore';
+
+import { FamilyMembership } from '@/types/family_membership';
+
+import { MembershipException } from '@/utilities/exceptions/membership_exceptions';
+import { FamilyMembershipValidator } from '@/utilities/membership_validators';
 
 const JoinHouseFam = () => {
   const [resYrs, setResYrs] = useState()
@@ -32,14 +39,14 @@ const JoinHouseFam = () => {
 
   const joinFamilyHandler = async (data: FamilyMembership) => {
     try {
-        /**
-       * If something goes wrong when joining a family, is it because of this logic.
-       * Currently I am unable to test the new JWT because it was not yet pushed in the 
-       * servers develop branch. Once it will be available then I will be able to check
-       * of how this endpoint behaves especially when handling JWT.
-       *
-       * I will leave this for now and revisit it later once the new JWT is available for testing.
-       */
+      /**
+     * If something goes wrong when joining a family, is it because of this logic.
+     * Currently I am unable to test the new JWT because it was not yet pushed in the 
+     * servers develop branch. Once it will be available then I will be able to check
+     * of how this endpoint behaves especially when handling JWT.
+     *
+     * I will leave this for now and revisit it later once the new JWT is available for testing.
+     */
       FamilyMembershipValidator.validate(data)
       const result = await apiClient.post('/v1/residents/family-membership/', data);
       console.info('Request for joining family is successful! ', JSON.stringify(result.data));
@@ -53,7 +60,7 @@ const JoinHouseFam = () => {
       const message = error?.response?.data?.error || error.message || "Unknown error"
     }
   }
-  
+
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
@@ -63,6 +70,7 @@ const JoinHouseFam = () => {
       />
       <ThemedKeyboardAwareScrollView>
         <View>
+          <Text style={{ fontWeight: 'semibold', fontSize: 25, paddingVertical: 16 }}>Select Household</Text>
           <ThemedSearchableDropdown
             searchplaceholder={'Search Household Number / Household Head'}
             dropdwonplaceholder={'Select your respective household'}
@@ -70,8 +78,6 @@ const JoinHouseFam = () => {
             searchKey="households"
             dropdownType="household"
           />
-
-          <Spacer />
 
           <ThemedDropdown
             placeholder={'Select Household Head Relationship'}
@@ -81,8 +87,15 @@ const JoinHouseFam = () => {
             setValue={(val: string) => setHouseholdRelation(val)}
           />
 
-          <Spacer />
+          <Spacer height={15} />
 
+          <Link href="./createhousehold">
+            <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create a new household</Text>
+          </Link>
+
+          <Spacer height={50} />
+
+          <Text style={{ fontWeight: 'semibold', fontSize: 25, paddingVertical: 16 }}>Select Family</Text>
           <ThemedSearchableDropdown
             searchplaceholder={'Search Family Number / Family Head'}
             dropdwonplaceholder={'Select your respective family unit'}
@@ -92,8 +105,6 @@ const JoinHouseFam = () => {
             dropdownType="family"
           />
 
-          <Spacer />
-
           <ThemedDropdown
             placeholder={'Select Family Head Relationship'}
             items={RELATIONSHIPS}
@@ -102,7 +113,13 @@ const JoinHouseFam = () => {
             order={3}
           />
 
-          <Spacer />
+          <Spacer height={15} />
+
+          <Link href="./createfamily">
+            <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create a new family</Text>
+          </Link>
+
+          <Spacer height={50} />
 
           <ThemedTextInput
             placeholder='Years of Residency'
