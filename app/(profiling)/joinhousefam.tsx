@@ -4,7 +4,6 @@ import { Link } from 'expo-router';
 
 import apiClient from '@/api/apiClient';
 
-import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedButton from '@/components/ThemedButton';
 import ThemedDropdown from '@/components/ThemedDropdown';
@@ -69,64 +68,71 @@ const JoinHouseFam = () => {
         showProfile={false}
       />
       <ThemedKeyboardAwareScrollView>
-        <View>
-          <Text style={{ fontWeight: 'semibold', fontSize: 25, paddingVertical: 16 }}>Select Household</Text>
-          <ThemedSearchableDropdown
-            searchplaceholder={'Search Household Number / Household Head'}
-            dropdwonplaceholder={'Select your respective household'}
-            data={households}
-            searchKey="households"
-            dropdownType="household"
-          />
+        <View style={{ gap: 35, paddingHorizontal: 8}}>
 
-          <ThemedDropdown
-            placeholder={'Select Household Head Relationship'}
-            items={RELATIONSHIPS}
-            value={householRelation}
-            order={1}
-            setValue={(val: string) => setHouseholdRelation(val)}
-          />
+          <View style={{ gap: 5 }}>
+            
+            <Text style={{ fontWeight: 'semibold', fontSize: 18 }}>Select Household</Text>
+            
+            <ThemedSearchableDropdown
+              searchplaceholder={'Search Household Number / Household Head'}
+              dropdwonplaceholder={'Select your respective household'}
+              data={households}
+              searchKey="households"
+              dropdownType="household"
+            />
 
-          <Spacer height={15} />
+            <ThemedDropdown
+              placeholder={'Select Household Head Relationship'}
+              items={RELATIONSHIPS}
+              value={householRelation}
+              order={1}
+              setValue={(val: string) => setHouseholdRelation(val)}
+            />
 
-          <Link href="./createhousehold">
-            <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create a new household</Text>
-          </Link>
+            <Link href="./createhousehold">
+              <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create Household</Text>
+            </Link>
 
-          <Spacer height={50} />
+          </View>
 
-          <Text style={{ fontWeight: 'semibold', fontSize: 25, paddingVertical: 16 }}>Select Family</Text>
-          <ThemedSearchableDropdown
-            searchplaceholder={'Search Family Number / Family Head'}
-            dropdwonplaceholder={'Select your respective family unit'}
-            data={families}
-            order={2}
-            searchKey="families"
-            dropdownType="family"
-          />
+          <View style={{ gap: 5 }}>
 
-          <ThemedDropdown
-            placeholder={'Select Family Head Relationship'}
-            items={RELATIONSHIPS}
-            value={familyRelation}
-            setValue={(val: string) => { setFamilyRelation(val) }}
-            order={3}
-          />
+            <Text style={{ fontWeight: 'semibold', fontSize: 18 }}>Select Family</Text>
 
-          <Spacer height={15} />
+            <ThemedSearchableDropdown
+              searchplaceholder={'Search Family Number / Family Head'}
+              dropdwonplaceholder={'Select your respective family unit'}
+              data={families}
+              order={2}
+              searchKey="families"
+              dropdownType="family"
+            />
 
-          <Link href="./createfamily">
-            <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create a new family</Text>
-          </Link>
+            <ThemedDropdown
+              placeholder={'Select Family Head Relationship'}
+              items={RELATIONSHIPS}
+              value={familyRelation}
+              setValue={(val: string) => { setFamilyRelation(val) }}
+              order={3}
+            />
 
-          <Spacer height={50} />
+            <Link href="./createfamily">
+              <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create Family</Text>
+            </Link>
 
-          <ThemedTextInput
-            placeholder='Years of Residency'
-            value={resYrs}
-            onChangeText={setResYrs}
-            keyboardType='numeric'
-          />
+          </View>
+
+
+          <View style={{ gap: 5 }}>
+            <Text style={{ fontWeight: 'semibold', fontSize: 18 }}>Years of Residency</Text>
+            <ThemedTextInput
+              placeholder='Years of Residency'
+              value={resYrs}
+              onChangeText={setResYrs}
+              keyboardType='numeric'
+            />
+          </View>
         </View>
 
         <View>
