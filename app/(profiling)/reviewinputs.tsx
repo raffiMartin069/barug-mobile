@@ -74,12 +74,22 @@ const ReviewInputs = () => {
   const [viewerSrc, setViewerSrc] = useState<string | null>(null);
 
   // Seed from registration store if personal empty
-  useEffect(() => {
-    if (personal) return;
-    const hasReg = reg.fname || reg.lname || reg.email || reg.street || reg.brgy || reg.city;
-    if (!hasReg) return;
+useEffect(() => {
+  const updates: any = {};
 
-    setPersonal({
+  if (!personal?.civil_status_id && reg.civilStatus) {
+    updates.civil_status_id = parseInt(reg.civilStatus || '0') || undefined;
+  }
+  if (!personal?.nationality_id && reg.nationality) {
+    updates.nationality_id = parseInt(reg.nationality || '0') || undefined;
+  }
+  if (!personal?.religion_id && reg.religion) {
+    updates.religion_id = parseInt(reg.religion || '0') || undefined;
+  }
+
+  // seed the rest if personal is totally empty
+  if (!personal) {
+    Object.assign(updates, {
       first_name: reg.fname?.trim() || '',
       middle_name: reg.mname?.trim() || null,
       last_name: reg.lname?.trim() || '',
@@ -88,9 +98,6 @@ const ReviewInputs = () => {
       email: reg.email?.trim() || '',
       mobile_number: reg.mobnum?.trim() || '',
       sex_id: reg.gender === 'female' ? 2 : 1,
-      civil_status_id: parseInt(reg.civilStatus || '0') || undefined,
-      nationality_id: parseInt(reg.nationality || '0') || undefined,
-      religion_id: parseInt(reg.religion || '0') || undefined,
       street: reg.street || '',
       purok: reg.puroksitio || '',
       barangay: reg.brgy || '',
@@ -98,7 +105,14 @@ const ReviewInputs = () => {
       username: reg.email?.trim() || '',
       password: reg.password?.trim() || '',
     });
-  }, [personal, reg, setPersonal]);
+  }
+
+  if (Object.keys(updates).length > 0) {
+    setPersonal({ ...(personal || {}), ...updates });
+  }
+}, [personal, reg, setPersonal]);
+
+
 
   if (!personal) {
     return (
@@ -108,6 +122,8 @@ const ReviewInputs = () => {
       </ThemedView>
     );
   }
+  console.log('personal.civil_status_id', personal.civil_status_id);
+  console.log('map value', civilStatusMap[personal.civil_status_id]);
 
   const displayGender = personal.sex_id === 1 ? 'male' : 'female';
   const frontUri = useMemo(() => validId?.id_front_uri || '', [validId?.id_front_uri]);
@@ -170,7 +186,6 @@ const ReviewInputs = () => {
 
   const onConfirmAndSubmit = async () => {
     try {
-      // Client-side guard for the required fields
       if (!frontUri) {
         Alert.alert('Missing ID Front', 'Please upload the front image of the ID.');
         return;
@@ -179,20 +194,30 @@ const ReviewInputs = () => {
       setSubmitting(true);
       const formData = await buildVerificationFormData();
 
+      // 🔍 Debug: log each FormData entry
+      formData.forEach((v, k) => {
+        if (typeof v === 'object' && v?.uri) {
+          console.log(`FormData file: ${k}`, v);
+        } else {
+          console.log(`FormData field: ${k} = ${v}`);
+        }
+      });
+
       // ✅ Use this API
       await requestPersonVerification(formData);
 
       Alert.alert('Success', 'Verification request submitted successfully.');
-      router.push('/residenthome'); // adjust destination as needed
+      router.push('/residenthome');
     } catch (err: any) {
       console.error('❌ Verification submit failed:', err);
       const msg = err?.response?.data?.error || err?.error || err?.message || 'Verification failed';
-      Alert.alert('Submit Failed', String(msg));
+      Alert.alert('Submit Failed', "Make sure your FULL NAME matches the ID");
     } finally {
       setSubmitting(false);
       setConfirmOpen(false);
     }
   };
+
 
   return (
     <ThemedView safe>
@@ -209,9 +234,11 @@ const ReviewInputs = () => {
           <Row label="Suffix" value={personal.suffix || ''} />
           <Row label="Sex" value={genderMap[displayGender] || displayGender} />
           <Row label="Date of Birth" value={normalizeDateYMD(personal.date_of_birth)} />
+
           <Row label="Civil Status" value={civilStatusMap[String(personal.civil_status_id)]} />
           <Row label="Nationality" value={nationalityMap[String(personal.nationality_id)]} />
           <Row label="Religion" value={religionMap[String(personal.religion_id)]} />
+
           <Row label="Street" value={personal.street} />
           <Row label="Purok / Sitio" value={personal.purok} />
           <Row label="Barangay" value={personal.barangay} />

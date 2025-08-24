@@ -37,6 +37,45 @@ const PersonalInfo = () => {
     setField, setAddress,
   } = useRegistrationStore();
 
+  function parseSupabaseAuthError(err: any): { code?: string; message?: string } {
+    const tryParse = (s: any) => {
+      if (typeof s !== 'string') return typeof s === 'object' ? s : null;
+      try { return JSON.parse(s); } catch { return null; }
+    };
+
+    // Possible carriers of the real payload
+    // 1) err.response.data  (axios)
+    // 2) err.response       (your backend stuffed stringified JSON here)
+    // 3) err.error          (your backend stuffed a stringified object here)
+    // 4) err.message        (fallback)
+
+    // A. axios-style
+    let payload = err?.response?.data ?? null;
+    payload = tryParse(payload) ?? payload;
+
+    // B. backend placed JSON string under response
+    if (!payload && err?.response) {
+      payload = tryParse(err.response) ?? null;
+    }
+
+    // C. backend placed nested JSON under error
+    if (!payload && err?.error) {
+      const fixed = typeof err.error === 'string'
+        ? err.error.replace(/'/g, '"').replace(/\bNone\b/g, 'null')
+        : err.error;
+      const p = tryParse(fixed);
+      // Some backends wrap it again under p.response
+      payload = tryParse(p?.response) ?? p ?? null;
+    }
+
+    // Now extract typical fields
+    const code = payload?.error_code ?? payload?.code ?? undefined;
+    const message = payload?.msg ?? payload?.message ?? err?.message ?? undefined;
+
+    return { code, message };
+  }
+
+
   // NEW: simple submitting state for the button text swap
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -190,27 +229,27 @@ const PersonalInfo = () => {
       router.push({ pathname: '/verifyemail', params: { email: trimmedEmail } });
     } catch (error: any) {
       console.error('❌ Registration API error:', error);
-      let code = 'UNKNOWN';
-      let reason = 'Something went wrong during registration.';
-      if (typeof error?.error === 'string') {
-        try {
-          const fixedErrorString = error.error.replace(/'/g, '"').replace(/\bNone\b/g, 'null');
-          const backendError = JSON.parse(fixedErrorString);
-          code = backendError?.code || code;
-          reason = backendError?.message || reason;
-        } catch {}
-      } else if (typeof error === 'object') {
-        code = error?.code || code;
-        reason = error?.message || reason;
-      }
-      Alert.alert('Registration Failed', `[${code}] ${reason}`);
+
+      const { code, message } = parseSupabaseAuthError(error);
+
+      // Friendly mapping for known codes (optional)
+      const knownMsg =
+        code === 'email_exists'
+          ? 'A user with this email address has already been registered'
+          : undefined;
+
+      const finalMsg =  knownMsg || message || 'Something went wrong during registration.';
+      const finalCode = code || 'ERROR';
+
+      Alert.alert('Registration Failed', `[${finalCode}] ${finalMsg}`);
     } finally {
       setIsSubmitting(false);
     }
+
   };
 
   const handleHomeAddress = () => {
-    router.push({ pathname: '/mapaddress', params: { returnTo: '/residentaddress' } });
+    router.push({ pathname: '/online_mapaddress', params: { returnTo: '/online_residentaddress' } });
   };
 
   return (

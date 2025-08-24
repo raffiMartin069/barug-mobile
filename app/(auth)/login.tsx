@@ -41,7 +41,7 @@ const Login = () => {
           if (parsed?.message || parsed?.code) {
             return { code: parsed.code, message: parsed.message };
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -57,7 +57,7 @@ const Login = () => {
         try {
           const parsed = JSON.parse(msg.replace(/'/g, '"').replace(/\bNone\b/g, 'null'));
           return { code: parsed?.code, message: parsed?.message };
-        } catch {}
+        } catch { }
       }
       return { message: err.message };
     }
@@ -102,21 +102,20 @@ const Login = () => {
       const codeNorm = (code || '').toString().toUpperCase();
       const msgNorm = (message || '').toLowerCase();
 
-      // Redirect to verify screen for "email not verified" cases:
-      // - explicit codes: P5040, P6071
-      // - OR message contains "not verified"
+      // ✅ Case 1: Email not verified → redirect
       if (codeNorm === 'P5040' || codeNorm === 'P6071' || msgNorm.includes('not verified')) {
         router.push({ pathname: '/verifyemail', params: { email: trimmedEmail } });
         return;
       }
 
-      const friendly =
-        message ||
-        (err?.response?.status === 0
-          ? 'Network error. Please check your connection.'
-          : 'Login failed. Please try again.');
+      // ✅ Case 2: Network error
+      if (err?.response?.status === 0) {
+        Alert.alert('Login Failed', 'Network error. Please check your connection.');
+        return;
+      }
 
-      Alert.alert('Login Failed', friendly);
+      // ✅ Case 3: Everything else
+      Alert.alert('Login Failed', 'Invalid credentials');
     } finally {
       setLoading(false);
     }

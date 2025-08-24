@@ -7,7 +7,8 @@ import React from 'react';
 type Params = { returnTo?: string };
 
 const MapAddress = () => {
-  const { returnTo = '/update_homeaddress' } = useLocalSearchParams<Params>();
+  // default to residentaddress (exists in your route list)
+  const { returnTo = '/update_residentaddress' } = useLocalSearchParams<Params>();
   return (
     <ThemedView safe={true}>
       <ThemedAppBar title="Map" showNotif={false} showProfile={false} />

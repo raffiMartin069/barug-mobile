@@ -1,3 +1,7 @@
+// =============================================
+// File: src/constants/formoptions.tsx (UPDATED)
+// =============================================
+
 // ✅ Gender Options
 export const genderOptions = [
   { label: 'Male', value: 'male' },
@@ -18,7 +22,8 @@ export const civilStatusOptions = [
   { label: 'Divorced', value: '5' },
 ];
 
-export const civilStatusMap = {
+// Note: number-keyed map (1..5)
+export const civilStatusMap: Record<number | string, string> = {
   1: 'Single',
   2: 'Married',
   3: 'Widowed',
@@ -50,7 +55,8 @@ export const nationalityOptions = [
   { label: 'Vietnamese', value: '20' },
 ];
 
-export const nationalityMap = {
+// Note: string-keyed map ('1'..'20')
+export const nationalityMap: Record<number | string, string> = {
   '1': 'American',
   '2': 'Australian',
   '3': 'Brazilian',
@@ -85,24 +91,30 @@ export const religionOptions = [
   { label: 'Christian', value: '5' },
   { label: 'Evangelical', value: '6' },
   { label: 'Hindu', value: '7' },
-  { label: 'Jehovah\'s Witness', value: '10' },
+  { label: "Jehovah's Witness", value: '10' },
   { label: 'Orthodox', value: '11' },
   { label: 'Protestant', value: '12' },
   { label: 'Seventh-Day Adventist', value: '14' },
   { label: 'Others', value: '15' },
 ];
 
-export const religionMap = {
-  13: 'Roman Catholic',
-  2: 'Iglesia Ni Cristo',
+// ✅ Fixed to match options (number-keyed)
+export const religionMap: Record<number | string, string> = {
+  1: 'Agnostic',
+  2: 'Amish',
   3: 'Born Again',
-  4: 'Islam',
-  5: 'Protestant',
-  6: 'Buddhist',
+  4: 'Buddhist',
+  5: 'Christian',
+  6: 'Evangelical',
   7: 'Hindu',
-  8: 'Seventh-Day Adventist',
-  9: 'Agnostic',
-  10: 'Others',
+  8: 'Iglesia Ni Cristo',
+  9: 'Islam',
+  10: "Jehovah's Witness",
+  11: 'Orthodox',
+  12: 'Protestant',
+  13: 'Roman Catholic',
+  14: 'Seventh-Day Adventist',
+  15: 'Others',
 };
 
 // Local suffix options (values stored uppercase for backend consistency)
@@ -114,7 +126,6 @@ export const suffixOptions = [
   { label: 'IV', value: 'IV' },
   { label: 'V', value: 'V' },
 ];
-
 
 // ✅ Educational Attainment Options
 export const educAttainmentOptions = [
@@ -129,8 +140,7 @@ export const educAttainmentOptions = [
   { label: 'Postgraduate', value: '9' },
 ];
 
-
-export const educAttainmentMap = {
+export const educAttainmentMap: Record<number | string, string> = {
   1: 'No Formal Education',
   2: 'Elementary Level',
   3: 'Elementary Graduate',
@@ -141,7 +151,6 @@ export const educAttainmentMap = {
   8: 'College Graduate',
   9: 'Postgraduate',
 };
-
 
 // ✅ Employment Status Options
 export const empStatOptions = [
@@ -162,7 +171,7 @@ export const empStatOptions = [
 ];
 
 // ✅ Employment Status Map
-export const empStatMap = {
+export const empStatMap: Record<number | string, string> = {
   1: 'Employed',
   2: 'Unemployed',
   3: 'OFW',
@@ -179,7 +188,6 @@ export const empStatMap = {
   14: 'Underemployed',
 };
 
-
 // ✅ Monthly Personal Income Options
 export const mnthlyPerosonalIncomeOptions = [
   { label: 'Below ₱5,000', value: '1' },
@@ -194,7 +202,7 @@ export const mnthlyPerosonalIncomeOptions = [
 ];
 
 // ✅ Monthly Personal Income Map
-export const mnthlyPersonalIncomeMap = {
+export const mnthlyPersonalIncomeMap: Record<number | string, string> = {
   1: 'Below ₱5,000',
   2: '₱5,001 - ₱10,000',
   3: '₱10,001 - ₱15,000',
@@ -205,8 +213,6 @@ export const mnthlyPersonalIncomeMap = {
   8: '₱75,001 - ₱100,000',
   9: 'Above ₱100,000',
 };
-
-
 
 // ✅ Government Programs Options
 export const govProgOptions = [
@@ -219,9 +225,8 @@ export const govProgOptions = [
   { label: 'SSS', value: '6' },
 ];
 
-
 // ✅ Government Programs Map
-export const govProgMap = {
+export const govProgMap: Record<number | string, string> = {
   1: '4Ps',
   2: 'GSIS',
   3: 'PhilHealth',
@@ -231,8 +236,6 @@ export const govProgMap = {
   7: 'None',
 };
 
-
-
 // ✅ ID Type Options (matches document_type table)
 export const idTypeOptions = [
   { label: 'PHILIPPINE PASSPORT', value: '1' },
@@ -240,9 +243,9 @@ export const idTypeOptions = [
   { label: 'SSS/UMID CARD', value: '3' },
   { label: 'GSIS ECARD', value: '4' },
   { label: 'PRC ID', value: '5' },
-  { label: 'DRIVER\'S LICENSE', value: '6' },
+  { label: "DRIVER'S LICENSE", value: '6' },
   { label: 'PHILHEALTH ID', value: '7' },
-  { label: 'VOTER\'S ID', value: '8' },
+  { label: "VOTER'S ID", value: '8' },
   { label: 'POSTAL ID', value: '9' },
   { label: 'SENIOR CITIZEN ID', value: '10' },
   { label: 'PWD ID', value: '11' },
@@ -256,15 +259,15 @@ export const idTypeOptions = [
   { label: 'RESIDENT SELFIE', value: '19' },
 ];
 
-export const idTypeMap: Record<number, string> = {
+export const idTypeMap: Record<number | string, string> = {
   1: 'PHILIPPINE PASSPORT',
   2: 'PHILIPPINE NATIONAL ID',
   3: 'SSS/UMID CARD',
   4: 'GSIS ECARD',
   5: 'PRC ID',
-  6: 'DRIVER\'S LICENSE',
+  6: "DRIVER'S LICENSE",
   7: 'PHILHEALTH ID',
-  8: 'VOTER\'S ID',
+  8: "VOTER'S ID",
   9: 'POSTAL ID',
   10: 'SENIOR CITIZEN ID',
   11: 'PWD ID',
@@ -278,15 +281,8 @@ export const idTypeMap: Record<number, string> = {
   19: 'RESIDENT SELFIE',
 };
 
-
-
-export const relationshipOptions = [
-
-];
-
-export const relationshipMap = {
-
-};
+export const relationshipOptions: Array<{label: string; value: string}> = [];
+export const relationshipMap: Record<string, string> = {};
 
 // ✅ NHTS Options
 export const nhtsOptions = [
@@ -309,3 +305,4 @@ export const indigentMap = {
   yes: 'Yes',
   no: 'No',
 };
+

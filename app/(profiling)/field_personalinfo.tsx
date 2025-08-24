@@ -115,7 +115,7 @@ const PersonalInfo2 = () => {
       first_name: fname.trim(),
       middle_name: mname.trim() || null,
       last_name: lname.trim(),
-      suffix: suffix?.trim() || null,
+      suffix: "Jr.",
       date_of_birth: dob,
       email: useEmail ? (trimmedEmail || null) : null, // only when useEmail
       mobile_number: trimmedMobile || null,            // optional

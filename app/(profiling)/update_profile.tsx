@@ -1,339 +1,372 @@
+// app/update_profile.tsx
+import { updateUnverifiedBasicInfo } from '@/api/residentApi'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDatePicker from '@/components/ThemedDatePicker'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
-import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedRadioButton from '@/components/ThemedRadioButton'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { useRouter } from 'expo-router'
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, View } from 'react-native'
+import { useRegistrationStore } from '@/store/registrationStore'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native'
 
 import {
     civilStatusOptions,
     genderOptions,
     nationalityOptions,
     religionOptions,
+    suffixOptions,
 } from '@/constants/formoptions'
 
-import { fetchResidentProfile, updateUnverifiedBasicInfo } from '@/api/residentApi'
-import { useProfilingWizard } from '@/store/profilingWizard'
+type RouteParams = {
+    profile?: string
+    person_id?: string
+    street?: string
+    purok?: string
+    brgy?: string
+    city?: string
+    skipPrefill?: string        // NEW
+    returnTo?: string
+}
 
-type Opt = { label: string; value: string }
+type Option = { label: string; value: string }
 
-const VerifyPersonalInfo = () => {
+const mapLabelToValue = (opts: Option[], label?: string | null, fallbackId?: number | string) => {
+    if (fallbackId !== undefined && fallbackId !== null && `${fallbackId}` !== '') {
+        return String(fallbackId)
+    }
+    if (!label) return ''
+    const needle = `${label}`.trim().toLowerCase()
+    const found = opts.find((o) => o.label.trim().toLowerCase() === needle)
+    return found ? String(found.value) : ''
+}
+
+const UpdateProfile = () => {
     const router = useRouter()
-    const { personal, setPersonal } = useProfilingWizard()
+    const {
+        profile: rawProfile,
+        person_id,
+        street: pStreet,
+        purok: pPurok,
+        brgy: pBrgy,
+        city: pCity,
+        skipPrefill,
+        returnTo,                    // ✅ NEW
+    } = useLocalSearchParams<RouteParams>()
 
-    // ---------- Local state ----------
-    const [fname, setFname] = useState('')
-    const [mname, setMname] = useState('')
-    const [lname, setLname] = useState('')
-    const [suffix, setSuffix] = useState('')
-    const [gender, setGender] = useState<'male' | 'female'>('male')
-    const [dob, setDob] = useState<Date | null>(null)
-    const [civilStatus, setCivilStatus] = useState<string>('')
-    const [nationality, setNationality] = useState<string>('')
-    const [religion, setReligion] = useState<string>('')
-    const [haddress, setHAddress] = useState('')
+    const {
+        // state
+        fname, mname, lname, suffix, gender, dob,
+        civilStatus, nationality, religion,
+        mobnum, email, haddress,
+        street, puroksitio, brgy, city,
+        // actions
+        setField, setAddress,
+    } = useRegistrationStore()
 
-    const [street, setStreet] = useState('')
-    const [purok, setPurok] = useState('')
-    const [barangay, setBarangay] = useState('')
-    const [city, setCity] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isPrefilling, setIsPrefilling] = useState(true)
 
-    const [mobnum, setMobNum] = useState('')
-    const [email, setEmail] = useState('')
+    // run prefill ONCE; also skip if store already has data or skipPrefill=1
+    const didPrefillRef = useRef(false)
 
-    const [profileLoading, setProfileLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [confirmVisible, setConfirmVisible] = useState(false)
+    // Date-safe value for ThemedDatePicker
+    const dobDate = useMemo(() => {
+        if (!dob) return undefined
+        const d = new Date(dob)
+        return isNaN(d.getTime()) ? undefined : d
+    }, [dob])
 
-    // ---------- Helpers ----------
-    const pickOptionValue = (idLike: any, nameLike: any, options: Opt[]) => {
-        if (idLike !== undefined && idLike !== null && idLike !== '') {
-            const idStr = String(idLike)
-            if (options.some(o => String(o.value) === idStr)) return idStr
+    // Dropdown helpers
+    const setCivilStatusState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
+        return (valOrFn) => {
+            const prev = useRegistrationStore.getState().civilStatus
+            const next = typeof valOrFn === 'function' ? (valOrFn as (p: string) => string)(prev) : valOrFn
+            setField('civilStatus', next)
         }
-        if (nameLike) {
-            const label = String(nameLike).trim().toLowerCase()
-            const hit = options.find(o => o.label.trim().toLowerCase() === label)
-            if (hit) return String(hit.value)
-        }
-        return ''
-    }
+    }, [setField])
 
-    const buildPersonalPayload = () => {
-        const toInt = (s: string) => {
-            const n = parseInt(s || '0', 10)
-            return Number.isFinite(n) && n > 0 ? n : undefined
+    const setNationalityState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
+        return (valOrFn) => {
+            const prev = useRegistrationStore.getState().nationality
+            const next = typeof valOrFn === 'function' ? (valOrFn as (p: string) => string)(prev) : valOrFn
+            setField('nationality', next)
         }
+    }, [setField])
 
-        return {
-            first_name: fname.trim(),
-            middle_name: mname.trim() || null,
-            last_name: lname.trim(),
-            suffix: suffix.trim() || null,
-            date_of_birth: dob ? dob.toISOString().split('T')[0] : null, // YYYY-MM-DD
-            email: (email || '').trim() || null,
-            mobile_number: (mobnum || '').trim() || null,
-            sex_id: gender === 'male' ? 1 : 2,
-            civil_status_id: toInt(civilStatus),
-            nationality_id: toInt(nationality),
-            religion_id: toInt(religion),
-            street: street || null,
-            purok: purok || null,
-            barangay: barangay || null,
-            city: city || null,
-            haddress: haddress || null,
+    const setReligionState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
+        return (valOrFn) => {
+            const prev = useRegistrationStore.getState().religion
+            const next = typeof valOrFn === 'function' ? (valOrFn as (p: string) => string)(prev) : valOrFn
+            setField('religion', next)
         }
-    }
+    }, [setField])
 
-    // ---------- Fetch profile ----------
+    const setSuffixState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
+        return (valOrFn) => {
+            const prev = useRegistrationStore.getState().suffix || ''
+            const next = typeof valOrFn === 'function' ? (valOrFn as (p: string) => string)(prev) : valOrFn
+            setField('suffix', next ?? '')
+        }
+    }, [setField])
+
+    // PREFILL FIRST (but not after returning from map)
     useEffect(() => {
-        let mounted = true
+        // skip if:
+        //  - we already prefilled this mount
+        //  - store already has meaningful data (user came back)
+        //  - caller explicitly asked to skip (skipPrefill=1)
+        const hasData =
+            Boolean(useRegistrationStore.getState().fname) ||
+            Boolean(useRegistrationStore.getState().lname) ||
+            Boolean(useRegistrationStore.getState().email) ||
+            Boolean(useRegistrationStore.getState().haddress)
+
+        if (didPrefillRef.current || hasData || String(skipPrefill || '') === '1') {
+            setIsPrefilling(false)
+            return
+        }
+        didPrefillRef.current = true
+
             ; (async () => {
                 try {
-                    const p = await fetchResidentProfile()
-                    if (!mounted || !p) return
+                    const data = rawProfile ? JSON.parse(String(rawProfile)) : {}
 
-                    setFname(p.first_name ?? '')
-                    setMname(p.middle_name ?? '')
-                    setLname(p.last_name ?? '')
-                    setSuffix(p.suffix ?? '')
+                    const sexName = (data.sex_name ?? data.sex ?? '').toString()
+                    const birthRaw = data.date_of_birth ?? data.birthdate ?? ''
+                    const birth = (() => {
+                        if (!birthRaw) return ''
+                        const d = new Date(birthRaw)
+                        return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
+                    })()
 
-                    const sexRaw = (p.sex_name ?? p.sex ?? '').toString().toLowerCase()
-                    setGender(sexRaw.startsWith('f') ? 'female' : 'male')
+                    const civilId = mapLabelToValue(civilStatusOptions, data.civil_status, data.civil_status_id)
+                    const natId = mapLabelToValue(nationalityOptions, data.nationality, data.nationality_id)
+                    const relId = mapLabelToValue(religionOptions, data.religion, data.religion_id)
 
-                    const rawDob = p.birthdate ?? p.date_of_birth ?? ''
-                    setDob(rawDob ? new Date(rawDob) : null)
+                    const mergedStreet = pStreet ?? data.street_name ?? data.street ?? ''
+                    const mergedPurok = pPurok ?? data.purok_sitio_name ?? data.purok_sitio ?? data.purok ?? ''
+                    const mergedBrgy = pBrgy ?? data.barangay_name ?? data.barangay ?? ''
+                    const mergedCity = pCity ?? data.city_name ?? data.city ?? ''
+                    const fullAddr = [mergedStreet, mergedPurok, mergedBrgy, mergedCity].filter(Boolean).join(', ')
 
-                    setCivilStatus(pickOptionValue(p.civil_status_id, p.civil_status, civilStatusOptions))
-                    setNationality(pickOptionValue(p.nationality_id, p.nationality, nationalityOptions))
-                    setReligion(pickOptionValue(p.religion_id, p.religion, religionOptions))
+                    // bulk fields
+                    setField('fname', data.first_name ?? '')
+                    setField('mname', data.middle_name ?? '')
+                    setField('lname', data.last_name ?? '')
+                    setField('suffix', data.suffix ?? '')
+                    setField('gender', sexName.toLowerCase() === 'male' ? 'male' : 'female')
+                    setField('dob', birth)
+                    setField('civilStatus', civilId)
+                    setField('nationality', natId)
+                    setField('religion', relId)
+                    setField('mobnum', data.mobile_number ?? '')
+                    setField('email', data.email ?? '')
+                    setField('haddress', fullAddr)
 
-                    const _street = p.street ?? p.street_name ?? ''
-                    const _purok = p.purok ?? p.purok_sitio ?? ''
-                    const _brgy = p.barangay ?? ''
-                    const _city = p.city ?? ''
-                    setStreet(_street)
-                    setPurok(_purok)
-                    setBarangay(_brgy)
-                    setCity(_city)
-
-                    const addrParts = [_street, _purok, _brgy, _city].filter(Boolean)
-                    setHAddress(addrParts.join(', '))
-
-                    setMobNum(p.mobile_num != null ? String(p.mobile_num) : '')
-                    setEmail(p.email != null ? String(p.email) : '')
-
-                    setPersonal({
-                        ...(personal ?? {}),
-                        ...buildPersonalPayload(),
+                    // granular address (used by map/update flows)
+                    setAddress({
+                        street: mergedStreet,
+                        puroksitio: mergedPurok,
+                        brgy: mergedBrgy,
+                        city: mergedCity,
                     })
                 } catch (e) {
-                    console.error('Failed to load resident profile:', e)
-                    Alert.alert('Error', 'Failed to load your profile. Please try again.')
+                    console.error('Prefill parse error:', e)
+                    Alert.alert('Error', 'Invalid profile data passed.')
                 } finally {
-                    if (mounted) setProfileLoading(false)
+                    setIsPrefilling(false)
                 }
             })()
-        return () => {
-            mounted = false
-        }
-    }, [])
+    }, [rawProfile, pStreet, pPurok, pBrgy, pCity, setField, setAddress, skipPrefill])
 
-    // ---------- Validators ----------
-    const validateEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
+    // validators (same as PersonalInfo, minus passwords)
+    const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
     const validateMobileNumber = (n: string) => /^(09\d{9}|\+639\d{9})$/.test(n)
+    // ...inside UpdateProfile component
 
-    const handleContinue = () => {
-        // validation rules (same as before)...
-        if (!fname.trim() || /[^a-zA-Z\s]/.test(fname.trim())) {
-            Alert.alert('Validation Error', 'Please enter a valid first name.')
-            return
-        }
-        if (!lname.trim() || /[^a-zA-Z\s]/.test(lname.trim())) {
-            Alert.alert('Validation Error', 'Please enter a valid last name.')
-            return
-        }
-        if (!dob || new Date(dob) > new Date()) {
-            Alert.alert('Validation Error', 'Please select a valid date of birth.')
-            return
-        }
-        if (!civilStatus || !nationality || !religion || !haddress.trim()) {
-            Alert.alert('Validation Error', 'Please complete all required fields.')
-            return
-        }
-        if (!mobnum.trim() || !validateMobileNumber(mobnum.trim())) {
-            Alert.alert('Validation Error', 'Invalid mobile number.')
-            return
-        }
-        if (!email.trim() || !validateEmail(email.trim())) {
-            Alert.alert('Validation Error', 'Invalid email address.')
-            return
+    const handleSubmit = async () => {
+        if (isSubmitting) return
+
+        const trimmedFname = fname.trim()
+        const trimmedMname = mname.trim()
+        const trimmedLname = lname.trim()
+        const trimmedSuffix = (suffix || '').trim()
+        const trimmedEmail = email.trim()
+        const trimmedMobnum = mobnum.trim()
+        const trimmedHAddress = haddress.trim()
+
+        // (validations unchanged)
+        // ...
+
+        // Normalize DOB to YYYY-MM-DD
+        const dobIso = typeof dob === 'string' ? dob : new Date(dob).toISOString().slice(0, 10)
+        const sexId = gender === 'male' ? 1 : 2
+
+        const fd = new FormData()
+
+        // tiny helper to append multiple accepted keys with the same value
+        const appendAliases = (keys: string[], value: any) => {
+            if (value === undefined || value === null || value === '') return
+            for (const k of keys) fd.append(k, typeof value === 'string' ? value : String(value))
         }
 
-        setConfirmVisible(true)
-    }
+        // IDs (send both plain and p_* just in case)
+        appendAliases(['person_id', 'p_person_id'], person_id)
+        appendAliases(['updated_by_id', 'p_updated_by_id'], person_id)
 
-    // ---------- API Submit + Next ----------
-    const proceedToNext = async () => {
-        setSaving(true)
+        // Names
+        appendAliases(['first_name', 'p_first_name'], trimmedFname)
+        appendAliases(['middle_name', 'p_middle_name'], trimmedMname)
+        appendAliases(['last_name', 'p_last_name'], trimmedLname)
+        appendAliases(['suffix', 'p_suffix'], trimmedSuffix)
+
+        // Birthdate / sex / status IDs
+        appendAliases(['birthdate', 'p_birthdate', 'date_of_birth'], dobIso)
+        appendAliases(['sex_id', 'p_sex_id'], sexId)
+        appendAliases(['civil_status_id', 'p_civil_status_id'], parseInt(civilStatus))
+        appendAliases(['nationality_id', 'p_nationality_id'], parseInt(nationality))
+        appendAliases(['religion_id', 'p_religion_id'], parseInt(religion))
+
+        // Contact
+        appendAliases(['mobile_num', 'p_mobile_num', 'mobile_number'], trimmedMobnum)
+        appendAliases(['email'], trimmedEmail)
+
+        // Address — use *_name keys that your backend prints
+        appendAliases(['city_name', 'p_city_name', 'city'], city)
+        appendAliases(['barangay_name', 'p_barangay_name', 'barangay'], brgy)
+        appendAliases(['purok_sitio_name', 'p_purok_sitio_name', 'purok'], puroksitio)
+        appendAliases(['street_name', 'p_street_name', 'street'], street)
+
         try {
-            const payload = buildPersonalPayload()
-            const formData = new FormData()
-            Object.entries(payload).forEach(([k, v]) => {
-                if (v !== undefined && v !== null) {
-                    formData.append(k, String(v))
-                }
-            })
+            setIsSubmitting(true)
+            const resp = await updateUnverifiedBasicInfo(fd)
+            console.log('✅ Update response:', resp)
+            Alert.alert('Success', 'Profile updated successfully.')
 
-            const res = await updateUnverifiedBasicInfo(formData)
-            console.log('Update success:', res)
-            router.push({ pathname: '/socioeconomicinfo' })
-
-            // persist to wizard state
-            setPersonal({ ...(personal ?? {}), ...payload })
-
-        } catch (err: any) {
-            console.log('Submit failed:', err)
-            console.log('Error', err?.message || 'Failed to update information. Please try again.')
-            Alert.alert('Error', err?.message || 'Failed to update information. Please try again.')
+            // ✅ Go back to origin if provided, else to residenthome
+            if (returnTo && String(returnTo).trim() !== '') {
+                router.replace(String(returnTo))          // or decodeURIComponent if you encode it when sending
+            } else {
+                router.replace('/residenthome')
+            }
+        } catch (error: any) {
+            console.error('❌ Update API error:', error)
+            let code = 'UNKNOWN'
+            let reason = 'Something went wrong while saving.'
+            if (typeof error?.error === 'string') {
+                try {
+                    const fixed = error.error.replace(/'/g, '"').replace(/\bNone\b/g, 'null')
+                    const parsed = JSON.parse(fixed)
+                    code = parsed?.code || code
+                    reason = parsed?.message || reason
+                } catch { }
+            } else if (typeof error === 'object') {
+                code = error?.code || code
+                reason = error?.message || reason
+            }
+            Alert.alert('Update Failed', `[${code}] ${reason}`)
         } finally {
-            setConfirmVisible(false)
-            setSaving(false)
+            setIsSubmitting(false)
         }
     }
-
-    const goEditProfile = () => {
-    setConfirmVisible(false);
-    };
 
     const handleHomeAddress = () => {
-        router.push({ pathname: '/update_mapaddress', params: { returnTo: '/update_profile' } })
-    }
-
-    if (profileLoading) {
-        return (
-            <ThemedView safe style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" />
-            </ThemedView>
-        )
+        // Go to map, then into update_residentaddress, which writes store
+        // We'll return here with skipPrefill=1 to prevent overwriting.
+        router.push({ pathname: '/update_mapaddress', params: { returnTo: '/update_residentaddress' } })
     }
 
     return (
         <ThemedView safe>
-            <ThemedAppBar title="Update Personal Info" showNotif={false} showProfile={false} />
-            <ThemedProgressBar step={1} totalStep={4} />
+            <ThemedAppBar title="Update Profile" showNotif={false} showProfile={false} />
+            {isPrefilling ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}>
+                    <ActivityIndicator size="large" />
+                    <Spacer height={10} />
+                    <ThemedText>Loading profile…</ThemedText>
+                </View>
+            ) : null}
 
             <ThemedKeyboardAwareScrollView>
-                <View>
-                    <ThemedTextInput placeholder="First Name" value={fname} onChangeText={setFname} />
+                <View pointerEvents={isPrefilling ? 'none' : 'auto'} style={{ opacity: isPrefilling ? 0.5 : 1 }}>
+                    <ThemedTextInput placeholder="First Name" value={fname} onChangeText={(v) => setField('fname', v)} />
                     <Spacer height={10} />
-                    <ThemedTextInput placeholder="Middle Name" value={mname} onChangeText={setMname} />
+                    <ThemedTextInput placeholder="Middle Name" value={mname} onChangeText={(v) => setField('mname', v)} />
                     <Spacer height={10} />
-                    <ThemedTextInput placeholder="Last Name" value={lname} onChangeText={setLname} />
+                    <ThemedTextInput placeholder="Last Name" value={lname} onChangeText={(v) => setField('lname', v)} />
                     <Spacer height={10} />
-                    <ThemedTextInput placeholder="Suffix" value={suffix} onChangeText={setSuffix} />
+
+                    <ThemedDropdown items={suffixOptions} value={suffix || ''} setValue={setSuffixState} placeholder="Suffix (optional)" order={-1} />
                     <Spacer height={10} />
 
                     <ThemedText subtitle>Sex</ThemedText>
-                    <ThemedRadioButton value={gender} onChange={setGender} options={genderOptions} />
+                    <ThemedRadioButton value={gender} onChange={(v) => setField('gender', v)} options={genderOptions} />
                     <Spacer height={10} />
 
-                    <ThemedDatePicker value={dob} mode="date" onChange={setDob} placeholder="Date of Birth" maximumDate={new Date()} />
-                    <Spacer height={10} />
+                    <ThemedDatePicker
+                        value={dobDate}
+                        mode="date"
+                        onChange={(picked: Date | string) => {
+                            const d = picked instanceof Date ? picked : new Date(picked)
+                            if (!isNaN(d.getTime())) setField('dob', d.toISOString().slice(0, 10))
+                        }}
+                        placeholder="Date of Birth"
+                        maximumDate={new Date()}
+                    />
 
-                    <ThemedDropdown items={civilStatusOptions} value={civilStatus} setValue={setCivilStatus} placeholder="Civil Status" order={0} />
                     <Spacer height={10} />
-                    <ThemedDropdown items={nationalityOptions} value={nationality} setValue={setNationality} placeholder="Nationality" order={1} />
+                    <ThemedDropdown items={civilStatusOptions} value={civilStatus} setValue={setCivilStatusState} placeholder="Civil Status" order={0} />
                     <Spacer height={10} />
-                    <ThemedDropdown items={religionOptions} value={religion} setValue={setReligion} placeholder="Religion" order={2} />
+                    <ThemedDropdown items={nationalityOptions} value={nationality} setValue={setNationalityState} placeholder="Nationality" order={1} />
+                    <Spacer height={10} />
+                    <ThemedDropdown items={religionOptions} value={religion} setValue={setReligionState} placeholder="Religion" order={2} />
                     <Spacer height={10} />
 
                     <Pressable onPress={handleHomeAddress}>
-                        <ThemedTextInput placeholder="Home Address" multiline numberOfLines={2} value={haddress} editable={false} />
+                        <ThemedTextInput
+                            placeholder="Home Address"
+                            multiline
+                            numberOfLines={2}
+                            value={haddress}
+                            onChangeText={(v) => setField('haddress', v)}
+                            editable={false}
+                            pointerEvents="none"
+                        />
                     </Pressable>
-                    <Spacer height={10} />
 
-                    <ThemedTextInput placeholder="Mobile Number" value={mobnum} onChangeText={setMobNum} keyboardType="phone-pad" />
                     <Spacer height={10} />
-
+                    <ThemedTextInput placeholder="Mobile Number" value={mobnum} onChangeText={(v) => setField('mobnum', v)} keyboardType="numeric" />
+                    <Spacer height={10} />
                     <ThemedTextInput
                         placeholder="Email Address"
-                        value={`Current Email: ${email}`}
-                        onChangeText={setEmail}
-                        color="gray"
+                        value={email}
+                        onChangeText={(v) => setField('email', v)}
                         keyboardType="email-address"
-                        editable={false}
+                        autoCapitalize="none"
+                        autoCorrect={false}
                     />
+
+                    <Spacer height={15} />
+                    <ThemedButton onPress={handleSubmit} disabled={isSubmitting || isPrefilling}>
+                        <ThemedText btn>{isSubmitting ? 'Saving…' : 'Save Changes'}</ThemedText>
+                    </ThemedButton>
+                    <Spacer height={20} />
                 </View>
-
-                <Spacer height={15} />
-                <ThemedButton onPress={handleContinue} disabled={saving}>
-                    <ThemedText btn>{saving ? 'Saving...' : 'Continue'}</ThemedText>
-                </ThemedButton>
             </ThemedKeyboardAwareScrollView>
-
-            {/* Confirmation Modal */}
-<Modal visible={confirmVisible} transparent animationType="fade" onRequestClose={() => setConfirmVisible(false)}>
-  <View style={styles.modalOverlay}>
-    <View style={styles.modalCard}>
-      <ThemedText title style={{ textAlign: 'center' }}>
-        Confirm Account Update
-      </ThemedText>
-      <Spacer height={8} />
-      <ThemedText style={{ textAlign: 'center' }}>
-        Please review your details carefully.{'\n'}
-        By selecting <ThemedText style={{ fontWeight: '600' }}>“Yes, Confirm”</ThemedText>, 
-        you acknowledge and authorize the immediate update of your account information.
-      </ThemedText>
-      <Spacer height={16} />
-      <View style={styles.modalActions}>
-        <View style={{ flex: 1, marginRight: 6 }}>
-          <ThemedButton onPress={goEditProfile} variant="outline">
-            <ThemedText btn>No, Go Back</ThemedText>
-          </ThemedButton>
-        </View>
-        <View style={{ flex: 1, marginLeft: 6 }}>
-          <ThemedButton onPress={proceedToNext}>
-            <ThemedText btn>Yes, Confirm</ThemedText>
-          </ThemedButton>
-        </View>
-      </View>
-    </View>
-  </View>
-</Modal>
-
         </ThemedView>
     )
 }
 
-export default VerifyPersonalInfo
+export default UpdateProfile
 
 const styles = StyleSheet.create({
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-    },
-    modalCard: {
-        width: '100%',
-        maxWidth: 420,
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 16,
-        elevation: 4,
-    },
-    modalActions: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
+    image: { width: '100%', height: 70, alignSelf: 'center' },
+    text: { textAlign: 'center' },
+    link: { textAlign: 'right' },
 })

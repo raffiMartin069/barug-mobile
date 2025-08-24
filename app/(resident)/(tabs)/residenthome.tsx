@@ -83,7 +83,7 @@ const ResidentHome = () => {
         <ThemedCard>
           <TouchableOpacity
             style={{ alignItems: 'center', paddingVertical: 15 }}
-            onPress={() => router.push('/socioeconomicinfo')}
+            onPress={() => router.push('/verify_personalinfo')}
           >
             <ThemedIcon name="checkmark-circle" iconColor="#2e7d32" bgColor="#c8e6c9" />
             <ThemedText style={{ marginTop: 10, fontWeight: 'bold', textAlign: 'center' }}>
@@ -100,7 +100,7 @@ const ResidentHome = () => {
         <ThemedCard>
           <TouchableOpacity
             style={{ alignItems: 'center', paddingVertical: 15 }}
-            onPress={() => router.push('/joinhousefam')}
+            onPress={() => router.push('/verify_personalinfo')}
           >
             <ThemedIcon name="home" iconColor="#1e88e5" bgColor="#bbdefb" />
             <ThemedText style={{ marginTop: 10, fontWeight: 'bold', textAlign: 'center' }}>

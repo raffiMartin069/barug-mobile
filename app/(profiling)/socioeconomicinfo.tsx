@@ -75,8 +75,9 @@ const SocioeconomicInfo = () => {
       employment_status_id: employmentstat ? parseInt(employmentstat) : null,
       occupation: occupation.trim() || null,
       monthly_personal_income_id: mnthlypersonalincome ? parseInt(mnthlypersonalincome) : null,
-      gov_program_id: govprogrm ? parseInt(govprogrm) : null,
+      gov_program_id: govprogrm ? parseInt(govprogrm) : 7,
       gov_program_other: requiresOtherGovProg ? govProgramOther.trim() : null,
+
     })
 
     // 👉 Move to the next step

@@ -47,32 +47,28 @@ export const loginBhw = async (username: string, password: string) => {
       { username, password },
       { headers: { 'X-Platform': 'mobile' } }
     );
-    // Expect: { message, staff: {...}, token, refresh }
-    const { token, refresh, staff } = res.data || {};
-    if (!token || !refresh || !staff) {
-      throw new Error('Invalid BHW login response');
-    }
-
-    await setTokens(token, refresh);
-    await AsyncStorage.setItem('bhw_staff', JSON.stringify(staff));
-
-    return staff as Staff;
+    const { staff_id } = res.data || {};
+    if (!staff_id) throw new Error('Invalid BHW login response');
+    return Number(staff_id) as number;
   } catch (error: any) {
-    console.error('BHW login error:', error.response?.data || error.message);
-    throw error.response?.data || { message: 'BHW login failed' };
+    console.error('BHW login error:', error?.response?.data || error?.message);
+    throw error?.response?.data || { message: 'BHW login failed' };
   }
 };
 
-export const logout = async () => {
+
+export const logout = async (): Promise<void> => {
   try {
-    await apiClient.post('/auth/logout/'); // server clears cookies; mobile just a no-op
-  } catch {
-    // ignore
+    await apiClient.post('/auth/logout/'); 
+    // server clears cookies (mostly for web), mobile just no-op
+  } catch (err) {
+    console.warn('Logout error (ignored):', err);
   } finally {
     await clearTokens();
     await AsyncStorage.multiRemove(['current_user', 'bhw_staff']);
   }
 };
+
 
 export const resendVerificationEmail = async (email: string) => {
   try {

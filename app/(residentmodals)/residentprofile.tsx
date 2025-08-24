@@ -1,3 +1,4 @@
+import { logout } from '@/api/authApi'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
@@ -9,7 +10,7 @@ import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Alert, StyleSheet, View } from 'react-native'
 
 export const options = {
   href: null,
@@ -48,6 +49,15 @@ const ResidentProfile = () => {
   }, [normalizedParams])
 
   // 3) Helpers
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace('/login'); // go back to login page
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to logout');
+    }
+  };
+
   const fmt = (v: any) => (v === null || v === undefined || `${v}`.trim() === '' ? '—' : `${v}`)
   const yesNo = (v: any) => {
     if (typeof v === 'boolean') return v ? 'YES' : 'NO'
@@ -71,6 +81,7 @@ const ResidentProfile = () => {
   const personCode = data.person_code
 
   const fullName = nameOf(data.first_name, data.middle_name, data.last_name, data.suffix)
+  
   const verifiedName = nameOf(
     data.verified_first_name,
     data.verified_middle_name,
@@ -82,7 +93,7 @@ const ResidentProfile = () => {
     .filter(Boolean)
     .join(', ')
 
-    
+
   // Address parts (with tolerant fallbacks)
   const street = data.street_name ?? data.street ?? ''
   const purok = data.purok_sitio_name ?? data.purok_sitio ?? data.purok ?? ''
@@ -383,16 +394,39 @@ const ResidentProfile = () => {
           <Spacer height={15} />
 
           <View>
+            <ThemedButton
+              submit={false}
+              onPress={() =>
+                router.push({
+                  pathname: '/update_profile',
+                  params: {
+                    profile: JSON.stringify(data), // ← pass the whole profile you already have
+                    person_id: String(personId ?? ''), // optional but useful for update payload
+                    street,
+                    purok,
+                    brgy: barangay,
+                    city,
+                  },
+                })
+              }
+            >
+              <ThemedText non_btn={true}>Update Profile</ThemedText>
+            </ThemedButton>
+          </View>
+
+
+          <View>
             <ThemedButton submit={false} onPress={() => router.push('/request')}>
               <ThemedText non_btn={true}>Request House-to-House Visit</ThemedText>
             </ThemedButton>
           </View>
+
         </ThemedCard>
 
         <Spacer height={15} />
 
         <View style={{ paddingHorizontal: 15 }}>
-          <ThemedButton submit={false}>
+          <ThemedButton onPress={handleLogout}>
             <ThemedText non_btn={true}>Logout</ThemedText>
           </ThemedButton>
         </View>

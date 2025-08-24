@@ -11,7 +11,7 @@ import { StyleSheet, View } from 'react-native';
 
 type AddrParams = { street?: string; brgy?: string; city?: string };
 
-const HomeAddress2 = () => {
+const HomeAddress = () => {
   const router = useRouter();
   const { street = '', brgy = '', city = '' } = useLocalSearchParams<AddrParams>();
 
@@ -30,7 +30,7 @@ const HomeAddress2 = () => {
 
   return (
     <ThemedView safe={true}>
-      <ThemedAppBar title="Home Address" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Home Address test" showNotif={false} showProfile={false} />
       <ThemedKeyboardAwareScrollView>
         <View>
           <ThemedTextInput placeholder="House Number" value={hnum} onChangeText={setHNum} />
@@ -54,7 +54,7 @@ const HomeAddress2 = () => {
   );
 };
 
-export default HomeAddress2;
+export default HomeAddress;
 
 const styles = StyleSheet.create({
   text: { textAlign: 'center' },
