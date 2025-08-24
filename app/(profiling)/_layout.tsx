@@ -4,7 +4,7 @@ import React from 'react'
 const _layout = () => {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name='individualFamCreation'/>
+        <Stack.Screen name='createhousehold'/>
     </Stack>
   )
 }

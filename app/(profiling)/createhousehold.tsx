@@ -78,11 +78,19 @@ const CreateHousehold = () => {
 
           <Spacer height={10} />
 
-          <ThemedTextInput
+          {/* 
+            Household head field not required as of the moment.
+          The user who creates the household will automatically
+          be the household head.
+
+            Changes cna be made until the team decides whether to
+          to completely remove or not.
+          */}
+          {/* <ThemedTextInput
             placeholder='Household Head'
             value={hhhead}
             onChangeText={setHhHead}
-          />
+          /> */}
 
           <Spacer height={10} />
 
