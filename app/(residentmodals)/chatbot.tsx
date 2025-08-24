@@ -66,37 +66,41 @@ const ChatBot = () => {
   const data = useMemo(() => [...messages].reverse(), [messages])
 
   return (
-    <ThemedView style={{ flex: 1 }} safe={true}>
+
+    <ThemedView style={{flex: 1}} safe={true}>
       <ThemedAppBar title="Barangay Assistant" showNotif={false} showProfile={false} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={80}
-      >
-        <FlatList
-          ref={listRef}
-          data={data}
-          keyExtractor={(item) => item.id}
-          inverted
-          contentContainerStyle={{ padding: 12, flexGrow: 1 }}
-          renderItem={({ item }) => <MessageBubble msg={item} />}
-        />
-
-        {/* Composer */}
-        <View style={styles.inputContainer}>
-          <ThemedTextInput
-            style={styles.textInput}
-            placeholder="Type your message..."
-            value={message}
-            onChangeText={setMessage}
-            multiline
+      <ThemedView>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={80}
+        >
+          <FlatList
+            style={{ flex: 1 }}
+            ref={listRef}
+            data={data}
+            keyExtractor={(item) => item.id}
+            inverted
+            contentContainerStyle={{ padding: 12, flexGrow: 1 }}
+            renderItem={({ item }) => <MessageBubble msg={item} />}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={() => {}} activeOpacity={0.7}>
-            <ThemedIcon name="send" size={20} bgColor="#310101" containerSize={40} />
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+
+          {/* Composer */}
+          <View style={styles.inputContainer}>
+            <ThemedTextInput
+              style={styles.textInput}
+              placeholder="Type your message..."
+              value={message}
+              onChangeText={setMessage}
+              multiline
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={() => {}} activeOpacity={0.7}>
+              <ThemedIcon name="send" size={20} bgColor="#310101" containerSize={40} />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </ThemedView>
     </ThemedView>
   )
 }
