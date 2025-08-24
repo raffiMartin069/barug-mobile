@@ -11,7 +11,7 @@ const FamilyCreationSummary = () => {
     return (
         <ThemedView safe={true}>
             <ThemedAppBar
-                title='Family Creation Summary'
+                title='Request Creation Summary'
                 showNotif={false}
                 showProfile={false}
             />
@@ -20,6 +20,28 @@ const FamilyCreationSummary = () => {
                     <View style={[styles.row]}>
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.fontSetting} subtitle={true}>Name:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>Internal Test</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>Household Head:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>Test Household Head</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+                    
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>Family Head:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
                             <ThemedText subtitle={true}>Internal Test</ThemedText>
@@ -41,27 +63,16 @@ const FamilyCreationSummary = () => {
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Household Number:</ThemedText>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>House Number:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test Househol Number</ThemedText>
+                            <ThemedText subtitle={true}>Test Household Number</ThemedText>
                         </View>
                     </View>
 
                     <ThemedDivider />
 
-                    <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Household Head:</ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test Household Head</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedDivider />
-
-                    <View style={styles.row}>
+                    {/* <View style={styles.row}>
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.fontSetting} subtitle={true}>Family Number:</ThemedText>
                         </View>
@@ -70,18 +81,7 @@ const FamilyCreationSummary = () => {
                         </View>
                     </View>
 
-                    <ThemedDivider />
-
-                    <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Family Head:</ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Internal Test</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedDivider />
+                    <ThemedDivider /> */}
 
                     <View>
                         <Text style={{ fontSize: 12, color: 'gray', lineHeight: 18 }}>
@@ -92,7 +92,7 @@ const FamilyCreationSummary = () => {
 
                     <View>
                         <ThemedButton>
-                            <ThemedText btn={true}>Request Family Creation</ThemedText>
+                            <ThemedText btn={true}>Create Request</ThemedText>
                         </ThemedButton>
                     </View>
 

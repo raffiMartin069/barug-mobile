@@ -28,7 +28,7 @@ const CreateHousehold = () => {
   const router = useRouter()
 
   const handleSubmit = () => {
-    router.push('/createfamily')
+    router.push('/familyCreationSummary')
   }
 
   useEffect(() => {
@@ -134,7 +134,7 @@ const CreateHousehold = () => {
 
           <View>
             <ThemedButton onPress={handleSubmit}>
-              <ThemedText btn={true}>Continue</ThemedText>
+              <ThemedText btn={true}>Proceed To Summary</ThemedText>
             </ThemedButton>
           </View>
 
