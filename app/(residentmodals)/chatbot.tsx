@@ -61,6 +61,24 @@ const ChatBot = () => {
       sender: 'bot',
       ts: Date.now(),
     },
+    {
+      id: '4',
+      text: 'You need 1 valid ID and proof of residence.',
+      sender: 'bot',
+      ts: Date.now(),
+    },
+    {
+      id: '5',
+      text: 'You need 1 valid ID and proof of residence.',
+      sender: 'bot',
+      ts: Date.now(),
+    },
+    {
+      id: '6',
+      text: 'You need 1 valid ID and proof of residence.',
+      sender: 'bot',
+      ts: Date.now(),
+    },
   ]
 
   const data = useMemo(() => [...messages].reverse(), [messages])
@@ -86,7 +104,6 @@ const ChatBot = () => {
             renderItem={({ item }) => <MessageBubble msg={item} />}
           />
 
-          {/* Composer */}
           <View style={styles.inputContainer}>
             <ThemedTextInput
               style={styles.textInput}
