@@ -5,7 +5,9 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import useDynamicRouteStore from '@/store/dynamicRouteStore';
+import { householdCreationStore } from '@/store/householdCreationStore';
+import { RelativePathString, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -21,10 +23,18 @@ const HomeAddress = () => {
   const [brgyState, setBrgy] = useState(brgy);
   const [cityState, setCity] = useState(city);
 
+  const route = useDynamicRouteStore((state: { currentRoute: RelativePathString }) => state.currentRoute);
+
+  const setAddress = householdCreationStore((state: { setAddress: (houseNumber: string, street: string, sitio: string, barangay: string, city: string) => void }) => state.setAddress);
+
+
   const submitAddress = () => {
+    // gi remove nako ang params, instead, global state ang mu handle sa data.
+    // once done ang usa ka operation i-clear nato arong ma ensure nga consistent
+    // even if gamiton ug balik.
+    setAddress(hnum, streetState, puroksitio, brgyState, cityState);
     router.navigate({
-      pathname: '/personalinfo',
-      params: { hnum, street: streetState, puroksitio, brgy: brgyState, city: cityState },
+      pathname: route,
     });
   };
 

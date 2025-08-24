@@ -6,8 +6,17 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDivider from '@/components/ThemedDivider'
+import { householdCreationStore } from '@/store/householdCreationStore'
+import { HOUSE_TYPE } from '@/constants/houseTypes'
+import { HOUSE_OWNERSHIP } from '@/constants/houseOwnership'
 
 const FamilyCreationSummary = () => {
+
+    const address = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state);
+    const houseType = householdCreationStore((state: { houseType: string }) => state.houseType);
+    const houseOwnership = householdCreationStore((state: { houseOwnership: string }) => state.houseOwnership);
+    const message = householdCreationStore((state: { message: string }) => state.message);
+
     return (
         <ThemedView safe={true}>
             <ThemedAppBar
@@ -17,34 +26,24 @@ const FamilyCreationSummary = () => {
             />
             <ThemedKeyboardAwareScrollView>
                 <View style={{ gap: 20, padding: 5 }}>
-                    <View style={[styles.row]}>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Name:</ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Internal Test</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedDivider />
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.fontSetting} subtitle={true}>Household Head:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test Household Head</ThemedText>
+                            <ThemedText subtitle={true}>Test User</ThemedText>
                         </View>
                     </View>
 
                     <ThemedDivider />
-                    
+
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.fontSetting} subtitle={true}>Family Head:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Internal Test</ThemedText>
+                            <ThemedText subtitle={true}>Test User</ThemedText>
                         </View>
                     </View>
 
@@ -55,7 +54,7 @@ const FamilyCreationSummary = () => {
                             <ThemedText style={styles.fontSetting} subtitle={true}>Home Address:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test Address</ThemedText>
+                            <ThemedText subtitle={true}>{ `${address.houseNumber} - ${address.street} - ${address.sitio} - ${address.barangay} - ${address.city}` }</ThemedText>
                         </View>
                     </View>
 
@@ -66,7 +65,48 @@ const FamilyCreationSummary = () => {
                             <ThemedText style={styles.fontSetting} subtitle={true}>House Number:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test Household Number</ThemedText>
+                            <ThemedText subtitle={true}>{ address.houseNumber }</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>House Type:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>{ HOUSE_TYPE.map(type => {
+                                if(type.value === parseInt(houseType)) {
+                                    return type.label
+                                }
+                            }) }</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>House Ownership:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>{ HOUSE_OWNERSHIP.map(type => {
+                                if(type.value === parseInt(houseOwnership)) {
+                                    return type.label
+                                }
+                            }) }</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>Request Message:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>{ message ? message : 'N/A' }</ThemedText>
                         </View>
                     </View>
 
