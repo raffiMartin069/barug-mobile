@@ -8,18 +8,33 @@ import ThemedText from '@/components/ThemedText'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDivider from '@/components/ThemedDivider'
 
-const FamilyCreationSummary = () => {
+import { householdCreationStore } from '@/store/householdCreationStore'
+import { HOUSE_TYPE } from '@/constants/houseTypes'
+import { HOUSE_OWNERSHIP } from '@/constants/houseOwnership'
+import { useDynamicURL } from '@/store/dynamicApiUrlStore'
+
+const HouseholdCreationSummary = () => {
+
+    const houseNumber = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.houseNumber);
+    const street = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.street);
+    const sitio = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.sitio);
+    const barangay = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.barangay);
+    const city = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.city);
+    const houseType = householdCreationStore((state: { houseType: string }) => state.houseType);
+    const houseOwnership = householdCreationStore((state: { houseOwnership: string }) => state.houseOwnership);
+    const message = householdCreationStore((state: { message: string }) => state.message);
+    const apiUrl = useDynamicURL((state: { url: string }) => state.url);
 
     const obj = {
-        apiUrl: '',
-        houseNumber: '',
-        street: '',
-        sitio: '',
-        barangay: '',
-        city: '',
-        houseType: '',
-        houseOwnership: '',
-        message: '',
+        apiUrl: apiUrl,
+        houseNumber: houseNumber,
+        street: street,
+        sitio: sitio,
+        barangay: barangay,
+        city: city,
+        houseType: houseType,
+        houseOwnership: houseOwnership,
+        message: message,
     }
 
     const handleRequest = () => {
@@ -41,7 +56,7 @@ const FamilyCreationSummary = () => {
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>House Number:</ThemedText>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>Household Head:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
                             <ThemedText subtitle={true}>Test User</ThemedText>
@@ -63,21 +78,10 @@ const FamilyCreationSummary = () => {
 
                     <View style={[styles.row]}>
                         <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Household Head Relationship:</ThemedText>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>Home Address:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedDivider />
-
-                    <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>NHTS Status:</ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Yes</ThemedText>
+                            <ThemedText subtitle={true}>{ `${houseNumber} - ${street} - ${sitio} - ${barangay} - ${city}` }</ThemedText>
                         </View>
                     </View>
 
@@ -85,21 +89,10 @@ const FamilyCreationSummary = () => {
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Indigent Status:</ThemedText>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>House Number:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedDivider />
-
-                    <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Source of Income:</ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>1000000</ThemedText>
+                            <ThemedText subtitle={true}>{ houseNumber }</ThemedText>
                         </View>
                     </View>
 
@@ -107,10 +100,40 @@ const FamilyCreationSummary = () => {
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Family Monthly Income:</ThemedText>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>House Type:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>1000000</ThemedText>
+                            <ThemedText subtitle={true}>{ HOUSE_TYPE.map(type => {
+                                if(type.value === parseInt(houseType)) {
+                                    return type.label
+                                }
+                            }) }</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>House Ownership:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>{ HOUSE_OWNERSHIP.map(type => {
+                                if(type.value === parseInt(houseOwnership)) {
+                                    return type.label
+                                }
+                            }) }</ThemedText>
+                        </View>
+                    </View>
+
+                    <ThemedDivider />
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText style={styles.fontSetting} subtitle={true}>Request Message:</ThemedText>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <ThemedText subtitle={true}>{ message ? message : 'N/A' }</ThemedText>
                         </View>
                     </View>
 
@@ -135,7 +158,7 @@ const FamilyCreationSummary = () => {
     )
 }
 
-export default FamilyCreationSummary
+export default HouseholdCreationSummary
 
 const styles = StyleSheet.create({
     textcenter: {
