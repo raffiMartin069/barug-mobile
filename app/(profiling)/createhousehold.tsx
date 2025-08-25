@@ -61,7 +61,7 @@ const CreateHousehold = () => {
 };
 
   const handleSubmit = () => {
-    router.push('/familyCreationSummary')
+    router.push('/householdCreationSummary')
   }
 
   const handleHomeAddress = () => {

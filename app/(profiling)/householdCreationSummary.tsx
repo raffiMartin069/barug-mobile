@@ -135,7 +135,7 @@ const HouseholdCreationSummary = () => {
 
                     <View>
                         <Text style={{ fontSize: 12, color: 'gray', lineHeight: 18 }}>
-                            Note: Family creation requests require approval from the household head or the Barangay Health Worker (BHW).
+                            Note: Household creation requests require approval from the Barangay Health Worker (BHW).
                             If you need further assistance, please reach out to your assigned BHW for guidance.
                         </Text>
                     </View>

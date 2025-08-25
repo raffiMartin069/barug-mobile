@@ -52,13 +52,6 @@ const FamilyUnitApplication = () => {
     }
 
     const handleSubmit = () => {
-        console.log(`House Number: ${houseNumber}`);
-        console.log(`Relationship to Household Head: ${relationship}`);
-        console.log(`NHTS Status: ${nhts}`);
-        console.log(`Indigent Status: ${indigent}`);
-        console.log(`Source of Income: ${sourceOfIncome}`);
-        console.log(`Family Monthly Income: ${familyMonthlyIncome}`);
-        console.log('Family Unit Application Screen....\n\n\n')
         router.push('/familyCreationSummary')
     }
 
@@ -149,6 +142,7 @@ const FamilyUnitApplication = () => {
                                 placeholder='Family Monthly Income'
                                 order={1}
                             />
+                            <ThemedText style={{ color: 'red', margin: 5 }}>{familyMonthlyIncomeError}</ThemedText>
                         </View>
 
                         <View style={{ gap: 15, paddingHorizontal: 5 }}>
