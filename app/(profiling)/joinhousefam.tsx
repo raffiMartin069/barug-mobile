@@ -117,7 +117,7 @@ const JoinHouseFam = () => {
               order={3}
             />
 
-            <Link href="./individualFamCreation">
+            <Link href="./familyUnitApplication">
               <Text style={{ color: '#310101', textDecorationLine: 'underline' }}>Create Family</Text>
             </Link>
 
