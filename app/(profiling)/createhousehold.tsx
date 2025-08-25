@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Pressable, TextInput, useColorScheme, View, Text } from 'react-native'
 import { Colors } from 'react-native/Libraries/NewAppScreen'
 
-import { useDynamicURL } from '@/store/dynamicApiUrlStore'
 import useDynamicRouteStore from '@/store/dynamicRouteStore'
 import { householdCreationStore } from '@/store/householdCreationStore'
 import { HOUSE_OWNERSHIP } from '@/constants/houseOwnership'
@@ -29,7 +28,6 @@ const CreateHousehold = () => {
   const setHouseType = householdCreationStore((state: { setHouseType: (houseType: string) => void }) => state.setHouseType);
   const setHouseOwnership = householdCreationStore((state: { setHouseOwnership: (houseOwnership: string) => void }) => state.setHouseOwnership);
   const setMessage = householdCreationStore((state: { setMessage: (message: string) => void }) => state.setMessage);
-  const setUrl = useDynamicURL((state: { setUrl: (newUrl: string ) => void}) => state.setUrl);
 
   const [addressErrorMessage, setAddressErrorMessage] = useState('')
   const [houseTypeErrorMessage, setHouseTypeErrorMessage] = useState('')
@@ -158,7 +156,6 @@ const CreateHousehold = () => {
               setAddressErrorMessage('');
               setHouseTypeErrorMessage('');
               setHouseOwnershipErrorMessage('');
-              setUrl('api/v1')
               handleSubmit();
             }}>
               <ThemedText btn={true}>Proceed To Summary</ThemedText>

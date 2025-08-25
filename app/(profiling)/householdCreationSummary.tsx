@@ -11,7 +11,6 @@ import ThemedDivider from '@/components/ThemedDivider'
 import { householdCreationStore } from '@/store/householdCreationStore'
 import { HOUSE_TYPE } from '@/constants/houseTypes'
 import { HOUSE_OWNERSHIP } from '@/constants/houseOwnership'
-import { useDynamicURL } from '@/store/dynamicApiUrlStore'
 
 const HouseholdCreationSummary = () => {
 
@@ -23,10 +22,8 @@ const HouseholdCreationSummary = () => {
     const houseType = householdCreationStore((state: { houseType: string }) => state.houseType);
     const houseOwnership = householdCreationStore((state: { houseOwnership: string }) => state.houseOwnership);
     const message = householdCreationStore((state: { message: string }) => state.message);
-    const apiUrl = useDynamicURL((state: { url: string }) => state.url);
 
     const obj = {
-        apiUrl: apiUrl,
         houseNumber: houseNumber,
         street: street,
         sitio: sitio,
