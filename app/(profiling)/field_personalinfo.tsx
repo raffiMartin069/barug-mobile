@@ -44,6 +44,7 @@ const PersonalInfo2 = () => {
 
   const [useEmail, setUseEmail] = useState<boolean>(() => Boolean(email?.trim()));
 
+  // --- wrappers for store values as state setters ---
   const setCivilStatusState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
     return (valOrFn) => {
       const prev = useRegistrationStore.getState().civilStatus;
@@ -68,6 +69,15 @@ const PersonalInfo2 = () => {
     };
   }, [setField]);
 
+  // ✅ suffix state like in PersonalInfo
+  const setSuffixState = useMemo<React.Dispatch<React.SetStateAction<string>>>(() => {
+    return (valOrFn) => {
+      const prev = useRegistrationStore.getState().suffix || '';
+      const next = typeof valOrFn === 'function' ? (valOrFn as (p: string) => string)(prev) : valOrFn;
+      setField('suffix', next ?? '');
+    };
+  }, [setField]);
+
   useEffect(() => {
     if (pStreet || pPurok || pBrgy || pCity) {
       setAddress({ street: pStreet, puroksitio: pPurok, brgy: pBrgy, city: pCity });
@@ -85,7 +95,6 @@ const PersonalInfo2 = () => {
   const validateEmail = (eml: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eml);
   const validateMobileNumber = (n: string) => /^(09\d{9}|\+639\d{9})$/.test(n);
 
-  // Auto username: firstname+lastname@user. Falls back to 'user@user' if both empty (UI-only; submit requires names)
   // Format date of birth into MMDDYY
   const formatDob = (dobStr?: string) => {
     if (!dobStr) return '';
@@ -115,7 +124,7 @@ const PersonalInfo2 = () => {
       first_name: fname.trim(),
       middle_name: mname.trim() || null,
       last_name: lname.trim(),
-      suffix: "Jr.",
+      suffix: (suffix || '').trim() || null, // <-- use selected suffix
       date_of_birth: dob,
       email: useEmail ? (trimmedEmail || null) : null, // only when useEmail
       mobile_number: trimmedMobile || null,            // optional
@@ -145,7 +154,7 @@ const PersonalInfo2 = () => {
     if (!trimmedFname || /[^a-zA-Z\s]/.test(trimmedFname)) { Alert.alert('Validation Error', 'Please enter a valid first name (letters only).'); return; }
     if (!trimmedLname || /[^a-zA-Z\s]/.test(trimmedLname)) { Alert.alert('Validation Error', 'Please enter a valid last name (letters only).'); return; }
     if (trimmedMname && /[^a-zA-Z\s]/.test(trimmedMname)) { Alert.alert('Validation Error', 'Middle name must contain letters only.'); return; }
-    // Removed suffix regex validation — dropdown already constrains allowed values.
+    // Suffix validation not needed (dropdown-constrained)
 
     if (!dob || new Date(dob) > new Date()) { Alert.alert('Validation Error', 'Please select a valid date of birth.'); return; }
     if (!civilStatus) { Alert.alert('Validation Error', 'Please select your civil status.'); return; }
@@ -205,13 +214,13 @@ const PersonalInfo2 = () => {
           <ThemedTextInput placeholder="Last Name" value={lname} onChangeText={(v) => setField('lname', v)} />
           <Spacer height={10} />
 
-          {/* Suffix as dropdown */}
+          {/* ✅ Suffix as dropdown with setSuffixState */}
           <ThemedDropdown
             items={suffixOptions}
-            value={suffix}
-            setValue={(val) => setField('suffix', val)}
-            placeholder="Suffix"
-            order={0}
+            value={suffix || ''}
+            setValue={setSuffixState}
+            placeholder="Suffix (optional)"
+            order={-1}
           />
           <Spacer height={10} />
 
