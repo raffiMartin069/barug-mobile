@@ -38,10 +38,7 @@ const HouseholdCreationSummary = () => {
     }
 
     const handleRequest = () => {
-        // Please do the actual api call right here.
-        // No updated drf yet. this will remain a log.
-        console.log(obj);
-        console.log('Request Created');
+        throw new Error('API integration not implemented, deployment not yet updated.')
     }
 
     return (

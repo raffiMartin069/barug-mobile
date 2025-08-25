@@ -80,7 +80,7 @@ const CreateHousehold = () => {
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
-        title='Create Household'
+        title='Household Application'
         showNotif={false}
         showProfile={false}
       />
@@ -154,7 +154,6 @@ const CreateHousehold = () => {
           <View>
             <ThemedButton onPress={() => {
               const isValid = validateFields();
-              console.log(isValid);
               if(!isValid) return;
               setAddressErrorMessage('');
               setHouseTypeErrorMessage('');
