@@ -47,7 +47,7 @@ export const nationalityMap = {
 };
 
 export const religionOptions = [
-
+  
 ];
 
 export const religionMap = {
@@ -120,4 +120,26 @@ export const indigentOptions = [
 export const indigentMap = {
   yes: 'Yes',
   no: 'No',
+};
+
+export const documentOptions = [
+  { label: 'Barangay Clearance', value: 'brgy_clearance' },
+  { label: 'Certificate of Residency', value: 'cert_residency' },
+  { label: 'Certificate of Indigency', value: 'cert_indigency' },
+  { label: 'Barangay Business Clearance', value: 'barangay_business_clearance' },
+  { label: 'Certificate of Low Income', value: 'cert_lowincome' },
+  { label: 'Certificate of Good Moral Character', value: 'cert_goodmoral' },
+  { label: 'Barangay Death Certificate', value: 'cert_death' },
+  { label: 'Permit to Conduct Activities', value: 'permit_conduct_activities' },
+];
+
+export const documentMap = {
+  barangay_clearance: 'Barangay Clearance',
+  residency_certificate: 'Certificate of Residency',
+  certificate_indigency: 'Certificate of Indigency',
+  barangay_business_clearance: 'Barangay Business Clearance',
+  certificate_low_income: 'Certificate of Low Income',
+  certificate_good_moral_character: 'Certificate of Good Moral Character',
+  barangay_death_certificate: 'Barangay Death Certificate',
+  permit_conduct_activities: 'Permit to Conduct Activities',
 };

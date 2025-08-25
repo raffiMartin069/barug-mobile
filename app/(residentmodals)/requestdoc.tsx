@@ -1,16 +1,33 @@
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
-import ThemedCard from '@/components/ThemedCard'
-import ThemedIcon from '@/components/ThemedIcon'
+import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { Ionicons } from '@expo/vector-icons'
-import React from 'react'
+import { documentOptions } from '@/constants/formoptions'
+import React, { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
+import Clearance from './(docreq)/clearance'
+import Death from './(docreq)/death'
+import GoodMoral from './(docreq)/goodmoral'
+import Indigency from './(docreq)/indigency'
+import LowIncome from './(docreq)/lowincome'
+import Residency from './(docreq)/residency'
+
+const DOC_COMPONENTS: Record<string, React.FC> = {
+  brgy_clearance: Clearance,
+  cert_residency: Residency,
+  cert_indigency: Indigency,
+  cert_lowincome: LowIncome,
+  cert_goodmoral: GoodMoral,
+  cert_death: Death,
+}
 
 const RequestDoc = () => {
+  const [document, setDocument] = useState('')
+  const SelectedDocument = useMemo(() => DOC_COMPONENTS[document] ?? null, [document])
+
   return (
     <ThemedView safe={true}>
 
@@ -22,46 +39,27 @@ const RequestDoc = () => {
 
       <ThemedKeyboardAwareScrollView>
         <View>
-          <ThemedCard>
-            <ThemedText>Please fill out the form below to request a document from the barangay office.</ThemedText>
+          <ThemedText>Please fill out the form below to request a document from the barangay office.</ThemedText>
             <Spacer height={15}/>
+
+            <ThemedDropdown
+              items={documentOptions}
+              value={document}
+              setValue={(v: string) => setDocument(v)}
+              placeholder={'Select Document Type'}
+              order={0}
+            />
+
+            {SelectedDocument ? <SelectedDocument /> : null}
+
+            <Spacer height={15}/>
+        </View>
+
+        <View>
             <ThemedButton>
               <ThemedText btn={true}>Submit</ThemedText>
             </ThemedButton>
-          </ThemedCard>
-
-          <Spacer height={20}/>
-
-          <ThemedCard>
-            <View style={styles.row}>
-              <ThemedIcon
-                name={'information-circle-outline'}
-                bgColor='#310101'
-                size={20}
-                containerSize={25}
-              />
-              <ThemedText style={{paddingLeft: 10}} link={true}>Important Note</ThemedText>
-            </View>
-            <ThemedText>• Processing time is typically 2-3 business days.</ThemedText>
-            <Spacer height={5}/>
-            <ThemedText>• You will receive a notification when your certificate is ready for pickup.</ThemedText>
-            <Spacer height={5}/>
-            <ThemedText>• Please bring a valid ID when claiming your certificate.</ThemedText>
-            <Spacer height={5}/>
-            <ThemedText>• For urgent requests, please visit the Barangay Hall directly.</ThemedText>
-            <Spacer height={5}/>
-            <View style={[styles.row]}>
-              <Ionicons
-                name='call'
-                color={'#310101'}
-                size={15}
-              />
-              <ThemedText style={{paddingLeft: 10, fontWeight: 'bold'}}>For assistance, call: 0917-123-4567</ThemedText>
-            </View>
-          </ThemedCard>
         </View>
-
-        <Spacer height={15}/>
 
       </ThemedKeyboardAwareScrollView>
 

@@ -12,7 +12,7 @@ const HOUSEHOLDS = [ { id: 'HH-001', number: 'HH-001', headName: 'Rogelio Santos
 
 const JoinHouseFam = () => {
   const [search, setSearch] = useState('')
-  const [showDropdown, setShowDropdown] = useState(false)   // 👈 NEW
+  const [showDropdown, setShowDropdown] = useState(false)
   const [selectedHousehold, setSelectedHousehold] =
     useState<typeof HOUSEHOLDS[number] | null>(null)
   const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null)
@@ -35,8 +35,6 @@ const JoinHouseFam = () => {
     setSearch(`${hh.number} · ${hh.headName}`)
     setShowDropdown(false)                                   
   }
-
-  const canJoin = !!(selectedHousehold && selectedFamilyId && resYrs.trim().length > 0)
 
   return (
     <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>

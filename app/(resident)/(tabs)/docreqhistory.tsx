@@ -5,10 +5,13 @@ import ThemedDivider from '@/components/ThemedDivider'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { useRouter } from 'expo-router'
 import React from 'react'
 import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const DocReqHistory = () => {
+  const router = useRouter()
+
   return (
     <ThemedView style={{flex: 1, justifyContent: 'flex-start',}} safe={true}>
 
@@ -53,7 +56,7 @@ const DocReqHistory = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/requestdoc')}>
         <ThemedIcon
           name={'add'}
           bgColor="#310101"
