@@ -29,9 +29,6 @@ const HomeAddress = () => {
 
 
   const submitAddress = () => {
-    // gi remove nako ang params, instead, global state ang mu handle sa data.
-    // once done ang usa ka operation i-clear nato arong ma ensure nga consistent
-    // even if gamiton ug balik.
     setAddress(hnum, streetState, puroksitio, brgyState, cityState);
     router.navigate({
       pathname: route,

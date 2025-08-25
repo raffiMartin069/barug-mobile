@@ -1,21 +1,48 @@
-import { View, StyleSheet, Text } from 'react-native'
 import React from 'react'
+import { View, StyleSheet, Text } from 'react-native'
+
 import ThemedView from '@/components/ThemedView'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedDivider from '@/components/ThemedDivider'
+
 import { householdCreationStore } from '@/store/householdCreationStore'
 import { HOUSE_TYPE } from '@/constants/houseTypes'
 import { HOUSE_OWNERSHIP } from '@/constants/houseOwnership'
+import { useDynamicURL } from '@/store/dynamicApiUrlStore'
 
 const FamilyCreationSummary = () => {
 
-    const address = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state);
+    const houseNumber = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.houseNumber);
+    const street = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.street);
+    const sitio = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.sitio);
+    const barangay = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.barangay);
+    const city = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state.city);
     const houseType = householdCreationStore((state: { houseType: string }) => state.houseType);
     const houseOwnership = householdCreationStore((state: { houseOwnership: string }) => state.houseOwnership);
     const message = householdCreationStore((state: { message: string }) => state.message);
+    const apiUrl = useDynamicURL((state: { url: string }) => state.url);
+
+    const obj = {
+        apiUrl: apiUrl,
+        houseNumber: houseNumber,
+        street: street,
+        sitio: sitio,
+        barangay: barangay,
+        city: city,
+        houseType: houseType,
+        houseOwnership: houseOwnership,
+        message: message,
+    }
+
+    const handleRequest = () => {
+        // Please do the actual api call right here.
+        // No updated drf yet. this will remain a log.
+        console.log(obj);
+        console.log('Request Created');
+    }
 
     return (
         <ThemedView safe={true}>
@@ -54,7 +81,7 @@ const FamilyCreationSummary = () => {
                             <ThemedText style={styles.fontSetting} subtitle={true}>Home Address:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>{ `${address.houseNumber} - ${address.street} - ${address.sitio} - ${address.barangay} - ${address.city}` }</ThemedText>
+                            <ThemedText subtitle={true}>{ `${houseNumber} - ${street} - ${sitio} - ${barangay} - ${city}` }</ThemedText>
                         </View>
                     </View>
 
@@ -65,7 +92,7 @@ const FamilyCreationSummary = () => {
                             <ThemedText style={styles.fontSetting} subtitle={true}>House Number:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>{ address.houseNumber }</ThemedText>
+                            <ThemedText subtitle={true}>{ houseNumber }</ThemedText>
                         </View>
                     </View>
 
@@ -112,17 +139,6 @@ const FamilyCreationSummary = () => {
 
                     <ThemedDivider />
 
-                    {/* <View style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.fontSetting} subtitle={true}>Family Number:</ThemedText>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <ThemedText subtitle={true}>Test Family Number</ThemedText>
-                        </View>
-                    </View>
-
-                    <ThemedDivider /> */}
-
                     <View>
                         <Text style={{ fontSize: 12, color: 'gray', lineHeight: 18 }}>
                             Note: Family creation requests require approval from the household head or the Barangay Health Worker (BHW).
@@ -131,14 +147,12 @@ const FamilyCreationSummary = () => {
                     </View>
 
                     <View>
-                        <ThemedButton>
+                        <ThemedButton onPress={handleRequest}>
                             <ThemedText btn={true}>Create Request</ThemedText>
                         </ThemedButton>
                     </View>
 
                 </View>
-
-
             </ThemedKeyboardAwareScrollView>
         </ThemedView>
     )
