@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 
@@ -67,6 +68,7 @@ const FamilyCreationSummary = () => {
             <ThemedKeyboardAwareScrollView>
                 <View style={{ gap: 20, padding: 5 }}>
 
+
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.fontSetting} subtitle={true}>House Number:</ThemedText>
@@ -75,12 +77,14 @@ const FamilyCreationSummary = () => {
                             <ThemedText subtitle={true} editable={false}>{ houseNumber }</ThemedText>
                         </View>
                         <ThemedText style={{ color: 'red', margin: 5 }}>{houseNumberError}</ThemedText>
+
                     </View>
 
                     <ThemedDivider />
 
                     <View style={[styles.row]}>
                         <View style={{ flex: 1 }}>
+
                             <ThemedText style={styles.fontSetting} subtitle={true}>Household Head Relationship:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
@@ -91,16 +95,19 @@ const FamilyCreationSummary = () => {
                             }) }</ThemedText>
                         </View>
                         <ThemedText style={{ color: 'red', margin: 5 }}>{relationshipError}</ThemedText>
+
                     </View>
 
                     <ThemedDivider />
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
+
                             <ThemedText style={styles.fontSetting} subtitle={true} editable={false}>NHTS Status:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
                             <ThemedText subtitle={true}>{ nhts === 1 ? "Yes" : "No" }</ThemedText>
+
                         </View>
                     </View>
 
@@ -108,10 +115,12 @@ const FamilyCreationSummary = () => {
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
+
                             <ThemedText style={styles.fontSetting} subtitle={true} editable={false}>Indigent Status:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
                             <ThemedText subtitle={true}>{ indigent === 1 ? "Yes" : "No" }</ThemedText>
+
                         </View>
                     </View>
 
@@ -119,18 +128,21 @@ const FamilyCreationSummary = () => {
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
+
                             <ThemedText style={styles.fontSetting} subtitle={true} >Source of Income:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
                             <ThemedText subtitle={true} editable={false}>{ !sourceOfIncome ? "N/A" : sourceOfIncome }</ThemedText>
                         </View>
                         <ThemedText style={{ color: 'red', margin: 5 }}>{sourceOfIncomeError}</ThemedText>
+
                     </View>
 
                     <ThemedDivider />
 
                     <View style={styles.row}>
                         <View style={{ flex: 1 }}>
+
                             <ThemedText style={styles.fontSetting} subtitle={true}>Family Monthly Income:</ThemedText>
                         </View>
                         <View style={{ flex: 1 }}>
@@ -141,6 +153,7 @@ const FamilyCreationSummary = () => {
                             }</ThemedText>
                         </View>
                         <ThemedText style={{ color: 'red', margin: 5 }}>{familyMonthlyIncomeError}</ThemedText>
+
                     </View>
 
                     <ThemedDivider />
