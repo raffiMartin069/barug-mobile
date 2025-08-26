@@ -1,39 +1,71 @@
-import Spacer from '@/components/Spacer'
+import React, { useState } from 'react'
+import { Pressable, TextInput, useColorScheme, View, Text } from 'react-native'
+import { Colors } from 'react-native/Libraries/NewAppScreen'
+
+import useDynamicRouteStore from '@/store/dynamicRouteStore'
+import { householdCreationStore } from '@/store/householdCreationStore'
+import { HOUSE_OWNERSHIP } from '@/constants/houseOwnership'
+import { HOUSE_TYPE } from '@/constants/houseTypes'
+
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
-import ThemedDropdown from '@/components/ThemedDropdown'
+import ThemedDropdown from '@/components/ThemedDropdown_'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
-import { useSearchParams } from 'expo-router/build/hooks'
-import React, { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+
 
 const CreateHousehold = () => {
-  const params = useSearchParams()
-
-  const [householdnum, setHouseholdNum] = useState('')
-  const [hAddress, setHAddress] = useState('')
-  const [hhhead, setHhHead] = useState('')
-  const [housetype, setHouseType] = useState('')
-  const [houseownership, setHouseOwnership] = useState('')
+  const colorScheme = useColorScheme()
+  const theme = Colors[colorScheme] ?? Colors.light
 
   const router = useRouter()
 
+  const setRoute = useDynamicRouteStore((state: { setCurrentRoute: (route: string) => void }) => state.setCurrentRoute)
+
+  const setHouseType = householdCreationStore((state: { setHouseType: (houseType: string) => void }) => state.setHouseType);
+  const setHouseOwnership = householdCreationStore((state: { setHouseOwnership: (houseOwnership: string) => void }) => state.setHouseOwnership);
+  const setMessage = householdCreationStore((state: { setMessage: (message: string) => void }) => state.setMessage);
+
+  const [addressErrorMessage, setAddressErrorMessage] = useState('')
+  const [houseTypeErrorMessage, setHouseTypeErrorMessage] = useState('')
+  const [houseOwnershipErrorMessage, setHouseOwnershipErrorMessage] = useState('')
+
+  const address = householdCreationStore((state: { houseNumber: string; street: string; sitio: string; barangay: string; city: string }) => state);
+  const houseType = householdCreationStore((state: { houseType: string }) => state.houseType);
+  const houseOwnership = householdCreationStore((state: { houseOwnership: string }) => state.houseOwnership);
+  const message = householdCreationStore((state: { message: string }) => state.message);
+
+  const fullAddr = [address.houseNumber, address.street, address.sitio, address.barangay, address.city].filter(Boolean).join(' ');
+
+
+  const validateFields = () => {
+  const errors: Record<string, string> = {};
+
+  if (!address.houseNumber) errors.address = 'House number is required';
+  else if (!address.street) errors.address = 'Street is required';
+  else if (!address.sitio) errors.address = 'Sitio is required';
+  else if (!address.barangay) errors.address = 'Barangay is required';
+  else if (!address.city) errors.address = 'City is required';
+
+  if (!houseType) errors.houseType = 'House type is required';
+  if (!houseOwnership) errors.houseOwnership = 'House ownership is required';
+
+  setAddressErrorMessage(errors.address ?? '');
+  setHouseTypeErrorMessage(errors.houseType ?? '');
+  setHouseOwnershipErrorMessage(errors.houseOwnership ?? '');
+
+  return Object.keys(errors).length === 0;
+};
+
   const handleSubmit = () => {
-    router.push('/createfamily')
+    router.push('/householdCreationSummary')
   }
 
-  useEffect(() => {
-    if ( params.get('hnum') || params.get('street') || params.get('puroksitio') || params.get('brgy') || params.get('city') ) {
-        const fullAddress = `${params.get('hnum') ?? ''} ${params.get('street') ?? ''}, ${params.get('puroksitio') ?? ''}, ${params.get('brgy') ?? ''}, ${params.get('city') ?? ''}`
-        setHAddress(fullAddress)
-    }
-  })
-
   const handleHomeAddress = () => {
+    setRoute('/createhousehold')
     router.push({
       pathname: '/mapaddress',
       params: {
@@ -46,65 +78,90 @@ const CreateHousehold = () => {
   return (
     <ThemedView safe={true}>
       <ThemedAppBar
-        title='Create Household'
+        title='Household Application'
         showNotif={false}
         showProfile={false}
       />
       <ThemedKeyboardAwareScrollView>
-        <View>
-            <ThemedTextInput
-              placeholder='Household Number'
-              value={householdnum}
-              onChangeText={setHouseholdNum}
-            />
+        <View style={{ gap: 25 }}>
 
-            <Spacer height={10}/>
-
+          <View>
+            <ThemedText>Home Address</ThemedText>
             <Pressable onPress={handleHomeAddress}>
-                <ThemedTextInput
-                placeholder='Home Address'
-                value={hAddress}
-                onChangeText={setHAddress}
+              <ThemedTextInput
+                placeholder='Press to open map'
+                value={fullAddr ? fullAddr : ''}
+                onChangeText={(val) => { }}
                 editable={false}
                 pointerEvents="none"
               />
             </Pressable>
+            <Text style={{ fontSize: 12, color: 'red', margin: 5 }}>{addressErrorMessage}</Text>
+          </View>
 
-            <Spacer height={10}/>
-
-            <ThemedTextInput
-              placeholder='Household Head'
-              value={hhhead}
-              onChangeText={setHhHead}
-            />
-
-            <Spacer height={10}/>
-
+          <View>
+            <ThemedText>House Type</ThemedText>
             <ThemedDropdown
-              items={[]}
-              value={housetype}
+              items={HOUSE_TYPE}
+              value={houseType}
               setValue={setHouseType}
-              placeholder='House Type'
+              placeholder='Press to show house types'
               order={0}
             />
+            <Text style={{ fontSize: 12, color: 'red', margin: 5 }}>{houseTypeErrorMessage}</Text>
+          </View>
 
-            <Spacer height={10}/>
 
+          <View>
+            <ThemedText>House Ownership</ThemedText>
             <ThemedDropdown
-              items={[]}
-              value={houseownership}
+              items={HOUSE_OWNERSHIP}
+              value={houseOwnership}
               setValue={setHouseOwnership}
-              placeholder='House Ownership'
+              placeholder='Press to show house ownership'
               order={1}
             />
-        </View>
-        
-        <Spacer height={15}/>
+            <Text style={{ fontSize: 12, color: 'red', margin: 5 }}>{houseOwnershipErrorMessage}</Text>
+          </View>
 
-        <View>
-          <ThemedButton onPress={handleSubmit}>
-            <ThemedText btn={true}>Continue</ThemedText>
-          </ThemedButton>
+
+          <View>
+            <ThemedText>Household Creation Message</ThemedText>
+            <TextInput
+              editable
+              multiline
+              numberOfLines={5}
+              maxLength={150}
+              placeholder='(Optional) - Enter request message.'
+              style={{
+                backgroundColor: 'white',
+                borderColor: theme.text,
+                borderWidth: 0,
+                borderBottomWidth: 2,
+                borderRadius: 0,
+                paddingHorizontal: 15,
+              }}
+              value={message}
+              onChangeText={(val) => {
+                setMessage(val)
+              }}
+            ></TextInput>
+          </View>
+
+
+          <View>
+            <ThemedButton onPress={() => {
+              const isValid = validateFields();
+              if(!isValid) return;
+              setAddressErrorMessage('');
+              setHouseTypeErrorMessage('');
+              setHouseOwnershipErrorMessage('');
+              handleSubmit();
+            }}>
+              <ThemedText btn={true}>Proceed To Summary</ThemedText>
+            </ThemedButton>
+          </View>
+
         </View>
       </ThemedKeyboardAwareScrollView>
     </ThemedView>
@@ -112,9 +169,3 @@ const CreateHousehold = () => {
 }
 
 export default CreateHousehold
-
-const styles = StyleSheet.create({
-  text: {
-    textAlign: 'center',
-  },
-})
