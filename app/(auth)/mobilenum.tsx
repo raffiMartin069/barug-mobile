@@ -43,6 +43,10 @@ const MobileNum = () => {
                     />
                 </View>
 
+                <Spacer />
+
+                <ThemedText>By tapping next, we'll collect your mobile number's network information to be able to send you a One-Time Password (OTP)</ThemedText>
+
                 <Spacer height={10}/>
 
                 <ThemedButton>
