@@ -1,9 +1,14 @@
-import { View } from 'react-native'
+import React from 'react'
+import { View, ViewStyle } from 'react-native'
 
-const Spacer = ({ width = "100%", height = 40 }) => {
-  return (
-    <View style={{width, height}}/>
-  )
+type SpacerProps = {
+  width?: ViewStyle['width']   // matches RN typing (number | string | undefined)
+  height?: ViewStyle['height'] // number | undefined
+}
+
+const Spacer: React.FC<SpacerProps> = ({ width = '100%', height = 20 }) => {
+  const style: ViewStyle = { width, height }
+  return <View style={style} />
 }
 
 export default Spacer

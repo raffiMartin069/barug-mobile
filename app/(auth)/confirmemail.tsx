@@ -6,21 +6,27 @@ import { Link } from 'expo-router'
 import React from 'react'
 import { Keyboard, StyleSheet, TouchableWithoutFeedback } from 'react-native'
 
-const EmailConfirmed = () => {
+const ConfirmEmail = () => {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ThemedView safe>
             <ThemedCard>
-                <ThemedText title>Email Address Verification</ThemedText>
+                <ThemedText title>Verify your email address</ThemedText>
+
+                <Spacer />
+
+                <ThemedText subtitle>
+                    We’ve sent a verification email to your address. 
+                    Please check your inbox or spam folder and click the link to verify your account.
+                </ThemedText>
 
                 <Spacer />
 
                 <ThemedText>
-                    Your email address has been verified successfully! You may now
+                    Didn’t receive the email? {"\u00A0"}
                     <Link href={'/'}>
-                        <ThemedText link>{"\u00A0"} login</ThemedText>
+                        <ThemedText link>Resend Verification</ThemedText>
                     </Link>
-                    {"\u00A0"} to your account.
                 </ThemedText>
             </ThemedCard>
         </ThemedView>
@@ -28,6 +34,6 @@ const EmailConfirmed = () => {
   )
 }
 
-export default EmailConfirmed
+export default ConfirmEmail
 
 const styles = StyleSheet.create({})
