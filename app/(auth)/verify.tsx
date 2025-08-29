@@ -30,7 +30,7 @@ export default function Verify() {
 
       // Link by phone (choose your PH/US linker)
       const digits = String(phone).replace(/\D/g, '')
-      const linker = (digits.startsWith('63') || digits.startsWith('9') || digits.startsWith('09'))
+      const linker = (digits.startsWith('+63') || digits.startsWith('9') || digits.startsWith('09'))
         ? 'link_test_person_by_phone' : 'link_test_person_by_temp_number'
       const { error: linkErr } = await supabase.rpc(linker, { p_phone: phone })
       if (linkErr) { Alert.alert('Account not found', linkErr.message); return }
