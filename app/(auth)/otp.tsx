@@ -40,50 +40,50 @@ export default function Otp() {
   };
 
   return (
-    <ThemedView safe>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ThemedCard>
-                <ThemedText>We sent a 6-digit authentication code to your registered mobile number</ThemedText>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ThemedView safe>
+          <ThemedCard>
+            <ThemedText>We sent a 6-digit authentication code to your registered mobile number</ThemedText>
 
-                <Spacer />
+            <Spacer />
 
-                <ThemedText style={styles.maskedNumber}>+63945****160</ThemedText>
+            <ThemedText style={styles.maskedNumber}>+63945****160</ThemedText>
 
-                <Spacer />
-                
-                <ThemedText>Please enter the authentication code</ThemedText>
+            <Spacer />
+            
+            <ThemedText>Please enter the authentication code</ThemedText>
 
-                <View style={styles.otpContainer}>
-                {code.map((digit, i) => (
-                    <TextInput
-                    key={i}
-                    ref={(r: TextInput | null) => { inputs.current[i] = r; }}
-                    style={styles.otpInput}
-                    keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    maxLength={1}
-                    autoFocus={i === 0}
-                    value={digit}
-                    onChangeText={(t) => handleChange(t, i)}
-                    onKeyPress={(e) => handleKeyPress(e, i)}
-                    textAlign="center"
-                    returnKeyType="done"
-                    />
-                ))}
-                </View>
+            <View style={styles.otpContainer}>
+            {code.map((digit, i) => (
+                <TextInput
+                key={i}
+                ref={(r: TextInput | null) => { inputs.current[i] = r; }}
+                style={styles.otpInput}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                maxLength={1}
+                autoFocus={i === 0}
+                value={digit}
+                onChangeText={(t) => handleChange(t, i)}
+                onKeyPress={(e) => handleKeyPress(e, i)}
+                textAlign="center"
+                returnKeyType="done"
+                />
+            ))}
+            </View>
 
-                <Spacer />
+            <Spacer />
 
-                <ThemedText style={{textAlign: 'center'}}>Didn't get the code? <ThemedText link>Tap here to resend</ThemedText></ThemedText>
+            <ThemedText style={{textAlign: 'center'}}>Didn't get the code? <ThemedText link>Tap here to resend</ThemedText></ThemedText>
 
-                <Spacer height={10}/>
+            <Spacer height={10}/>
 
-                <ThemedButton>
-                    <ThemedText btn>Submit</ThemedText>
-                </ThemedButton>
-            </ThemedCard>
-        </TouchableWithoutFeedback>
-    </ThemedView>
+            <ThemedButton>
+                <ThemedText btn>Submit</ThemedText>
+            </ThemedButton>
+          </ThemedCard>
+        </ThemedView>
+    </TouchableWithoutFeedback>
   );
 }
 

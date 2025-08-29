@@ -35,6 +35,8 @@ const Mpin = () => {
             style={styles.image}
         />
 
+        <ThemedText style={{textAlign: 'center'}} title>Barangay Sto. Niño</ThemedText>
+
         <Spacer />
 
         <View style={styles.header}>
