@@ -4,7 +4,7 @@ import ThemedCard from '@/components/ThemedCard';
 import ThemedText from '@/components/ThemedText';
 import ThemedView from '@/components/ThemedView';
 import React, { useRef, useState } from 'react';
-import { NativeSyntheticEvent, StyleSheet, TextInput, TextInputKeyPressEventData, TouchableWithoutFeedback, View } from 'react-native';
+import { Keyboard, NativeSyntheticEvent, StyleSheet, TextInput, TextInputKeyPressEventData, TouchableWithoutFeedback, View } from 'react-native';
 
 export default function Otp() {
   const [code, setCode] = useState<string[]>(['', '', '', '', '', '']);
@@ -41,7 +41,7 @@ export default function Otp() {
 
   return (
     <ThemedView safe>
-        <TouchableWithoutFeedback>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <ThemedCard>
                 <ThemedText>We sent a 6-digit authentication code to your registered mobile number</ThemedText>
 
