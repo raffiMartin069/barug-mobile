@@ -23,7 +23,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
       
       <View style={styles.rightSection}>
         {showNotif && (
-          <TouchableOpacity onPress={() => router.push('/notifications')}>
+          <TouchableOpacity onPress={() => router.push('/')}>
               <Ionicons name='notifications' size={20} color={theme.background}/>
               {unreadCount > 0 && (
               <View style={styles.badge}>
@@ -36,13 +36,13 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
         )}
   
         {showProfile && (
-          <TouchableOpacity onPress={() => router.push('/residentprofile')}>
+          <TouchableOpacity onPress={() => router.push('/')}>
               <Ionicons name='person' size={20} color={theme.background}/>
           </TouchableOpacity>
         )}
 
         {showSettings && (
-          <TouchableOpacity onPress={() => router.push('/settings')}>
+          <TouchableOpacity onPress={() => router.push('/')}>
             <Ionicons name='settings-outline' size={20} color={theme.background}/>
           </TouchableOpacity>
         )}

@@ -11,12 +11,12 @@ const EmailConfirmed = () => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ThemedView safe>
             <ThemedCard>
-                <ThemedText title>Email Address Verification</ThemedText>
+                <ThemedText title>Email Address Confirmation</ThemedText>
 
                 <Spacer />
 
                 <ThemedText>
-                    Your email address has been verified successfully! You may now
+                    Your email address has been confirmed! You may now
                     <Link href={'/'}>
                         <ThemedText link>{"\u00A0"} login</ThemedText>
                     </Link>

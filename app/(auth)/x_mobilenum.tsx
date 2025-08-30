@@ -45,7 +45,7 @@ const MobileNum = () => {
 
                 <Spacer />
 
-                <ThemedText>By tapping next, we'll collect your mobile number's network information to be able to send you a One-Time Password (OTP)</ThemedText>
+                <ThemedText>By continuing, you agree to receive an SMS One-Time Password to verify your identity within the barangay.</ThemedText>
 
                 <Spacer height={10}/>
 
