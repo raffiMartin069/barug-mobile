@@ -24,21 +24,21 @@ const ITEMS: Item[] =[
         title: 'Register Resident',
         desc: 'Profile a resident.',
         icon: 'person-add',
-        route: '/(auth)/mpin' as const,
+        route: '/(auth)/mpin' as Href,
     },
     {
         key: 'register_household',
         title: 'Register Household',
         desc: 'Profile a household.',
         icon: 'home',
-        route: '/(bhwmodals)/(household)/createhousehold' as const,
+        route: '/(bhwmodals)/(household)/createhousehold' as Href,
     },
     {
         key: 'register_family',
         title: 'Register Family Unit',
         desc: 'Profile a family under a household.',
         icon: 'people',
-        route: '/(auth)/mpin' as const,
+        route: '/(bhwmodals)/(family)/createfamily' as Href,
     },
 ]
 
