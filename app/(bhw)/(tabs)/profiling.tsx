@@ -31,7 +31,7 @@ const ITEMS: Item[] =[
         title: 'Register Household',
         desc: 'Profile a household.',
         icon: 'home',
-        route: '/(auth)/mpin' as const,
+        route: '/(bhwmodals)/(household)/createhousehold' as const,
     },
     {
         key: 'register_family',
