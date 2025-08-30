@@ -4,7 +4,7 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { civilStatusMap, educAttainmentMap, empStatMap, genderMap, govProgMap, idTypeMap, mnthlyPersonalIncomeMap, nationalityMap, religionMap } from '@/constants/formOptions'
+import { civilStatusMap, educAttainmentMap, empStatMap, genderMap, govProgMap, mnthlyPersonalIncomeMap, nationalityMap, religionMap } from '@/constants/formOptions'
 import { useSearchParams } from 'expo-router/build/hooks'
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
@@ -185,24 +185,6 @@ const ReviewInputs = () => {
                 <View style={styles.row}>
                     <ThemedText subtitle={true}>Government Program:</ThemedText>
                     <ThemedText subtitle={true}>{govProgMap[data.govprogrm]}</ThemedText>
-                </View>
-
-                <Spacer height={20}/>
-
-                <ThemedText title={true}>Valid ID</ThemedText>
-
-                <Spacer height={10}/>
-
-                <View style={styles.row}>
-                    <ThemedText subtitle={true}>ID Type:</ThemedText>
-                    <ThemedText subtitle={true}>{data.idType ? idTypeMap[data.idType] : 'Not Provided'}</ThemedText>
-                </View>
-
-                <Spacer height={10}/>
-
-                <View style={styles.row}>
-                    <ThemedText subtitle={true}>Image:</ThemedText>
-                    <ThemedText subtitle={true}>{data.validIdUri ? data.validIdUri : 'No Image Uploaded'}</ThemedText>
                 </View>
             </View>
 

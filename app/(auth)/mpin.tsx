@@ -8,7 +8,7 @@ import { Image, Pressable, StyleSheet, TouchableOpacity, View } from 'react-nati
 
 const CIRCLE = 70;
 const MPIN_LEN = 4;
-const ROLES = ['Resident', 'Barangay Health Worker', 'Business Owner']
+const ROLES = ['Resident', 'Staff', 'Business Owner']
 
 const Mpin = () => {
   const [role, setRole] = useState('Resident')

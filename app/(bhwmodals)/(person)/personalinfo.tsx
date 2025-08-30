@@ -33,9 +33,6 @@ const PersonalInfo = () => {
   const [brgy, setBrgy] = useState('');
   const [city, setCity] = useState('');
   const [mobnum, setMobNum] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [cpassword, setCPassword] = useState('')
 
   useEffect(() => {
     const streetParam = params.get('street') ?? '';
@@ -74,9 +71,6 @@ const PersonalInfo = () => {
             brgy,
             city,
             mobnum,
-            email,
-            password,
-            cpassword,
         }
     })
   }
@@ -207,32 +201,6 @@ const PersonalInfo = () => {
                     value={mobnum}
                     onChangeText={setMobNum}
                     keyboardType='numeric'
-                />
-
-                <Spacer height={10}/>
-
-                <ThemedTextInput
-                    placeholder='Email Address'
-                    value={email}
-                    onChangeText={setEmail}
-                /> 
-
-                <Spacer height={10}/>         
-
-                <ThemedTextInput
-                    placeholder='Password'
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                />
-
-                <Spacer height={10}/>         
-
-                <ThemedTextInput
-                    placeholder='Confirm Password'
-                    value={cpassword}
-                    onChangeText={setCPassword}
-                    secureTextEntry
                 />
             </View>
 
