@@ -25,7 +25,7 @@ const SocioeconomicInfo = () => {
 
   const handleSubmit = () => {
     router.push({
-        pathname: '/reviewinputs',
+        pathname: '/reviewinputsprofile',
         params: {
             ...Object.fromEntries(params.entries()),
             educattainment,

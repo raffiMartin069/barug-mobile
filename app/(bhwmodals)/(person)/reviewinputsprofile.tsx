@@ -9,7 +9,7 @@ import { useSearchParams } from 'expo-router/build/hooks'
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
 
-const ReviewInputs = () => {
+const ReviewInputsProfile = () => {
   const params = useSearchParams()
   const data = Object.fromEntries(params.entries())
 
@@ -201,7 +201,7 @@ const ReviewInputs = () => {
   )
 }
 
-export default ReviewInputs
+export default ReviewInputsProfile
 
 const styles = StyleSheet.create({
     row: {
