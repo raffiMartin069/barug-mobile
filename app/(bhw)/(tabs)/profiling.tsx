@@ -24,7 +24,7 @@ const ITEMS: Item[] =[
         title: 'Register Resident',
         desc: 'Profile a resident.',
         icon: 'person-add',
-        route: '/(auth)/mpin' as Href,
+        route: '/(bhwmodals)/(person)/personalinfo' as Href,
     },
     {
         key: 'register_household',
@@ -39,6 +39,13 @@ const ITEMS: Item[] =[
         desc: 'Profile a family under a household.',
         icon: 'people',
         route: '/(bhwmodals)/(family)/createfamily' as Href,
+    },
+    {
+        key: 'household_list',
+        title: 'List of Households',
+        desc: 'View and manage all registered households in the barangay.',
+        icon: 'people',
+        route: '/(bhwmodals)/(household)/householdlist' as Href,
     },
 ]
 

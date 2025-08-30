@@ -7,6 +7,7 @@ import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
@@ -25,6 +26,8 @@ const HHHEAD: Hhead[] = [
 ]
 
 const CreateHousehold = () => {
+  const router = useRouter()
+  
   const [householdnum, setHouseholdNum] = useState('')
   const [hAddress, setHAddress] = useState('')
   const [hhhead, setHhHead] = useState('')
@@ -33,6 +36,15 @@ const CreateHousehold = () => {
 
   const [headSearchText, setHeadSearchText] = useState('')
   const residentItems = useMemo(() => HHHEAD, [])
+
+  const handleHomeAddress = () => {
+    router.push({
+      pathname: '/mapaddress',
+      params: {
+        returnTo: '/homeaddress',
+      }
+    })
+  }
 
   return (
     <ThemedView safe>
@@ -52,7 +64,7 @@ const CreateHousehold = () => {
 
                 <Spacer height={10}/>
 
-                <Pressable>
+                <Pressable onPress={handleHomeAddress}>
                     <ThemedTextInput
                         placeholder='Home Address'
                         value={hAddress}
