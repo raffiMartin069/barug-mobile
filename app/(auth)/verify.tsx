@@ -3,7 +3,6 @@ import { router, useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
-  Alert,
   Keyboard,
   NativeSyntheticEvent,
   StyleSheet,
@@ -18,27 +17,30 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { supabase } from '../../constants/supabase'
 
 const RESEND_SECONDS = 30
+const PRIMARY = '#310101'
 
 export default function Verify() {
+  const { showModal, hideModal } = useNiceModal()
+
   const params = useLocalSearchParams<{ phone?: string | string[] }>()
   const phone = useMemo(
     () => (Array.isArray(params.phone) ? params.phone[0] : params.phone) ?? '',
     [params.phone]
   )
 
-  // ----- OTP UI state (ported from otp.tsx) -----
   const [code, setCode] = useState<string[]>(['', '', '', '', '', ''])
+  const [focused, setFocused] = useState<number | null>(null)
   const inputs = useRef<Array<TextInput | null>>([])
 
   const focusNext = (i: number) => inputs.current[i + 1]?.focus()
   const focusPrev = (i: number) => inputs.current[i - 1]?.focus()
 
   const handleChange = (text: string, i: number) => {
-    // Handle paste of multiple digits
+    // handle paste of full code
     if (text.length > 1) {
       const digits = text.replace(/\D/g, '').slice(0, 6).split('')
       const next = [...code]
@@ -54,81 +56,65 @@ export default function Verify() {
     if (next[i] && i < 5) focusNext(i)
   }
 
-  const handleKeyPress = (
-    e: NativeSyntheticEvent<TextInputKeyPressEventData>,
-    i: number
-  ) => {
+  const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>, i: number) => {
     if (e.nativeEvent.key === 'Backspace') {
       if (code[i]) {
-        const next = [...code]
-        next[i] = ''
-        setCode(next)
-        return
+        const next = [...code]; next[i] = ''; setCode(next); return
       }
       if (i > 0) {
-        const next = [...code]
-        next[i - 1] = ''
-        setCode(next)
-        focusPrev(i)
+        const next = [...code]; next[i - 1] = ''; setCode(next); focusPrev(i)
       }
     }
   }
 
-  // ----- Verify / resend logic (kept from your verify.tsx) -----
   const [busy, setBusy] = useState(false)
   const [resendIn, setResendIn] = useState(RESEND_SECONDS)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    timerRef.current = setInterval(
-      () => setResendIn((s) => (s > 0 ? s - 1 : 0)),
-      1000
-    )
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
+    timerRef.current = setInterval(() => setResendIn(s => (s > 0 ? s - 1 : 0)), 1000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
 
   const otp = code.join('')
   const ready = /^\d{6}$/.test(otp)
 
   const verify = async () => {
-    if (busy) return
-    if (!ready) return Alert.alert('Invalid code', 'Enter the 6-digit code.')
+    if (busy || !ready) return
     setBusy(true)
     try {
       const { error: otpErr } = await supabase.auth.verifyOtp({
         phone: String(phone),
         token: otp,
-        type: 'sms',
+        type: 'sms'
       })
       if (otpErr) {
-        Alert.alert('Invalid / expired code', otpErr.message)
+        showModal({ title: 'Invalid or expired code', message: otpErr.message, variant: 'warn' })
         return
       }
 
-      // Link by phone (choose PH/US linker as in your original)
       const digits = String(phone).replace(/\D/g, '')
-      const linker =
-        digits.startsWith('63') || digits.startsWith('09') || digits.startsWith('9')
-          ? 'link_test_person_by_phone'
-          : 'link_test_person_by_temp_number'
+      const linker = (digits.startsWith('63') || digits.startsWith('09') || digits.startsWith('9'))
+        ? 'link_test_person_by_phone'
+        : 'link_test_person_by_temp_number'
+
       const { error: linkErr } = await supabase.rpc(linker, { p_phone: phone })
       if (linkErr) {
-        Alert.alert('Account not found', linkErr.message)
+        showModal({ title: 'Account not found', message: linkErr.message, variant: 'warn' })
         return
       }
 
-      // Decide next
       const { data: me, error: meErr } = await supabase.rpc('me_profile')
       if (meErr) {
-        Alert.alert('Error', meErr.message)
+        showModal({ title: 'Error', message: meErr.message, variant: 'error' })
         return
       }
+
       if (!me?.mpin_set) {
-        router.replace({ pathname: '/(auth)/setup-mpin' })
+        router.replace('/(auth)/setup-mpin')
       } else {
-        router.replace({ pathname: '/(resident)/(tabs)/residenthome' })
+        // ✅ If MPIN exists, go to lock screen first
+        router.replace('/(auth)/enter-mpin')
       }
     } finally {
       setBusy(false)
@@ -137,79 +123,81 @@ export default function Verify() {
 
   const resend = async () => {
     if (!phone || resendIn > 0) return
-    await supabase.auth.signInWithOtp({
-      phone: String(phone),
-      options: { channel: 'sms' },
-    })
-    setResendIn(RESEND_SECONDS)
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: String(phone),
+        options: { channel: 'sms' }
+      })
+      if (error) {
+        showModal({ title: 'Failed to resend', message: error.message, variant: 'error' })
+        return
+      }
+      setResendIn(RESEND_SECONDS)
+      showModal({ title: 'OTP sent', message: 'We’ve re-sent the code to your phone.', variant: 'success' })
+      setTimeout(hideModal, 600)
+    } catch (e: any) {
+      showModal({ title: 'Error', message: e?.message ?? 'Something went wrong.', variant: 'error' })
+    }
   }
 
   const maskedPhone = useMemo(() => {
     const d = String(phone).replace(/\D/g, '')
     if (d.length < 6) return phone || ''
-    // show +63XXX****XXX format
-    const head = d.slice(0, 5)
-    const tail = d.slice(-3)
+    const head = d.slice(0, 5), tail = d.slice(-3)
     return `+${head}****${tail}`
   }, [phone])
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ThemedView safe>
-        <ThemedCard>
-          <ThemedText>
-            We sent a 6-digit authentication code to your registered mobile number
-          </ThemedText>
-
-          <Spacer />
-
+      <ThemedView safe style={{ justifyContent: 'center', flex: 1, padding: 20 }}>
+        <ThemedCard style={styles.card}>
+          <ThemedText title style={styles.title}>Verify your number</ThemedText>
+          <ThemedText style={styles.subtitle}>Enter the 6-digit code we sent to:</ThemedText>
+          <Spacer height={6} />
           <ThemedText style={styles.maskedNumber}>{maskedPhone}</ThemedText>
 
-          <Spacer />
-
-          <ThemedText>Please enter the authentication code</ThemedText>
-
-          <View style={styles.otpContainer}>
+          {/* OTP boxes */}
+          <View style={styles.otpRow}>
             {code.map((digit, i) => (
               <TextInput
                 key={i}
-                ref={(r) => {
-                  inputs.current[i] = r
-                }}
-                style={styles.otpInput}
+                ref={(r) => { inputs.current[i] = r }}
+                style={[
+                  styles.otpBox,
+                  digit ? styles.otpBoxFilled : null,
+                  focused === i ? styles.otpBoxFocused : null,
+                ]}
                 keyboardType="number-pad"
-                textContentType="oneTimeCode"
                 maxLength={1}
                 autoFocus={i === 0}
                 value={digit}
                 onChangeText={(t) => handleChange(t, i)}
                 onKeyPress={(e) => handleKeyPress(e, i)}
+                onFocus={() => setFocused(i)}
+                onBlur={() => setFocused(null)}
                 textAlign="center"
                 returnKeyType="done"
-                importantForAutofill="yes"
-                autoComplete="one-time-code"
               />
             ))}
           </View>
 
-          <Spacer />
-
-          <ThemedText style={{ textAlign: 'center' }}>
-            Didn&apos;t get the code?{' '}
-            <ThemedText link onPress={resend}>
-              {resendIn > 0 ? `Resend in ${resendIn}s` : 'Tap here to resend'}
-            </ThemedText>
-          </ThemedText>
-
-          <Spacer height={10} />
-
+          <Spacer height={16} />
           <ThemedButton disabled={!ready || busy} onPress={verify}>
-            {busy ? (
-              <ActivityIndicator />
-            ) : (
-              <ThemedText btn>Verify &amp; Continue</ThemedText>
-            )}
+            {busy ? <ActivityIndicator color="#fff" /> : <ThemedText btn>Verify &amp; Continue</ThemedText>}
           </ThemedButton>
+
+          <Spacer height={14} />
+          <View style={styles.resendRow}>
+            <ThemedText style={styles.resendText}>Didn’t get the code?</ThemedText>
+            <View style={[styles.resendChip, resendIn > 0 && styles.resendChipDisabled]}>
+              <ThemedText
+                style={[styles.resendChipText, resendIn > 0 && { opacity: 0.6 }]}
+                onPress={resend}
+              >
+                {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend OTP'}
+              </ThemedText>
+            </View>
+          </View>
         </ThemedCard>
       </ThemedView>
     </TouchableWithoutFeedback>
@@ -217,22 +205,66 @@ export default function Verify() {
 }
 
 const styles = StyleSheet.create({
-  otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-    gap: 12,
+  card: {
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 360,
+    padding: 22,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
+  title: { textAlign: 'center', marginBottom: 4 },
+  subtitle: { textAlign: 'center', color: '#6b7280' },
   maskedNumber: {
     textAlign: 'center',
-    fontSize: 16,
-    fontWeight: '700', // must be a string
+    fontSize: 18,
+    fontWeight: '800',
+    color: PRIMARY,
+    letterSpacing: 0.3,
+    marginBottom: 6,
   },
-  otpInput: {
-    borderBottomWidth: 2,
-    borderColor: '#000',
-    fontSize: 20,
-    paddingVertical: 10,
-    width: 44,
+
+  // OTP row kept inside card
+  otpRow: {
+    marginTop: 18,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 320,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
   },
+  otpBox: {
+    width: 48,
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  otpBoxFilled: { borderColor: PRIMARY },
+  otpBoxFocused: { borderColor: PRIMARY, transform: [{ scale: 1.04 }] },
+
+  resendRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    alignItems: 'center',
+  },
+  resendText: { color: '#6b7280' },
+  resendChip: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  resendChipDisabled: { backgroundColor: '#f3f4f6' },
+  resendChipText: { fontWeight: '700', color: PRIMARY },
 })

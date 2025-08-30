@@ -1,9 +1,9 @@
 // app/(auth)/phone.tsx
-import { router } from 'expo-router'
-import React, { useMemo, useState } from 'react'
+import { useNiceModal } from '@/hooks/NiceModalProvider'; // 👈 use global modal
+import { router } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -11,8 +11,8 @@ import {
   TextInput,
   TouchableOpacity,
   View
-} from 'react-native'
-import { supabase } from '../../constants/supabase'
+} from 'react-native';
+import { supabase } from '../../constants/supabase';
 
 const COLORS = {
   bg: '#F7F8FA',
@@ -45,11 +45,20 @@ function extractLocal10(input: string) {
 }
 
 export default function Phone() {
+  const { showModal, hideModal } = useNiceModal()
+
   const [local10, setLocal10] = useState('')
   const [loading, setLoading] = useState(false)
 
   const isValid = useMemo(() => /^\d{10}$/.test(local10), [local10])
   const fullDisplay = useMemo(() => `+63 ${local10}`, [local10])
+
+  const open = (
+    title: string,
+    message = '',
+    variant: 'info' | 'success' | 'warn' | 'error' = 'info',
+    opts?: { primaryText?: string; onPrimary?: () => void; secondaryText?: string; onSecondary?: () => void }
+  ) => showModal({ title, message, variant, primaryText: opts?.primaryText ?? 'Got it', secondaryText: opts?.secondaryText, onPrimary: opts?.onPrimary, onSecondary: opts?.onSecondary })
 
   const checkPhoneExists = async (phone: string) => {
     const { data, error } = await supabase.rpc('phone_exists', { p_phone: phone })
@@ -63,16 +72,13 @@ export default function Phone() {
     try {
       const phone = toE164PH(local10)
       if (!phone) {
-        Alert.alert('Invalid number', 'Enter the last 10 digits after +63 (e.g., 9XXXXXXXXX).')
+        open('Invalid number', 'Enter the last 10 digits after +63 (e.g., 9XXXXXXXXX).', 'warn')
         return
       }
 
       const exists = await checkPhoneExists(phone)
       if (!exists) {
-        Alert.alert(
-          'Number not found',
-          'This mobile number is not registered. Please register first or contact the barangay office.'
-        )
+        open('Number not found', 'This mobile number is not registered. Please register first or contact the barangay office.', 'warn')
         return
       }
 
@@ -81,14 +87,17 @@ export default function Phone() {
         options: { channel: 'sms' },
       })
       if (error) {
-        Alert.alert('Failed to send code', error.message)
+        open('Failed to send code', error.message, 'error')
         return
       }
 
-      Alert.alert('OTP sent', `We’ve sent a verification code to ${phone}`)
-      router.push({ pathname: '/(auth)/verify', params: { phone } })
+      open('OTP sent', `We’ve sent a verification code to ${phone}.`, 'success')
+      setTimeout(() => {
+        hideModal()
+        router.push({ pathname: '/(auth)/verify', params: { phone } })
+      }, 500)
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Something went wrong.')
+      open('Error', err?.message ?? 'Something went wrong.', 'error')
     } finally {
       setLoading(false)
     }
@@ -125,7 +134,7 @@ export default function Phone() {
               Barangay Sto. Niño
             </Text>
             <Text style={{ fontSize: 14, color: COLORS.muted, textAlign: 'center', marginTop: 4 }}>
-              Mobile number verification phone.tsx
+              Mobile number verification
             </Text>
           </View>
 
@@ -189,7 +198,7 @@ export default function Phone() {
             onPress={sendOtp}
             disabled={!isValid || loading}
             style={{
-              backgroundColor: '#500804ff',
+              backgroundColor: '#4d0602ff',
               paddingVertical: 14,
               borderRadius: 12,
               alignItems: 'center',
