@@ -35,7 +35,7 @@ export default function NiceModal({
     info: { bg: '#28527a', icon: 'information-circle' as const },
     success: { bg: '#441010ff', icon: 'checkmark-circle' as const },
     warn: { bg: '#441010ff', icon: 'alert-circle' as const },
-    error: { bg: '#7a2323', icon: 'close-circle' as const },
+    error: { bg: '#441010ff', icon: 'close-circle' as const },
   }[variant]
 
   return (

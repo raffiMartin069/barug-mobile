@@ -1,4 +1,5 @@
 // app/(auth)/setup-mpin.tsx
+import NiceModal, { type ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
@@ -6,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router, useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, Image, Modal, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, View } from 'react-native'
 import { supabase } from '../../constants/supabase'
 
 const LOCAL_MPIN_NOT_SET = 'local_mpin_not_set'
@@ -50,6 +51,20 @@ export default function SetupMPIN() {
   const currentPin = stage === 'a' ? pinA : pinB
   const setCurrentPin = stage === 'a' ? setPinA : setPinB
 
+  // 🔶 NiceModal state
+  const [alertOpen, setAlertOpen] = useState(false)
+  const [alertTitle, setAlertTitle] = useState<string>('')
+  const [alertMsg,   setAlertMsg]   = useState<string>('')
+  const [alertVar,   setAlertVar]   = useState<ModalVariant>('info')
+
+  const openAlert = (title: string, message: string, variant: ModalVariant = 'info') => {
+    setAlertTitle(title)
+    setAlertMsg(message)
+    setAlertVar(variant)
+    setAlertOpen(true)
+  }
+  const closeAlert = () => setAlertOpen(false)
+
   // Apply deep-link params once on mount (or when params change)
   useEffect(() => {
     if (stageParam === 'a' || stageParam === 'b') {
@@ -66,16 +81,16 @@ export default function SetupMPIN() {
   // Fetch registered phone once
   useEffect(() => {
     let alive = true
-      ; (async () => {
-        setLoadingPhone(true)
-        try {
-          const { data } = await supabase.rpc('me_profile')
-          if (!alive) return
-          if (data?.contact_number) setPhone(String(data.contact_number))
-        } finally {
-          if (alive) setLoadingPhone(false)
-        }
-      })()
+    ;(async () => {
+      setLoadingPhone(true)
+      try {
+        const { data } = await supabase.rpc('me_profile')
+        if (!alive) return
+        if (data?.contact_number) setPhone(String(data.contact_number))
+      } finally {
+        if (alive) setLoadingPhone(false)
+      }
+    })()
     return () => { alive = false }
   }, [])
 
@@ -98,22 +113,29 @@ export default function SetupMPIN() {
 
   const onCheck = async () => {
     if (busy) return
-    if (currentPin.length !== MPIN_LEN) return Alert.alert('MPIN must be 4 digits')
+    if (currentPin.length !== MPIN_LEN) {
+      openAlert('MPIN must be 4 digits', 'Please enter exactly 4 numbers.', 'warn')
+      return
+    }
 
     if (stage === 'a') { setStage('b'); return }
 
     if (pinA !== pinB) {
       setPinB('')
-      return Alert.alert('MPINs do not match')
+      openAlert('MPINs do not match', 'Re-enter your MPIN to confirm.', 'warn')
+      return
     }
 
     setBusy(true)
     try {
       const { error } = await supabase.rpc('set_mpin', { p_pin: pinA })
-      if (error) return Alert.alert('Failed to set MPIN', error.message)
+      if (error) {
+        openAlert('Failed to set MPIN', error.message ?? 'Please try again.', 'error')
+        return
+      }
 
       // Clear local "not set" override if any (from forgot flow)
-      await AsyncStorage.removeItem(LOCAL_MPIN_NOT_SET).catch(() => { })
+      await AsyncStorage.removeItem(LOCAL_MPIN_NOT_SET).catch(() => {})
 
       // Poll briefly until me_profile reflects mpin_set=true
       for (let i = 0; i < 5; i++) {
@@ -216,7 +238,18 @@ export default function SetupMPIN() {
         </Pressable>
       </View>
 
+      {/* ✅ NiceModal for alerts (replaces Alert.alert) */}
+      <NiceModal
+        visible={alertOpen}
+        title={alertTitle}
+        message={alertMsg}
+        variant={alertVar}
+        primaryText="OK"
+        onPrimary={closeAlert}
+        onClose={closeAlert}
+      />
 
+      {/* Success modal (kept as-is) */}
       <Modal visible={done} transparent animationType="fade" onRequestClose={goToEnterMpin}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -307,10 +340,5 @@ const styles = StyleSheet.create({
     borderColor: BRAND,
     backgroundColor: '#fff',
   },
-  startOverText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: BRAND,
-  },
-
+  startOverText: { fontSize: 14, fontWeight: '600', color: BRAND },
 })
