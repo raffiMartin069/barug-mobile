@@ -3,12 +3,13 @@ import React from 'react'
 import { Pressable, StyleSheet, useColorScheme } from 'react-native'
 import ThemedText from './ThemedText'
 
-const ThemedChip = ({style = null, label, filled = true, ...props}) => {
+const ThemedChip = ({style = null, label, filled = true, onPress, ...props}) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
   
   return (
     <Pressable
+        onPress={onPress}
         style={({ pressed }) => [
         styles.base,
         filled ? styles.filled : styles.outlined,

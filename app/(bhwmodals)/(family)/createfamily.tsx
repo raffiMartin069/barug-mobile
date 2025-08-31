@@ -150,6 +150,8 @@ const CreateFamily = () => {
                 />
             </View>
 
+            <Spacer height={15}/>
+
             <View>
                 <ThemedButton>
                     <ThemedText btn>Continue</ThemedText>
