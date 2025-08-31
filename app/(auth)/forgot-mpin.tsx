@@ -131,7 +131,7 @@ export default function ForgotMpin() {
       open('MPIN cleared', 'Please set a new MPIN to continue.', 'success')
       setTimeout(() => {
         hideModal()
-        router.replace('/(auth)/setup-mpin')
+        router.replace({ pathname: '/(auth)/setup-mpin', params: { stage: 'a', reset: '1' } })
       }, 500)
     } finally {
       setBusy(false)

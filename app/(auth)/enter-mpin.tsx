@@ -1,4 +1,5 @@
 // app/(auth)/enter-mpin.tsx
+import NiceModal, { ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
@@ -6,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native'
 import { supabase } from '../../constants/supabase'
 import { markUnlocked } from '../../hooks/sessionUnlock'
 
@@ -15,68 +16,6 @@ const MPIN_LEN = 4
 const ATTEMPT_LIMIT = 5
 const LOCK_SECONDS = 60
 const LOCK_KEY = 'mpin_lock_until_ts'
-
-// ----- Reusable modal (now with 2 buttons) -----
-type ModalVariant = 'info' | 'success' | 'warn' | 'error'
-const NiceModal = ({
-  visible,
-  title,
-  message,
-  variant = 'info',
-  onClose,
-  primaryText = 'OK',
-  onPrimary,
-  secondaryText,
-  onSecondary,
-}: {
-  visible: boolean
-  title: string
-  message?: string
-  variant?: ModalVariant
-  onClose: () => void
-  primaryText?: string
-  onPrimary?: () => void
-  secondaryText?: string
-  onSecondary?: () => void
-}) => {
-  const palette = {
-    info: { bg: '#28527a', icon: 'information-circle' as const },
-    success: { bg: '#237a57', icon: 'checkmark-circle' as const },
-    warn: { bg: '#441010ff', icon: 'alert-circle' as const },
-    error: { bg: '#7a2323', icon: 'close-circle' as const },
-  }[variant]
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={mstyles.backdrop}>
-        <View style={mstyles.card}>
-          <View style={[mstyles.iconWrap, { backgroundColor: palette.bg }]}>
-            <Ionicons name={palette.icon} size={28} color="#fff" />
-          </View>
-          <ThemedText title style={mstyles.modalTitle}>{title}</ThemedText>
-          {!!message && <ThemedText style={mstyles.modalMsg}>{message}</ThemedText>}
-
-          <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
-            {secondaryText ? (
-              <Pressable
-                onPress={() => { onSecondary?.(); onClose(); }}
-                style={({ pressed }) => [mstyles.secondaryBtn, pressed && { opacity: 0.9 }]}
-              >
-                <ThemedText style={{ fontWeight: '700', color: '#310101' }}>{secondaryText}</ThemedText>
-              </Pressable>
-            ) : null}
-            <Pressable
-              onPress={() => { onPrimary?.(); onClose(); }}
-              style={({ pressed }) => [mstyles.primaryBtn, pressed && { opacity: 0.9 }]}
-            >
-              <ThemedText btn>{primaryText}</ThemedText>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  )
-}
 
 function maskPH(phone?: string) {
   if (!phone) return ''
@@ -92,13 +31,13 @@ const Mpin = () => {
   const [busy, setBusy] = useState(false)
   const attemptsRef = useRef(0)
   const [lockedUntil, setLockedUntil] = useState<number>(0)
-  const [tick, setTick] = useState(0)
+  const [tick, setTick] = useState(0) // just to re-render the countdown
 
   // phone chip state
   const [phone, setPhone] = useState<string>('')
   const [loadingPhone, setLoadingPhone] = useState<boolean>(true)
 
-  // modal state
+  // NiceModal state
   const [modalOpen, setModalOpen] = useState(false)
   const [modalTitle, setModalTitle] = useState('')
   const [modalMsg, setModalMsg] = useState('')
@@ -128,6 +67,7 @@ const Mpin = () => {
     return () => { alive = false }
   }, [])
 
+  // load lock-from-storage once
   useEffect(() => {
     const rawLoad = async () => {
       const raw = await AsyncStorage.getItem(LOCK_KEY)
@@ -138,12 +78,14 @@ const Mpin = () => {
     rawLoad()
   }, [])
 
+  // tick while locked (for countdown render)
   useEffect(() => {
     if (!isLocked) return
     const id = setInterval(() => setTick(t => t + 1), 1000)
     return () => clearInterval(id)
   }, [isLocked])
 
+  // clear lock when time passes
   useEffect(() => {
     if (!isLocked && lockedUntil) {
       AsyncStorage.removeItem(LOCK_KEY).catch(() => {})
@@ -191,7 +133,7 @@ const Mpin = () => {
           openModal('Too many attempts', `You’re temporarily locked. Try again in ${LOCK_SECONDS} seconds.`, 'warn')
           return
         }
-        openModal('Incorrect MPIN', `You still have ${remaining} ${remaining === 1 ? 'attempt' : 'attempts'} left before a temporary lock.`, 'warn')
+        openModal('Incorrect MPIN', `${remaining} ${remaining === 1 ? 'attempt' : 'attempts'} left before a temporary lock.`, 'warn')
         return
       }
 
@@ -199,11 +141,12 @@ const Mpin = () => {
       markUnlocked()
       attemptsRef.current = 0
       setPin('')
-      openModal('Unlocked', 'Welcome back!', 'success')
-      setTimeout(() => {
-        setModalOpen(false)
-        router.replace('/(resident)/(tabs)/residenthome')
-      }, 600)
+      openModal('Unlocked', 'Welcome back!', 'success', {
+        onPrimary: () => {
+          router.replace('/(resident)/(tabs)/residenthome')
+        },
+        primaryText: 'Continue',
+      })
     } finally {
       setBusy(false)
     }
@@ -319,17 +262,17 @@ const Mpin = () => {
         </Pressable>
       </View>
 
-      {/* Pretty alerts / confirms */}
+      {/* Shared NiceModal */}
       <NiceModal
         visible={modalOpen}
         title={modalTitle}
         message={modalMsg}
         variant={modalVariant}
-        onClose={() => setModalOpen(false)}
         primaryText={modalPrimaryText}
-        onPrimary={modalPrimary}
         secondaryText={modalSecondaryText}
-        onSecondary={modalSecondary}
+        onPrimary={() => { modalPrimary?.(); setModalOpen(false) }}
+        onSecondary={() => { modalSecondary?.(); setModalOpen(false) }}
+        onClose={() => setModalOpen(false)}
       />
     </ThemedView>
   )
@@ -372,26 +315,4 @@ const styles = StyleSheet.create({
 
   actionsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, gap: 10 },
   link: { fontWeight: '700', textAlign: 'center', padding: 10 },
-})
-
-const mstyles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: {
-    width: '100%',
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-    gap: 10,
-  },
-  iconWrap: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  modalTitle: { textAlign: 'center' },
-  modalMsg: { textAlign: 'center', opacity: 0.9, marginBottom: 6 },
-  primaryBtn: { flex: 1, borderRadius: 12, backgroundColor: '#310101', paddingVertical: 12, alignItems: 'center', justifyContent: 'center' },
-  secondaryBtn: { flex: 1, borderRadius: 12, borderWidth: 1, borderColor: '#310101', paddingVertical: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
 })

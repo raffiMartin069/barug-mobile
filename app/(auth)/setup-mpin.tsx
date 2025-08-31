@@ -4,7 +4,7 @@ import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Image, Modal, Pressable, StyleSheet, View } from 'react-native'
 import { supabase } from '../../constants/supabase'
@@ -13,6 +13,8 @@ const LOCAL_MPIN_NOT_SET = 'local_mpin_not_set'
 const CIRCLE = 78
 const MPIN_LEN = 4
 const BRAND = '#310101'
+
+type Stage = 'a' | 'b'
 
 // mask PH number → "+63 9X•••••• XX"
 function maskPH(phone?: string) {
@@ -26,7 +28,13 @@ function maskPH(phone?: string) {
 }
 
 export default function SetupMPIN() {
-  const [stage, setStage] = useState<'a' | 'b'>('a')
+  // URL params: stage ('a' or 'b') and reset ('0' | '1')
+  const { stage: stageParam, reset: resetParam } = useLocalSearchParams<{
+    stage?: Stage
+    reset?: '0' | '1'
+  }>()
+
+  const [stage, setStage] = useState<Stage>('a')
   const [pinA, setPinA] = useState('')
   const [pinB, setPinB] = useState('')
   const [busy, setBusy] = useState(false)
@@ -37,24 +45,37 @@ export default function SetupMPIN() {
   const [loadingPhone, setLoadingPhone] = useState<boolean>(true)
   const masked = useMemo(() => maskPH(phone), [phone])
 
-  const keys = useMemo(() => ['1','2','3','4','5','6','7','8','9','check','0','back'], [])
+  const keys = useMemo(() => ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'check', '0', 'back'], [])
 
   const currentPin = stage === 'a' ? pinA : pinB
   const setCurrentPin = stage === 'a' ? setPinA : setPinB
 
+  // Apply deep-link params once on mount (or when params change)
+  useEffect(() => {
+    if (stageParam === 'a' || stageParam === 'b') {
+      setStage(stageParam)
+    }
+    if (resetParam === '1') {
+      setPinA('')
+      setPinB('')
+      // default to first stage on a reset for clarity
+      if (!stageParam) setStage('a')
+    }
+  }, [stageParam, resetParam])
+
   // Fetch registered phone once
   useEffect(() => {
     let alive = true
-    ;(async () => {
-      setLoadingPhone(true)
-      try {
-        const { data } = await supabase.rpc('me_profile')
-        if (!alive) return
-        if (data?.contact_number) setPhone(String(data.contact_number))
-      } finally {
-        if (alive) setLoadingPhone(false)
-      }
-    })()
+      ; (async () => {
+        setLoadingPhone(true)
+        try {
+          const { data } = await supabase.rpc('me_profile')
+          if (!alive) return
+          if (data?.contact_number) setPhone(String(data.contact_number))
+        } finally {
+          if (alive) setLoadingPhone(false)
+        }
+      })()
     return () => { alive = false }
   }, [])
 
@@ -92,7 +113,7 @@ export default function SetupMPIN() {
       if (error) return Alert.alert('Failed to set MPIN', error.message)
 
       // Clear local "not set" override if any (from forgot flow)
-      await AsyncStorage.removeItem(LOCAL_MPIN_NOT_SET).catch(() => {})
+      await AsyncStorage.removeItem(LOCAL_MPIN_NOT_SET).catch(() => { })
 
       // Poll briefly until me_profile reflects mpin_set=true
       for (let i = 0; i < 5; i++) {
@@ -107,6 +128,13 @@ export default function SetupMPIN() {
     } finally {
       setBusy(false)
     }
+  }
+
+  const startOver = () => {
+    if (busy) return
+    setStage('a')
+    setPinA('')
+    setPinB('')
   }
 
   return (
@@ -178,6 +206,16 @@ export default function SetupMPIN() {
           )
         })}
       </View>
+
+      {/* Nice-to-have: Start over link */}
+      <View style={styles.startOverWrap}>
+        <Pressable onPress={startOver} disabled={busy}
+          style={({ pressed }) => [styles.startOverBtn, pressed && { opacity: 0.7 }]}>
+          <Ionicons name="refresh-outline" size={18} color={BRAND} style={{ marginRight: 6 }} />
+          <ThemedText style={styles.startOverText}>Start over</ThemedText>
+        </Pressable>
+      </View>
+
 
       <Modal visible={done} transparent animationType="fade" onRequestClose={goToEnterMpin}>
         <View style={styles.modalBackdrop}>
@@ -257,4 +295,22 @@ const styles = StyleSheet.create({
   modalTitle: { textAlign: 'center', marginTop: 4 },
   modalSub: { textAlign: 'center', opacity: 0.7, marginTop: 6, marginBottom: 14 },
   modalBtn: { marginTop: 4, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, backgroundColor: BRAND },
+
+  startOverWrap: { alignItems: 'center', marginTop: 12 },
+  startOverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: BRAND,
+    backgroundColor: '#fff',
+  },
+  startOverText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: BRAND,
+  },
+
 })

@@ -17,8 +17,9 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { supabase } from '@/constants/supabase'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
-import { supabase } from '../../constants/supabase'
+import { sendOtp, verifyOtp } from '@/services/auth'
 
 const RESEND_SECONDS = 30
 const PRIMARY = '#310101'
@@ -40,7 +41,6 @@ export default function Verify() {
   const focusPrev = (i: number) => inputs.current[i - 1]?.focus()
 
   const handleChange = (text: string, i: number) => {
-    // handle paste of full code
     if (text.length > 1) {
       const digits = text.replace(/\D/g, '').slice(0, 6).split('')
       const next = [...code]
@@ -83,27 +83,9 @@ export default function Verify() {
     if (busy || !ready) return
     setBusy(true)
     try {
-      const { error: otpErr } = await supabase.auth.verifyOtp({
-        phone: String(phone),
-        token: otp,
-        type: 'sms'
-      })
-      if (otpErr) {
-        showModal({ title: 'Invalid or expired code', message: otpErr.message, variant: 'warn' })
-        return
-      }
+      await verifyOtp(String(phone), otp) // <-- uses services/auth.ts
 
-      const digits = String(phone).replace(/\D/g, '')
-      const linker = (digits.startsWith('63') || digits.startsWith('09') || digits.startsWith('9'))
-        ? 'link_test_person_by_phone'
-        : 'link_test_person_by_temp_number'
-
-      const { error: linkErr } = await supabase.rpc(linker, { p_phone: phone })
-      if (linkErr) {
-        showModal({ title: 'Account not found', message: linkErr.message, variant: 'warn' })
-        return
-      }
-
+      // proceed with your post-auth flow
       const { data: me, error: meErr } = await supabase.rpc('me_profile')
       if (meErr) {
         showModal({ title: 'Error', message: meErr.message, variant: 'error' })
@@ -113,9 +95,11 @@ export default function Verify() {
       if (!me?.mpin_set) {
         router.replace('/(auth)/setup-mpin')
       } else {
-        // ✅ If MPIN exists, go to lock screen first
         router.replace('/(auth)/enter-mpin')
       }
+    } catch (e: any) {
+      const msg = e?.message ?? 'Invalid or expired code'
+      showModal({ title: 'Verification failed', message: msg, variant: 'warn' })
     } finally {
       setBusy(false)
     }
@@ -124,19 +108,12 @@ export default function Verify() {
   const resend = async () => {
     if (!phone || resendIn > 0) return
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: String(phone),
-        options: { channel: 'sms' }
-      })
-      if (error) {
-        showModal({ title: 'Failed to resend', message: error.message, variant: 'error' })
-        return
-      }
+      await sendOtp(String(phone)) // <-- uses services/auth.ts
       setResendIn(RESEND_SECONDS)
       showModal({ title: 'OTP sent', message: 'We’ve re-sent the code to your phone.', variant: 'success' })
       setTimeout(hideModal, 600)
     } catch (e: any) {
-      showModal({ title: 'Error', message: e?.message ?? 'Something went wrong.', variant: 'error' })
+      showModal({ title: 'Failed to resend', message: e?.message ?? 'Something went wrong.', variant: 'error' })
     }
   }
 
@@ -156,7 +133,6 @@ export default function Verify() {
           <Spacer height={6} />
           <ThemedText style={styles.maskedNumber}>{maskedPhone}</ThemedText>
 
-          {/* OTP boxes */}
           <View style={styles.otpRow}>
             {code.map((digit, i) => (
               <TextInput
@@ -227,8 +203,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     marginBottom: 6,
   },
-
-  // OTP row kept inside card
   otpRow: {
     marginTop: 18,
     alignSelf: 'center',
@@ -251,7 +225,6 @@ const styles = StyleSheet.create({
   },
   otpBoxFilled: { borderColor: PRIMARY },
   otpBoxFocused: { borderColor: PRIMARY, transform: [{ scale: 1.04 }] },
-
   resendRow: {
     flexDirection: 'row',
     justifyContent: 'center',
