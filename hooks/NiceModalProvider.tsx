@@ -9,7 +9,7 @@ type ShowOptions = {
   primaryText?: string
   secondaryText?: string
   onPrimary?: () => void
-  onSecondary?: () => void
+  onSecondary?: () => void  
   dismissible?: boolean
 }
 

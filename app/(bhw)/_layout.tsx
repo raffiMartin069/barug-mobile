@@ -42,6 +42,17 @@ const BhwLayout = () => {
             }}
         >
             <Tabs.Screen
+                name='(tabs)/bhwhome'
+                options={{title: 'Home', tabBarIcon: ({focused}) => (
+                    <Ionicons
+                    name={focused ? 'home' : 'home-outline'}
+                    size={20}
+                    color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+                    />
+                )}}
+            />
+
+            <Tabs.Screen
                 name='(tabs)/profiling'
                 options={{title: 'Profiling', tabBarIcon: ({focused}) => (
                     <Ionicons
@@ -51,6 +62,7 @@ const BhwLayout = () => {
                     />
                 )}}
             />
+
         </Tabs>
     </>
   )
