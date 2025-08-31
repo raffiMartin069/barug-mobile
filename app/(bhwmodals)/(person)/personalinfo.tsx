@@ -33,6 +33,7 @@ const PersonalInfo = () => {
   const [brgy, setBrgy] = useState('');
   const [city, setCity] = useState('');
   const [mobnum, setMobNum] = useState('')
+  const [email, setEmail] = useState('')
 
   useEffect(() => {
     const streetParam = params.get('street') ?? '';
@@ -71,6 +72,7 @@ const PersonalInfo = () => {
             brgy,
             city,
             mobnum,
+            email,
         }
     })
   }
@@ -202,6 +204,14 @@ const PersonalInfo = () => {
                     onChangeText={setMobNum}
                     keyboardType='numeric'
                 />
+
+                <Spacer height={10}/>
+
+                <ThemedTextInput
+                    placeholder='Email Address'
+                    value={email}
+                    onChangeText={setEmail}
+                /> 
             </View>
 
             <Spacer height={15}/>

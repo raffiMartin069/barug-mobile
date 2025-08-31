@@ -23,28 +23,28 @@ const ITEMS: Item[] =[
         key: 'register_resident',
         title: 'Register Resident',
         desc: 'Profile a resident.',
-        icon: 'person-add',
+        icon: 'person-add-outline',
         route: '/(bhwmodals)/(person)/personalinfo' as Href,
     },
     {
         key: 'register_household',
         title: 'Register Household',
         desc: 'Profile a household.',
-        icon: 'home',
+        icon: 'home-outline',
         route: '/(bhwmodals)/(household)/createhousehold' as Href,
     },
     {
         key: 'register_family',
         title: 'Register Family Unit',
         desc: 'Profile a family under a household.',
-        icon: 'people',
+        icon: 'people-outline',
         route: '/(bhwmodals)/(family)/createfamily' as Href,
     },
     {
         key: 'household_list',
         title: 'List of Households',
         desc: 'View and manage all registered households in the barangay.',
-        icon: 'people',
+        icon: 'people-outline',
         route: '/(bhwmodals)/(household)/householdlist' as Href,
     },
 ]
@@ -81,7 +81,7 @@ const Profiling = () => {
                                     <ThemedIcon
                                         name={item.icon}
                                         bgColor='#310101'
-                                        size={15}
+                                        size={18}
                                         containerSize={40}
                                     />
                                 </View>
