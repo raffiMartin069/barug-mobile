@@ -7,7 +7,7 @@ import ThemedView from '@/components/ThemedView'
 import { useSearchParams } from 'expo-router/build/hooks'
 import React from 'react'
 import { StyleSheet, View } from 'react-native'
-import { civilStatusMap, educAttainmentMap, empStatMap, genderMap, govProgMap, idTypeMap, mnthlyPersonalIncomeMap, nationalityMap, religionMap } from '../../constants/formoptions'
+import { civilStatusMap, educAttainmentMap, empStatMap, genderMap, govProgMap, idTypeMap, mnthlyPersonalIncomeMap, nationalityMap, religionMap } from '../../constants/formOptions'
 
 const ReviewInputs = () => {
   const params = useSearchParams()

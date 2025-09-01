@@ -11,7 +11,7 @@ import { useRouter } from 'expo-router'
 import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { educAttainmentOptions, empStatOptions, govProgOptions, mnthlyPerosonalIncomeOptions } from '../../constants/formoptions'
+import { educAttainmentOptions, empStatOptions, govProgOptions, mnthlyPerosonalIncomeOptions } from '../../constants/formOptions'
 
 const SocioeconomicInfo = () => {
   const [educattainment, setEducAttainment] = useState('')

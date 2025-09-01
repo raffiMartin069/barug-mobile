@@ -143,7 +143,7 @@ const Mpin = () => {
       setPin('')
       openModal('Unlocked', 'Welcome back!', 'success', {
         onPrimary: () => {
-          router.replace('/(resident)/(tabs)/residenthome')
+          router.replace('/(bhwmodals)/(person)/personalinfo')
         },
         primaryText: 'Continue',
       })

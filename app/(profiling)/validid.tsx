@@ -7,7 +7,7 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { idTypeOptions } from '@/constants/formoptions'
+import { idTypeOptions } from '@/constants/formOptions'
 import { useRouter } from 'expo-router'
 import { useSearchParams } from 'expo-router/build/hooks'
 import React, { useState } from 'react'
