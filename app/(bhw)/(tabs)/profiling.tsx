@@ -86,9 +86,9 @@ const Profiling = () => {
                                     />
                                 </View>
 
-                                <View>
-                                    <ThemedText>{item.title}</ThemedText>
-                                    <ThemedText style={{color: 'gray'}}>{item.desc}</ThemedText>
+                                <View style={{ flex: 1 }}>
+                                    <ThemedText style={{ fontSize: 16, fontWeight: '700' }}>{item.title}</ThemedText>
+                                    <ThemedText style={{ color: 'gray', flexWrap: 'wrap', flexShrink: 1 }}>{item.desc}</ThemedText>
                                 </View>
                             </View>
 
@@ -116,6 +116,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        flexWrap: 'nowrap',
     },
     row: {
         flexDirection: 'row',

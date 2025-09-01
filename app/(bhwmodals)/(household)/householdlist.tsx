@@ -3,13 +3,14 @@ import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedBottomSheet from '@/components/ThemedBottomSheet'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
+import ThemedChip from '@/components/ThemedChip'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useRef, useState } from 'react'
-import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 
@@ -45,7 +46,8 @@ type Household = {
 const HouseholdList = () => {
   const router = useRouter()
 
-  const household: Household = {
+  const households: Household[] = [
+  {
     id: 'HH-2024-001',
     householdNum: 'HH-2024-001',
     householdHead: 'Raphael H. Bellosillo',
@@ -68,7 +70,44 @@ const HouseholdList = () => {
         ],
       },
     ],
-  }
+  },
+  {
+    id: 'HH-2024-002',
+    householdNum: 'HH-2024-002',
+    householdHead: 'Maria Santos',
+    address: 'Purok 5, Sitio Mabini',
+    houseType: 'Wooden',
+    houseOwnership: 'Renting',
+    families: [
+      {
+        familyNum: 'FAM-002',
+        headName: 'Maria Santos',
+        type: 'EXTENDED',
+        nhts: 'NO',
+        indigent: 'YES',
+        monthlyIncome: '₱5,000 - ₱8,000',
+        sourceIncome: 'Small Business',
+        members: [
+          { id: 'P-4', name: 'Maria Santos', relation: 'HEAD', age: 50, sex: 'Female' },
+          { id: 'P-5', name: 'Jose Santos', relation: 'CHILD', age: 22, sex: 'Male' },
+          { id: 'P-6', name: 'Liza Santos', relation: 'CHILD', age: 19, sex: 'Female' },
+          { id: 'P-7', name: 'Juan Dela Cruz', relation: 'GRANDCHILD', age: 5, sex: 'Male' },
+        ],
+      },
+      {
+        familyNum: 'FAM-003',
+        headName: 'Pedro Cruz',
+        type: 'NUCLEAR',
+        nhts: 'NO',
+        indigent: 'NO',
+        monthlyIncome: '₱10,000 - ₱12,000',
+        sourceIncome: 'Construction Work',
+        members: [], // no members yet
+      },
+    ],
+  },
+]
+
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false)
@@ -111,53 +150,56 @@ const HouseholdList = () => {
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
           <Spacer height={20} />
 
-          <Pressable onPress={() => openSheet(household)}>
-            <ThemedCard>
-              <View style={styles.rowContainer}>
-                <View style={styles.rowSubContainer}>
-                  <ThemedIcon
-                    name={'home'}
-                    bgColor={'#310101'}
-                    containerSize={40}
-                    size={18}
-                  />
-                  <View style={{ marginLeft: 10 }}>
-                    <ThemedText style={{ fontWeight: '700' }} subtitle={true}>
-                      {household.householdNum}
-                    </ThemedText>
-                    <ThemedText style={{ color: '#475569' }}>
-                      Household Head: {household.householdHead}
+          {households.map((hh) => (
+            <View key={hh.id}>
+              <Pressable onPress={() => openSheet(hh)}>
+                <ThemedCard>
+                  <View style={styles.rowContainer}>
+                    <View style={styles.rowSubContainer}>
+                      <ThemedIcon
+                        name={'home'}
+                        bgColor={'#310101'}
+                        containerSize={40}
+                        size={18}
+                      />
+                      <View style={{ marginLeft: 10 }}>
+                        <ThemedText style={{ fontWeight: '700' }} subtitle={true}>
+                          {hh.householdNum}
+                        </ThemedText>
+                        <ThemedText style={{ color: '#475569' }}>
+                          Household Head: {hh.householdHead}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} />
+                  </View>
+
+                  <View style={[styles.rowSubContainer, { paddingBottom: 5, paddingTop: 5 }]}>
+                    <Ionicons name="location-outline" size={16} color="#475569" />
+                    <ThemedText style={{ marginLeft: 10, color: '#475569' }}>{hh.address}</ThemedText>
+                  </View>
+
+                  <View style={styles.rowSubContainer}>
+                    <Ionicons name="people-outline" size={16} color="#475569" />
+                    <ThemedText style={{ marginLeft: 10, color: '#475569' }}>
+                      {hh.families.length} Families
                     </ThemedText>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward" size={18} />
-              </View>
 
-              <View style={[styles.rowSubContainer, { paddingBottom: 5, paddingTop: 5 }]}>
-                <Ionicons name="location-outline" size={16} color="#475569" />
-                <ThemedText style={{ marginLeft: 10, color: '#475569' }}>{household.address}</ThemedText>
-              </View>
+                  <Spacer height={15} />
 
-              <View style={styles.rowSubContainer}>
-                <Ionicons name="people-outline" size={16} color="#475569" />
-                <ThemedText style={{ marginLeft: 10, color: '#475569' }}>
-                  {household.families.length} Families
-                </ThemedText>
-              </View>
+                  <ThemedButton submit={false} onPress={() => openSheet(hh)}>
+                    <ThemedText non_btn={true}>View Details</ThemedText>
+                  </ThemedButton>
+                </ThemedCard>
+              </Pressable>
 
-              <Spacer height={15} />
-
-              <ThemedButton submit={false} onPress={() => openSheet(household)}>
-                <ThemedText non_btn={true}>View Details</ThemedText>
-              </ThemedButton>
-            </ThemedCard>
-          </Pressable>
+              <Spacer />
+            </View>
+          ))}
         </ScrollView>
-      </KeyboardAvoidingView>
 
-      <TouchableOpacity style={styles.fab}>
-        <ThemedIcon name={'add'} bgColor="#310101" size={24} />
-      </TouchableOpacity>
+      </KeyboardAvoidingView>
 
       {/* ---------- Bottom Sheet --------- */}
       <ThemedBottomSheet visible={open} onClose={closeSheet}>
@@ -255,9 +297,12 @@ const HouseholdList = () => {
                       {fam.members.length > 0 ? (
                         <View style={styles.memberGrid}>
                           {fam.members.map((m) => (
-                            <Pressable key={m.id} onPress={() => onPressMember(fam, m)} style={styles.memberPill}>
-                              <ThemedText>{m.name}</ThemedText>
-                            </Pressable>
+                            <ThemedChip
+                              key={m.id}
+                              label={m.name}
+                              onPress={() => onPressMember(fam, m)}          
+                              style={{}}                  
+                            />
                           ))}
                         </View>
                       ) : (
@@ -288,13 +333,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    zIndex: 999,
-  },
-
   kvRow: {
     
   },
@@ -312,14 +350,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
-  memberPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#EEF2F7',
-    borderWidth: 1,
-    borderColor: '#E5EAF0',
-  },
   badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   badgeText:   { fontSize: 12, color: '#334155' },
