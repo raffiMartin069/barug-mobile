@@ -6,6 +6,7 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { documentOptions } from '@/constants/formOptions'
+import { useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import ClearanceAdult from './(docreq)/clearanceadult'
@@ -42,6 +43,8 @@ const DOC_COMPONENTS: Record<string, React.FC> = {
 
 
 const RequestDoc = () => {
+  const router = useRouter()
+
   const [document, setDocument] = useState('')
   const SelectedDocument = useMemo(() => DOC_COMPONENTS[document] ?? null, [document])
 
@@ -73,7 +76,7 @@ const RequestDoc = () => {
         </View>
 
         <View>
-            <ThemedButton>
+            <ThemedButton onPress={() => router.push('/receipt')}>
               <ThemedText btn={true}>Submit</ThemedText>
             </ThemedButton>
         </View>
