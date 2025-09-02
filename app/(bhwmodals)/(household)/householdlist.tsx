@@ -106,6 +106,28 @@ const HouseholdList = () => {
       },
     ],
   },
+  {
+    id: 'HH-2024-111',
+    householdNum: 'HH-2024-001',
+    householdHead: 'Raphael H. Bellosillo',
+    address: 'Purok 3, Sitio San Roque',
+    houseType: 'Concrete',
+    houseOwnership: 'Owned',
+    families: [
+
+    ],
+  },
+  {
+    id: 'HH-2024-112',
+    householdNum: 'HH-2024-001',
+    householdHead: 'Raphael H. Bellosillo',
+    address: 'Purok 3, Sitio San Roque',
+    houseType: 'Concrete',
+    houseOwnership: 'Owned',
+    families: [
+
+    ],
+  },
 ]
 
 
@@ -262,9 +284,17 @@ const HouseholdList = () => {
 
               {/* Families */}
               <View style={{ marginTop: 16 }}>
-                <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>
-                  Families in this Household
-                </ThemedText>
+                <View style={styles.sectionHeaderRow}>
+                  <ThemedText style={styles.sectionTitle}>
+                    Families in this Household
+                  </ThemedText>
+
+                  <ThemedChip
+                    label={'Add Family Unit'}
+                    onPress={() => router.push('/createfamily')}
+                    filled={false}
+                  />
+                </View>
 
                 <ScrollView
                   ref={familiesScrollRef}
@@ -275,7 +305,7 @@ const HouseholdList = () => {
                   scrollEventThrottle={16}
                 >
                   {selectedHousehold.families.map((fam) => (
-                    <View key={fam.familyNum} style={{ width: SCREEN_WIDTH - 32, paddingRight: 16 }}>
+                    <View key={fam.familyNum} style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}>
                       <View style={styles.familyCover}>
                         <Ionicons name="home-outline" size={20} color="#475569" />
                         <View style={{ marginLeft: 10 }}>
@@ -300,8 +330,7 @@ const HouseholdList = () => {
                             <ThemedChip
                               key={m.id}
                               label={m.name}
-                              onPress={() => onPressMember(fam, m)}          
-                              style={{}}                  
+                              onPress={() => onPressMember(fam, m)}                          
                             />
                           ))}
                         </View>
@@ -353,4 +382,12 @@ const styles = StyleSheet.create({
   badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   badgeText:   { fontSize: 12, color: '#334155' },
+  sectionHeaderRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 12,
+  marginBottom: 6,
+},
+  sectionTitle: { fontWeight: '700', flexShrink: 1, },
 })
