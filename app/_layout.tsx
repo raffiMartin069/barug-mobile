@@ -1,7 +1,7 @@
 // app/_layout.tsx
 import { Stack } from 'expo-router'
 import React from 'react'
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { NiceModalProvider } from '../hooks/NiceModalProvider'
 import { useRouteGuard } from '../hooks/useRouteGuard'
 
@@ -21,7 +21,7 @@ export default function RootLayout() {
           </View>
         )}
         {/* debug overlay */}
-        <View pointerEvents="box-none" style={styles.overlay}>
+        {/* <View pointerEvents="box-none" style={styles.overlay}>
           <View style={[styles.devBar, { backgroundColor: authed ? '#065f46' : '#7c2d12' }]}>
             <Text style={styles.devText}>
               {authed ? `Session: ON (uid: ${shortUid})  MPIN: ${mpinSet ? 'SET' : 'NOT SET'}` : 'Session: OFF'}
@@ -34,7 +34,7 @@ export default function RootLayout() {
               <Text style={[styles.devText, { opacity: 0.75 }]}>login to create session</Text>
             )}
           </View>
-        </View>
+        </View> */}
       </>
     </NiceModalProvider>
   )
