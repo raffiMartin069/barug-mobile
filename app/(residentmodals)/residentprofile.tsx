@@ -8,38 +8,18 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native'
-import { supabase } from '../../constants/supabase'
+import React from 'react'
+import { StyleSheet, View } from 'react-native'
 
-export const options = { href: null }
+export const options = {
+  href: null,
+}
 
 const ResidentProfile = () => {
   const router = useRouter()
-  const [loggingOut, setLoggingOut] = useState(false)
-
-  const onLogout = async () => {
-    if (loggingOut) return
-    setLoggingOut(true)
-    try {
-      // End Supabase session (access + refresh)
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
-      // Optional: if you use any realtime channels, you can also cleanup:
-      // supabase.getChannels().forEach(ch => supabase.removeChannel(ch))
-
-      // Send user back to auth stack
-      router.replace('/(auth)/phone')
-    } catch (e: any) {
-      Alert.alert('Logout failed', e?.message ?? String(e))
-    } finally {
-      setLoggingOut(false)
-    }
-  }
-
+  
   return (
-    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
       <ThemedAppBar
         title='Profile'
         showProfile={false}
@@ -48,16 +28,21 @@ const ResidentProfile = () => {
       />
 
       <ThemedKeyboardAwareScrollView>
-        <Spacer height={20} />
+        <Spacer height={20}/>
 
         <ThemedCard>
-          <View style={{ alignItems: 'center' }}>
-            <ThemedImage src={require('@/assets/images/default-image.jpg')} size={90} />
+          <View style={{alignItems: 'center'}}>
+            <ThemedImage
+              src={require('@/assets/images/default-image.jpg')}
+              size={90}
+            />
           </View>
 
-          <Spacer height={15} />
+          <Spacer height={15}/>
 
-          <Spacer height={10} />
+          {/* <ThemedText title={true}>Personal Infomation</ThemedText> */}
+
+          <Spacer height={10}/>
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Resident ID:</ThemedText>
@@ -94,9 +79,11 @@ const ResidentProfile = () => {
             <ThemedText subtitle={true}>Catholic</ThemedText>
           </View>
 
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
+          <Spacer height={15}/>
+
+          <ThemedDivider/>
+
+          <Spacer height={15}/>
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Educational Attainment:</ThemedText>
@@ -123,9 +110,11 @@ const ResidentProfile = () => {
             <ThemedText subtitle={true}>SSS</ThemedText>
           </View>
 
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
+          <Spacer height={15}/>
+
+          <ThemedDivider/>
+
+          <Spacer height={15}/>
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Home Address:</ThemedText>
@@ -143,12 +132,12 @@ const ResidentProfile = () => {
           </View>
         </ThemedCard>
 
-        <Spacer height={30} />
+        <Spacer height={30}/>
 
         <ThemedCard>
           <ThemedText title={true}>Household Infomation</ThemedText>
 
-          <Spacer height={10} />
+          <Spacer height={10}/>
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Household Head:</ThemedText>
@@ -170,13 +159,15 @@ const ResidentProfile = () => {
             <ThemedText subtitle={true}>Renter</ThemedText>
           </View>
 
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
+          <Spacer height={15}/>
+
+          <ThemedDivider/>
+
+          <Spacer height={15}/>
 
           <ThemedText title={true}>Family Infomation</ThemedText>
 
-          <Spacer height={10} />
+          <Spacer height={10}/>
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Family Head:</ThemedText>
@@ -213,47 +204,44 @@ const ResidentProfile = () => {
             <ThemedText subtitle={true}>P100.00</ThemedText>
           </View>
 
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
+          <Spacer height={15}/>
+
+          <ThemedDivider/>
+
+          <Spacer height={15}/>
 
           <ThemedText title={true}>Family Members</ThemedText>
 
-          <Spacer height={10} />
+          <Spacer height={10}/>  
 
           <View style={styles.familyList}>
-            {[
-              { name: 'Maria Lourdes A. Cruz' },
-              { name: 'Renzo Gabriel A. Cruz' },
-              { name: 'Andrei A. Cruz' },
-            ].map((member, index) => (
-              <View key={index} style={styles.familyCard}>
-                <ThemedText subtitle={true}>{member.name}</ThemedText>
-              </View>
-            ))}
-          </View>
-
-          <Spacer height={15} />
-
-          <View>
-            <ThemedButton submit={false} onPress={() => router.push('/request')}>
-              <ThemedText non_btn={true}>Request House-to-House Visit</ThemedText>
-            </ThemedButton>
-          </View>
-        </ThemedCard>
-
-        <Spacer height={15} />
-
-        <View style={{ paddingHorizontal: 15 }}>
-          <ThemedButton submit={false} onPress={onLogout} disabled={loggingOut}>
-            {loggingOut
-              ? <ActivityIndicator color="#fff" />
-              : <ThemedText non_btn={true}>Logout</ThemedText>}
-          </ThemedButton>
+          {[
+            { name: 'Maria Lourdes A. Cruz' },
+            { name: 'Renzo Gabriel A. Cruz' },
+            { name: 'Andrei A. Cruz' },
+          ].map((member, index) => (
+            <View key={index} style={styles.familyCard}>
+              <ThemedText subtitle={true}>
+                {member.name}
+              </ThemedText>
+            </View>
+          ))}
         </View>
 
-        <Spacer height={20} />
+        <Spacer height={15}/>
+      
+        </ThemedCard>
+
+        <Spacer height={15}/>
+
+        <View style={{paddingHorizontal: 15}}>
+          <ThemedButton submit={false}>
+            <ThemedText non_btn={true}>Logout</ThemedText>
+          </ThemedButton>
+        </View>
+        <Spacer height={20}/>
       </ThemedKeyboardAwareScrollView>
+
     </ThemedView>
   )
 }
@@ -261,10 +249,27 @@ const ResidentProfile = () => {
 export default ResidentProfile
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 },
-  bold: { fontWeight: '600' },  // RN expects string weights
-  relationship: { color: '#808080' },
-  member: { backgroundColor: '#310101' },
-  familyList: { gap: 10 },
-  familyCard: { backgroundColor: '#f3f4f6', padding: 12, borderRadius: 8 },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  bold: {
+    fontWeight: 600,
+  },
+  relationship: {
+    color: '#808080'
+  },
+  member: {
+    backgroundColor: "#310101",
+  },
+  familyList: {
+    gap: 10,
+  },
+  familyCard: {
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+  },
 })
