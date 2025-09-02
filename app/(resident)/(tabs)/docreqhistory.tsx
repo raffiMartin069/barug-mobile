@@ -5,9 +5,10 @@ import ThemedDivider from '@/components/ThemedDivider'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedItemCard from '@/components/ThemedItemCard'
 import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { useRouter } from 'expo-router'
-import React from 'react'
+import { Link, useRouter } from 'expo-router'
+import React, { useState } from 'react'
 import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const STATUS_UI: Record<
@@ -64,6 +65,7 @@ const HISTORY_REQUESTS: RequestItem[] = [
 ]
 
 const DocReqHistory = () => {
+  const [search, setSearch] = useState('')
   const router = useRouter()
 
   return (
@@ -75,13 +77,47 @@ const DocReqHistory = () => {
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+          <Spacer />
+          <View style={{paddingHorizontal: 40}}>
+            <ThemedTextInput
+              placeholder='Search...'
+              value={search}
+              onChangeText={setSearch}
+            />
 
-          <Spacer height={15}/>
+            <Spacer height={10}/>
+
+            {/* change according to status list in db */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.chipRow}>
+                {[
+                  { key: 'all',       label: 'All' },
+                  { key: 'pending',   label: 'Pending' },
+                  { key: 'ready',     label: 'Ready' },
+                  { key: 'completed', label: 'Completed' },
+                  { key: 'declined',  label: 'Declined' },
+                ].map((f) => {
+                  const selected = f.key === 'all' // 🔴 hard-coded for now
+                  return (
+                    <TouchableOpacity key={f.key} activeOpacity={0.7} style={[styles.chip, selected && styles.chipSelected]}>
+                      <ThemedText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                        {f.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
+          <Spacer />
 
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Active Requests</ThemedText>
-              <ThemedText link>View All</ThemedText>
+              <ThemedText link>
+                <Link href={'/allactive'}>View All</Link>
+              </ThemedText>
             </View>
 
             <Spacer height={10}/>
@@ -115,7 +151,9 @@ const DocReqHistory = () => {
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Request History</ThemedText>
-              <ThemedText link>View All</ThemedText>
+              <ThemedText link>
+                <Link href={'/requesthistory'}>View All</Link>
+              </ThemedText>
             </View>
 
             <Spacer height={10}/>
@@ -213,5 +251,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#310101',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: 8, // RN 0.73+ supports gap; if older, remove and keep marginRight on chip
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+    backgroundColor: '#ffffff',
+  },
+  chipSelected: {
+    borderColor: '#310101',   // 🟦 selected outline
+  },
+  chipTextSelected: {
+    color: '#310101',         // 🟦 selected text color
+    fontWeight: '600',
+  },
+  chipText: {
+    fontSize: 12,
   },
 })
