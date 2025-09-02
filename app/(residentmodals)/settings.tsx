@@ -14,7 +14,7 @@ const settingsData = [
     options: [
       { label: 'My Profile', route: '/residentprofile' },
       { label: 'Resident Verification', route: '/residentprofile' },
-      { label: 'Change Password', route: '/changepassword' },
+      { label: 'Change MPIN', route: '/change-mpin' },
     ],
   },
   {

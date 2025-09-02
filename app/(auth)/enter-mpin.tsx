@@ -254,9 +254,9 @@ const Mpin = () => {
         <Pressable onPress={confirmForgot} disabled={busy}>
           <ThemedText style={styles.link}>Forgot MPIN?</ThemedText>
         </Pressable>
-        <Pressable onPress={() => router.push('/(auth)/change-mpin')} disabled={busy}>
+        {/* <Pressable onPress={() => router.push('/(auth)/change-mpin')} disabled={busy}>
           <ThemedText style={styles.link}>Change MPIN</ThemedText>
-        </Pressable>
+        </Pressable> */}
         <Pressable onPress={confirmUseAnother} disabled={busy}>
           <ThemedText style={styles.link}>Use another number</ThemedText>
         </Pressable>
