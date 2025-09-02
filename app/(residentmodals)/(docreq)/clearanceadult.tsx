@@ -6,12 +6,11 @@ import ThemedView from '@/components/ThemedView'
 import React, { useState } from 'react'
 import { StyleSheet } from 'react-native'
 
-const Death = () => {
+const ClearanceAdult = () => {
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
-  const [nationality, setNationality] = useState('')
-  const [dateofdeath, setDateofDeath] = useState('')
-  const [placeofdeath, setPlaceofDeath] = useState('')
+  const [cstatus, setCStatus] = useState('')
+  const [address, setAddress] = useState('')
   const [purpose, setPurpose] = useState('')
 
   return (
@@ -27,10 +26,10 @@ const Death = () => {
 
       <Spacer height={10}/>
 
-      {/* Age at time of Death */}
-      <ThemedText style={styles.label}>Age at time of Death</ThemedText>
+      {/* Age */}
+      <ThemedText style={styles.label}>Age</ThemedText>
       <ThemedTextInput
-        placeholder='Age at time of Death'
+        placeholder='Age'
         value={age}
         onChangeText={setAge}
         editable={false}
@@ -38,34 +37,23 @@ const Death = () => {
 
       <Spacer height={10}/>
 
-      {/* Nationality */}
-      <ThemedText style={styles.label}>Nationality</ThemedText>
+      {/* Civil Status */}
+      <ThemedText style={styles.label}>Civil Status</ThemedText>
       <ThemedTextInput
-        placeholder='Nationality'
-        value={nationality}
-        onChangeText={setNationality}
+        placeholder='Civil Status'
+        value={cstatus}
+        onChangeText={setCStatus}
         editable={false}
       />
 
       <Spacer height={10}/>
 
-      {/* Date of Death */}
-      <ThemedText style={styles.label}>Date of Death</ThemedText>
+      {/* Home Address */}
+      <ThemedText style={styles.label}>Home Address</ThemedText>
       <ThemedTextInput
-        placeholder='Date of Death'
-        value={dateofdeath}
-        onChangeText={setDateofDeath}
-        editable={false}
-      />
-
-      <Spacer height={10}/>
-
-      {/* Place of Death */}
-      <ThemedText style={styles.label}>Place of Death</ThemedText>
-      <ThemedTextInput
-        placeholder='Place of Death'
-        value={placeofdeath}
-        onChangeText={setPlaceofDeath}
+        placeholder='Home Address'
+        value={address}
+        onChangeText={setAddress}
         editable={false}
       />
 
@@ -83,7 +71,7 @@ const Death = () => {
   )
 }
 
-export default Death
+export default ClearanceAdult
 
 const styles = StyleSheet.create({
   label: {

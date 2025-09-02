@@ -123,23 +123,33 @@ export const indigentMap = {
 };
 
 export const documentOptions = [
-  { label: 'Barangay Clearance', value: 'brgy_clearance' },
-  { label: 'Certificate of Residency', value: 'cert_residency' },
-  { label: 'Certificate of Indigency', value: 'cert_indigency' },
-  { label: 'Barangay Business Clearance', value: 'barangay_business_clearance' },
-  { label: 'Certificate of Low Income', value: 'cert_lowincome' },
-  { label: 'Certificate of Good Moral Character', value: 'cert_goodmoral' },
+  { label: 'Barangay Clearance (Adult)', value: 'brgy_clearance_adult' },
+  { label: 'Barangay Clearance (Minor)', value: 'brgy_clearance_minor' },
+
   { label: 'Barangay Death Certificate', value: 'cert_death' },
-  { label: 'Permit to Conduct Activities', value: 'permit_conduct_activities' },
+
+  { label: 'Certificate of Indigency (Adult)', value: 'cert_indigency_adult' },
+  { label: 'Certificate of Indigency (Minor)', value: 'cert_indigency_minor' },
+
+  { label: 'Certificate of Low Income (Adult)', value: 'cert_lowincome_adult' },
+  { label: 'Certificate of Low Income (Minor)', value: 'cert_lowincome_minor' },
+
+  { label: 'Certificate of Residency (Adult)', value: 'cert_residency_adult' },
+  { label: 'Certificate of Residency (Minor)', value: 'cert_residency_minor' },
 ];
 
 export const documentMap = {
-  barangay_clearance: 'Barangay Clearance',
-  residency_certificate: 'Certificate of Residency',
-  certificate_indigency: 'Certificate of Indigency',
-  barangay_business_clearance: 'Barangay Business Clearance',
-  certificate_low_income: 'Certificate of Low Income',
-  certificate_good_moral_character: 'Certificate of Good Moral Character',
-  barangay_death_certificate: 'Barangay Death Certificate',
-  permit_conduct_activities: 'Permit to Conduct Activities',
+  brgy_clearance_adult: 'Barangay Clearance (Adult)',
+  brgy_clearance_minor: 'Barangay Clearance (Minor)',
+
+  cert_death: 'Barangay Death Certificate',
+
+  cert_indigency_adult: 'Certificate of Indigency (Adult)',
+  cert_indigency_minor: 'Certificate of Indigency (Minor)',
+
+  cert_lowincome_adult: 'Certificate of Low Income (Adult)',
+  cert_lowincome_minor: 'Certificate of Low Income (Minor)',
+
+  cert_residency_adult: 'Certificate of Residency (Adult)',
+  cert_residency_minor: 'Certificate of Residency (Minor)',
 };

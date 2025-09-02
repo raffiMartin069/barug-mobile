@@ -13,7 +13,7 @@ const DocReqHistory = () => {
   const router = useRouter()
 
   return (
-    <ThemedView style={{flex: 1, justifyContent: 'flex-start',}} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start',}} safe>
 
       <ThemedAppBar
         title='Document Requests'
@@ -27,7 +27,7 @@ const DocReqHistory = () => {
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Active Requests</ThemedText>
-              <ThemedText link={true}>View All</ThemedText>
+              <ThemedText link>View All</ThemedText>
             </View>
 
             <Spacer height={10}/>
@@ -42,7 +42,7 @@ const DocReqHistory = () => {
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Request History</ThemedText>
-              <ThemedText link={true}>View All</ThemedText>
+              <ThemedText link>View All</ThemedText>
             </View>
 
             <Spacer height={10}/>

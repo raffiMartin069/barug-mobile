@@ -14,7 +14,7 @@ const ResidentHome = () => {
   const router = useRouter()
 
   return (
-    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe>
 
         <ThemedAppBar
             title={'Barangay Sto. Niño'}
@@ -25,7 +25,7 @@ const ResidentHome = () => {
             <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
             <View style={[styles.container, {paddingHorizontal: 30, paddingVertical: 10,}]}>
-              <ThemedText title={true}>Welcome, firstname!</ThemedText>
+              <ThemedText title>Welcome, firstname!</ThemedText>
               <ThemedImage
                 src={require('@/assets/images/default-image.jpg')}
                 size={60}
@@ -36,7 +36,7 @@ const ResidentHome = () => {
 
             {/* Make this dynamic */}
             <ThemedCard>
-              <ThemedText style={styles.text} subtitle={true}>Activities</ThemedText>
+              <ThemedText style={styles.text} subtitle>Activities</ThemedText>
 
               <View style={styles.activityItem}>
                 <ThemedIcon
@@ -111,7 +111,7 @@ const ResidentHome = () => {
             <Spacer height={20}/>
 
             <ThemedCard>
-              <ThemedText style={styles.text} subtitle={true}>Services</ThemedText>
+              <ThemedText style={styles.text} subtitle>Services</ThemedText>
               <View style={styles.container}>
                 <View style={styles.subcontainer}>
                   <TouchableOpacity onPress={() => router.push('/requestdoc')}>
