@@ -4,14 +4,14 @@
 
 // ✅ Gender Options
 export const genderOptions = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
+  { label: 'Male', value: '1' },
+  { label: 'Female', value: '2' },
 ];
 
 export const genderMap = {
-  male: 'Male',
-  female: 'Female',
-};
+  '1': 'Male',
+  '2': 'Female',
+}
 
 // ✅ Civil Status Options
 export const civilStatusOptions = [
@@ -118,14 +118,38 @@ export const religionMap: Record<number | string, string> = {
 };
 
 // Local suffix options (values stored uppercase for backend consistency)
+// ✅ Suffix Options
 export const suffixOptions = [
   { label: 'None', value: '' },
-  { label: 'Jr.', value: 'JR' },
-  { label: 'Sr.', value: 'SR' },
+  { label: 'Jr.', value: 'Jr.' },
+  { label: 'Sr.', value: 'Sr' },
   { label: 'III', value: 'III' },
   { label: 'IV', value: 'IV' },
   { label: 'V', value: 'V' },
+  { label: 'VI', value: 'VI' },
+  { label: 'VII', value: 'VII' },
+  { label: 'VIII', value: 'VIII' },
+  { label: 'IX', value: 'IX' },
+  { label: 'X', value: 'X' },
+  { label: 'Others', value: 'OTHERS' }, // optional catch-all
 ];
+
+// ✅ Suffix Map
+export const suffixMap: Record<string, string> = {
+  '': 'None',
+  Jr: 'Jr.',
+  Sr: 'Sr.',
+  III: 'III',
+  IV: 'IV',
+  V: 'V',
+  VI: 'VI',
+  VII: 'VII',
+  VIII: 'VIII',
+  IX: 'IX',
+  X: 'X',
+  OTHERS: 'Others',
+};
+
 
 // ✅ Educational Attainment Options
 export const educAttainmentOptions = [

@@ -1,3 +1,4 @@
+// app/.../mapaddress.tsx
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedMapAddress from '@/components/ThemedMapAddress'
 import ThemedView from '@/components/ThemedView'
@@ -6,18 +7,14 @@ import React from 'react'
 
 const MapAddress = () => {
   const params = useSearchParams()
-  const routeTo = params.get('returnTo') || '/homeaddress'
+  // Default back to ResidentAddress
+  const routeTo = params.get('returnTo') ?? '/residentaddress'
 
   return (
-    <ThemedView safe={true}>
-        <ThemedAppBar
-          title='Map'
-          showNotif={false}
-          showProfile={false}
-        />
-        <ThemedMapAddress
-            route={routeTo}
-        />
+    <ThemedView safe>
+      <ThemedAppBar title='Map sa mapaddress.tsx' showNotif={false} showProfile={false} />
+      {/* ThemedMapAddress should navigate ONLY when user confirms selection */}
+      <ThemedMapAddress route={routeTo} />
     </ThemedView>
   )
 }

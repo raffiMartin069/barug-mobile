@@ -4,6 +4,9 @@ import React from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { NiceModalProvider } from '../hooks/NiceModalProvider'
 import { useRouteGuard } from '../hooks/useRouteGuard'
+// ✅ Make sure this is a VALUE import, not "import type { ... }"
+import { Text, TouchableOpacity } from 'react-native'
+
 
 export default function RootLayout() {
   const { ready, authed, mpinSet, session, logoutNow } = useRouteGuard()
@@ -21,7 +24,7 @@ export default function RootLayout() {
           </View>
         )}
         {/* debug overlay */}
-        {/* <View pointerEvents="box-none" style={styles.overlay}>
+        <View pointerEvents="box-none" style={styles.overlay}>
           <View style={[styles.devBar, { backgroundColor: authed ? '#065f46' : '#7c2d12' }]}>
             <Text style={styles.devText}>
               {authed ? `Session: ON (uid: ${shortUid})  MPIN: ${mpinSet ? 'SET' : 'NOT SET'}` : 'Session: OFF'}
@@ -34,7 +37,7 @@ export default function RootLayout() {
               <Text style={[styles.devText, { opacity: 0.75 }]}>login to create session</Text>
             )}
           </View>
-        </View> */}
+        </View>
       </>
     </NiceModalProvider>
   )
