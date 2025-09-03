@@ -35,7 +35,7 @@ const settingsData = [
 const Settings = () => {
   const router = useRouter()
   return (
-    <ThemedView safe={true}>
+    <ThemedView safe>
       <ThemedAppBar title="Account Settings" />
       <ThemedKeyboardAwareScrollView>
         {settingsData.map((section, idx) => (

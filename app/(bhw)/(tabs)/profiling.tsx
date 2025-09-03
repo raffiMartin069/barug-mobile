@@ -34,13 +34,6 @@ const ITEMS: Item[] =[
         route: '/(bhwmodals)/(household)/createhousehold' as Href,
     },
     {
-        key: 'register_family',
-        title: 'Register Family Unit',
-        desc: 'Profile a family under a household.',
-        icon: 'people-outline',
-        route: '/(bhwmodals)/(family)/createfamily' as Href,
-    },
-    {
         key: 'household_list',
         title: 'List of Households',
         desc: 'View and manage all registered households in the barangay.',

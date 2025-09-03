@@ -6,25 +6,45 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { documentOptions } from '@/constants/formOptions'
+import { useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
-import Clearance from './(docreq)/clearance'
+import ClearanceAdult from './(docreq)/clearanceadult'
+import ClearanceMinor from './(docreq)/clearanceminor'
 import Death from './(docreq)/death'
-import GoodMoral from './(docreq)/goodmoral'
-import Indigency from './(docreq)/indigency'
-import LowIncome from './(docreq)/lowincome'
-import Residency from './(docreq)/residency'
+import IndigencyAdult from './(docreq)/indigencyadult'
+import IndigencyMinor from './(docreq)/indigencyminor'
+import LowIncomeAdult from './(docreq)/lowincomeadult'
+import LowIncomeMinor from './(docreq)/lowincomeminor'
+import ResidencyAdult from './(docreq)/residencyadult'
+import ResidencyMinor from './(docreq)/residencyminor'
 
 const DOC_COMPONENTS: Record<string, React.FC> = {
-  brgy_clearance: Clearance,
-  cert_residency: Residency,
-  cert_indigency: Indigency,
-  cert_lowincome: LowIncome,
-  cert_goodmoral: GoodMoral,
+  // Barangay Clearance
+  brgy_clearance_adult: ClearanceAdult,
+  brgy_clearance_minor: ClearanceMinor,
+
+  // Barangay Death Certificate
   cert_death: Death,
-}
+
+  // Certificate of Indigency
+  cert_indigency_adult: IndigencyAdult,
+  cert_indigency_minor: IndigencyMinor,
+
+  // Certificate of Low Income
+  cert_lowincome_adult: LowIncomeAdult,
+  cert_lowincome_minor: LowIncomeMinor,
+
+  // Certificate of Residency
+  cert_residency_adult: ResidencyAdult,
+  cert_residency_minor: ResidencyMinor,
+};
+
+
 
 const RequestDoc = () => {
+  const router = useRouter()
+
   const [document, setDocument] = useState('')
   const SelectedDocument = useMemo(() => DOC_COMPONENTS[document] ?? null, [document])
 
@@ -56,7 +76,7 @@ const RequestDoc = () => {
         </View>
 
         <View>
-            <ThemedButton>
+            <ThemedButton onPress={() => router.push('/receipt')}>
               <ThemedText btn={true}>Submit</ThemedText>
             </ThemedButton>
         </View>
