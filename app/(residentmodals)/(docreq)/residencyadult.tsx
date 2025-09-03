@@ -3,8 +3,19 @@ import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
+
+const PURPOSE_OPTIONS = [
+  { label: 'Employment / Job Application', value: 'employment' },
+  { label: 'School / Scholarship', value: 'school' },
+  { label: 'Government ID / Requirement', value: 'gov_id' },
+  { label: 'Travel / Visa', value: 'travel' },
+  { label: 'Bank / Financial Requirement', value: 'bank' },
+  { label: 'Business / Permit Requirement', value: 'business' },
+  { label: 'Legal / Court Requirement', value: 'legal' },
+  { label: 'Others (specify)', value: 'other' },
+]
 
 const ResidencyAdult = () => {
   const [name, setName] = useState('')
@@ -13,7 +24,13 @@ const ResidencyAdult = () => {
   const [nationality, setNationality] = useState('')
   const [resperiod, setResPeriod] = useState('')
   const [address, setAddress] = useState('')
-  const [purpose, setPurpose] = useState('')
+  const [purpose, setPurpose] = useState<string | null>(null)
+  const [otherPurpose, setOtherPurpose] = useState('')
+  const showOther = purpose === 'other'
+  const finalPurpose = useMemo(
+    () => (showOther ? otherPurpose.trim() : purpose || ''),
+    [showOther, otherPurpose, purpose]
+  )
   
   return (
     <ThemedView safe>
@@ -86,11 +103,23 @@ const ResidencyAdult = () => {
       {/* Purpose */}
       <ThemedText style={styles.label}>Purpose</ThemedText>
       <ThemedDropdown
-        items={[]}
+        items={PURPOSE_OPTIONS}
         placeholder='Select Purpose'
         value={purpose}
         setValue={setPurpose}
       />
+
+      {showOther && (
+        <>
+          <Spacer height={10} />
+          <ThemedText style={styles.label}>Please specify</ThemedText>
+          <ThemedTextInput
+            placeholder='Type purpose here'
+            value={otherPurpose}
+            onChangeText={setOtherPurpose}
+          />
+        </>
+      )}
     </ThemedView>
   )
 }
