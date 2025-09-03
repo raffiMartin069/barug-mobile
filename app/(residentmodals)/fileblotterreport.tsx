@@ -11,7 +11,7 @@ import { StyleSheet, View } from 'react-native'
 
 const FileBlotterReport = () => {
   return (
-    <ThemedView safe={true}>
+    <ThemedView safe>
 
       <ThemedAppBar
         title='File a Blotter Report'
@@ -23,7 +23,7 @@ const FileBlotterReport = () => {
         <View>
           <ThemedCard>
             <ThemedButton>
-              <ThemedText btn={true}>Submit</ThemedText>
+              <ThemedText btn>Submit</ThemedText>
             </ThemedButton>
           </ThemedCard>
 
@@ -37,7 +37,7 @@ const FileBlotterReport = () => {
                 size={20}
                 containerSize={25}
               />
-              <ThemedText style={{paddingLeft: 10}} link={true}>Important Note</ThemedText>
+              <ThemedText style={{paddingLeft: 10}} link>Important Note</ThemedText>
             </View>
             <ThemedText>By submitting this blotter report, you affirm that all information provided is true and accurate to the best of your knowledge. False reporting may lead to legal consequences.</ThemedText>
           </ThemedCard>

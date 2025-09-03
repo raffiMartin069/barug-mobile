@@ -14,7 +14,7 @@ const settingsData = [
     options: [
       { label: 'My Profile', route: '/residentprofile' },
       { label: 'Resident Verification', route: '/residentprofile' },
-      { label: 'Change Password', route: '/changepassword' },
+      { label: 'Change MPIN', route: '/change-mpin' },
     ],
   },
   {
@@ -35,7 +35,7 @@ const settingsData = [
 const Settings = () => {
   const router = useRouter()
   return (
-    <ThemedView safe={true}>
+    <ThemedView safe>
       <ThemedAppBar title="Account Settings" />
       <ThemedKeyboardAwareScrollView>
         {settingsData.map((section, idx) => (

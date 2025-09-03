@@ -10,7 +10,7 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } 
 
 const BlotRptHistory = () => {
   return (
-    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe>
 
       <ThemedAppBar
         title='Blotter Report'
@@ -23,7 +23,7 @@ const BlotRptHistory = () => {
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Active Blotter Reports</ThemedText>
-              <ThemedText link={true}>View All</ThemedText>
+              <ThemedText link>View All</ThemedText>
             </View>
 
             <Spacer height={10}/>
@@ -38,7 +38,7 @@ const BlotRptHistory = () => {
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Blotter Reports History</ThemedText>
-              <ThemedText link={true}>View All</ThemedText>
+              <ThemedText link>View All</ThemedText>
             </View>
 
             <Spacer height={10}/>

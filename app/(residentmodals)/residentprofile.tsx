@@ -1,41 +1,82 @@
-import Spacer from '@/components/Spacer'
-import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedButton from '@/components/ThemedButton'
-import ThemedCard from '@/components/ThemedCard'
-import ThemedDivider from '@/components/ThemedDivider'
-import ThemedImage from '@/components/ThemedImage'
-import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
-import ThemedText from '@/components/ThemedText'
-import ThemedView from '@/components/ThemedView'
-import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
-import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native'
-import { supabase } from '../../constants/supabase'
+import NiceModal, { type ModalVariant } from '@/components/NiceModal'; // ✅ add
+import Spacer from '@/components/Spacer';
+import ThemedAppBar from '@/components/ThemedAppBar';
+import ThemedButton from '@/components/ThemedButton';
+import ThemedCard from '@/components/ThemedCard';
+import ThemedDivider from '@/components/ThemedDivider';
+import ThemedImage from '@/components/ThemedImage';
+import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
+import ThemedText from '@/components/ThemedText';
+import ThemedView from '@/components/ThemedView';
+import { supabase } from '@/constants/supabase';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react'; // ✅ modal state
+import { StyleSheet, View } from 'react-native';
+
 
 export const options = { href: null }
 
 const ResidentProfile = () => {
   const router = useRouter()
-  const [loggingOut, setLoggingOut] = useState(false)
 
-  const onLogout = async () => {
-    if (loggingOut) return
-    setLoggingOut(true)
-    try {
-      // End Supabase session (access + refresh)
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
+  // 🟦 NiceModal local state (same pattern you used in enter-mpin.tsx)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalTitle, setModalTitle] = useState('')
+  const [modalMsg, setModalMsg] = useState('')
+  const [modalVariant, setModalVariant] = useState<ModalVariant>('info')
+  const [modalPrimary, setModalPrimary] = useState<(() => void) | undefined>(undefined)
+  const [modalSecondary, setModalSecondary] = useState<(() => void) | undefined>(undefined)
+  const [modalPrimaryText, setModalPrimaryText] = useState('Got it')
+  const [modalSecondaryText, setModalSecondaryText] = useState<string | undefined>(undefined)
 
-      // Optional: if you use any realtime channels, you can also cleanup:
-      // supabase.getChannels().forEach(ch => supabase.removeChannel(ch))
+  const openModal = (
+    title: string,
+    message = '',
+    variant: ModalVariant = 'info',
+    opts?: { primaryText?: string; onPrimary?: () => void; secondaryText?: string; onSecondary?: () => void }
+  ) => {
+    setModalTitle(title)
+    setModalMsg(message)
+    setModalVariant(variant)
+    setModalPrimary(() => opts?.onPrimary)
+    setModalSecondary(() => opts?.onSecondary)
+    setModalPrimaryText(opts?.primaryText ?? 'Got it')
+    setModalSecondaryText(opts?.secondaryText)
+    setModalOpen(true)
+  }
 
-      // Send user back to auth stack
-      router.replace('/(auth)/phone')
-    } catch (e: any) {
-      Alert.alert('Logout failed', e?.message ?? String(e))
-    } finally {
-      setLoggingOut(false)
-    }
+  const confirmLogout = () => {
+    openModal(
+      'Sign Out',
+      'Signing out will end your current session. OTP will be required next login. Continue?',
+      'warn',
+      {
+        primaryText: 'Sign out',
+        onPrimary: async () => {
+          await supabase.auth.signOut()
+          router.dismissAll()
+          router.replace('/(auth)/phone')
+        },
+        secondaryText: 'Cancel',
+      }
+    )
+  }
+
+
+  // 🔁 “Switch Account” confirm flow (same as “Use another number”)
+  const confirmSwitchAccount = () => {
+    openModal(
+      'Switch to another account',
+      'Would you like to switch to a different account role?',
+      'warn',
+      {
+        primaryText: 'Switch',
+        onPrimary: async () => {
+          router.replace('/(auth)/choose-account') // ✅ routing path basis from your example
+        },
+        secondaryText: 'Cancel',
+      }
+    )
   }
 
   return (
@@ -52,7 +93,10 @@ const ResidentProfile = () => {
 
         <ThemedCard>
           <View style={{ alignItems: 'center' }}>
-            <ThemedImage src={require('@/assets/images/default-image.jpg')} size={90} />
+            <ThemedImage
+              src={require('@/assets/images/default-image.jpg')}
+              size={90}
+            />
           </View>
 
           <Spacer height={15} />
@@ -228,32 +272,49 @@ const ResidentProfile = () => {
               { name: 'Andrei A. Cruz' },
             ].map((member, index) => (
               <View key={index} style={styles.familyCard}>
-                <ThemedText subtitle={true}>{member.name}</ThemedText>
+                <ThemedText subtitle={true}>
+                  {member.name}
+                </ThemedText>
               </View>
             ))}
           </View>
 
           <Spacer height={15} />
-
-          <View>
-            <ThemedButton submit={false} onPress={() => router.push('/request')}>
-              <ThemedText non_btn={true}>Request House-to-House Visit</ThemedText>
-            </ThemedButton>
-          </View>
         </ThemedCard>
 
         <Spacer height={15} />
 
+        {/* 🆕 Switch Account button (above Logout) */}
         <View style={{ paddingHorizontal: 15 }}>
-          <ThemedButton submit={false} onPress={onLogout} disabled={loggingOut}>
-            {loggingOut
-              ? <ActivityIndicator color="#fff" />
-              : <ThemedText non_btn={true}>Logout</ThemedText>}
+          <ThemedButton submit={false} onPress={confirmSwitchAccount}>
+            <ThemedText non_btn={true}>Switch Account</ThemedText>
           </ThemedButton>
         </View>
 
+        <Spacer height={10} />
+
+        <View style={{ paddingHorizontal: 15 }}>
+          <ThemedButton submit={false} onPress={confirmLogout}>
+            <ThemedText non_btn={true}>Logout</ThemedText>
+          </ThemedButton>
+        </View>
+
+
         <Spacer height={20} />
       </ThemedKeyboardAwareScrollView>
+
+      {/* Shared NiceModal */}
+      <NiceModal
+        visible={modalOpen}
+        title={modalTitle}
+        message={modalMsg}
+        variant={modalVariant}
+        primaryText={modalPrimaryText}
+        secondaryText={modalSecondaryText}
+        onPrimary={() => { modalPrimary?.(); setModalOpen(false) }}
+        onSecondary={() => { modalSecondary?.(); setModalOpen(false) }}
+        onClose={() => setModalOpen(false)}
+      />
     </ThemedView>
   )
 }
@@ -261,10 +322,27 @@ const ResidentProfile = () => {
 export default ResidentProfile
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 },
-  bold: { fontWeight: '600' },  // RN expects string weights
-  relationship: { color: '#808080' },
-  member: { backgroundColor: '#310101' },
-  familyList: { gap: 10 },
-  familyCard: { backgroundColor: '#f3f4f6', padding: 12, borderRadius: 8 },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  bold: {
+    fontWeight: '600',
+  },
+  relationship: {
+    color: '#808080'
+  },
+  member: {
+    backgroundColor: "#310101",
+  },
+  familyList: {
+    gap: 10,
+  },
+  familyCard: {
+    backgroundColor: '#f3f4f6',
+    padding: 12,
+    borderRadius: 8,
+  },
 })

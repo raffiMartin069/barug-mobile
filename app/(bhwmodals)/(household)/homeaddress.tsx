@@ -63,7 +63,7 @@ const HomeAddress = () => {
         <ThemedKeyboardAwareScrollView>
             <View>
                 <ThemedTextInput
-                    placeholder='House Number'
+                    placeholder='House Number BHW'
                     value={hnum}
                     onChangeText={setHNum}
                 />

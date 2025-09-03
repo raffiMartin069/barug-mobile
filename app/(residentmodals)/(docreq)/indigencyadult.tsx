@@ -7,21 +7,19 @@ import React, { useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
 
 const PURPOSE_OPTIONS = [
-  { label: 'Insurance Claim', value: 'insurance' },
-  { label: 'Burial / Funeral Requirement', value: 'burial' },
-  { label: 'Hospital / Medical Records', value: 'medical' },
-  { label: 'Government Benefit / Assistance', value: 'gov_benefit' },
-  { label: 'Inheritance / Legal Matters', value: 'inheritance' },
+  { label: 'Scholarship / Educational Assistance', value: 'scholarship' },
+  { label: 'Medical / Hospital Assistance', value: 'medical' },
+  { label: 'Government Aid / Social Welfare', value: 'gov_aid' },
+  { label: 'Employment / Job Application', value: 'employment' },
+  { label: 'Financial Assistance (Private / NGO)', value: 'financial' },
   { label: 'Others (specify)', value: 'other' },
-]
+] 
 
-const Death = () => {
+const IndigencyAdult = () => {
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [nationality, setNationality] = useState('')
-  const [dateofdeath, setDateofDeath] = useState('')
-  const [placeofdeath, setPlaceofDeath] = useState('')
-  const [purpose, setPurpose] = useState<string | null>(null)
+   const [purpose, setPurpose] = useState<string | null>(null)
   const [otherPurpose, setOtherPurpose] = useState('')
 
   const showOther = purpose === 'other'
@@ -29,6 +27,7 @@ const Death = () => {
     () => (showOther ? otherPurpose.trim() : purpose || ''),
     [showOther, otherPurpose, purpose]
   )
+
   return (
     <ThemedView safe>
       {/* Full Name */}
@@ -42,10 +41,10 @@ const Death = () => {
 
       <Spacer height={10}/>
 
-      {/* Age at time of Death */}
-      <ThemedText style={styles.label}>Age at time of Death</ThemedText>
+      {/* Age */}
+      <ThemedText style={styles.label}>Age</ThemedText>
       <ThemedTextInput
-        placeholder='Age at time of Death'
+        placeholder='Age'
         value={age}
         onChangeText={setAge}
         editable={false}
@@ -59,28 +58,6 @@ const Death = () => {
         placeholder='Nationality'
         value={nationality}
         onChangeText={setNationality}
-        editable={false}
-      />
-
-      <Spacer height={10}/>
-
-      {/* Date of Death */}
-      <ThemedText style={styles.label}>Date of Death</ThemedText>
-      <ThemedTextInput
-        placeholder='Date of Death'
-        value={dateofdeath}
-        onChangeText={setDateofDeath}
-        editable={false}
-      />
-
-      <Spacer height={10}/>
-
-      {/* Place of Death */}
-      <ThemedText style={styles.label}>Place of Death</ThemedText>
-      <ThemedTextInput
-        placeholder='Place of Death'
-        value={placeofdeath}
-        onChangeText={setPlaceofDeath}
         editable={false}
       />
 
@@ -110,7 +87,7 @@ const Death = () => {
   )
 }
 
-export default Death
+export default IndigencyAdult
 
 const styles = StyleSheet.create({
   label: {

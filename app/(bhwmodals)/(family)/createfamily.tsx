@@ -8,7 +8,7 @@ import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { indigentOptions, nhtsOptions } from '@/constants/formOptions'
+import { indigentOptions, nhtsOptions } from '@/constants/formoptions'
 import React, { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 

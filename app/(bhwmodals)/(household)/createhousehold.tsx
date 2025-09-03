@@ -67,7 +67,7 @@ const CreateHousehold = () => {
 
   const handleHomeAddress = () => {
     router.push({
-      pathname: '/mapaddress',
+      pathname: '/hh_mapaddress',
       params: {
         returnTo: '/homeaddress',
       }
