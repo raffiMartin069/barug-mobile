@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import {  Pressable, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import React, { useState } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -18,13 +18,13 @@ import { houseType } from '@/constants/houseType'
 import { useGeolocationStore } from '@/store/geolocationStore'
 import { useHouseholdCreationStore } from '@/store/householdCreationStore'
 
-import { GeolocationType } from '@/types/geolocation'
-import { HouseholdCreation } from '@/types/householdCreation'
-import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
-import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
-import { HouseholdHead } from '@/types/householdHead'
 import { useHouseholdCreation } from '@/hooks/useHouseholCreation'
 import { useNumericInput } from '@/hooks/useNumericInput'
+import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
+import { GeolocationType } from '@/types/geolocation'
+import { HouseholdCreation } from '@/types/householdCreation'
+import { HouseholdHead } from '@/types/householdHead'
+import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
 
 const CreateHousehold = () => {
   const router = useRouter()
