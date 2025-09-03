@@ -15,7 +15,6 @@ import { StyleSheet, View } from 'react-native';
 
 
 export const options = { href: null }
-export const options = { href: null }
 
 const ResidentProfile = () => {
   const router = useRouter()
@@ -82,7 +81,6 @@ const ResidentProfile = () => {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
-    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
       <ThemedAppBar
         title='Profile'
         showProfile={false}
@@ -91,7 +89,6 @@ const ResidentProfile = () => {
       />
 
       <ThemedKeyboardAwareScrollView>
-        <Spacer height={20} />
         <Spacer height={20} />
 
         <ThemedCard>
@@ -103,9 +100,7 @@ const ResidentProfile = () => {
           </View>
 
           <Spacer height={15} />
-          <Spacer height={15} />
 
-          <Spacer height={10} />
           <Spacer height={10} />
 
           <View style={styles.row}>
@@ -146,9 +141,6 @@ const ResidentProfile = () => {
           <Spacer height={15} />
           <ThemedDivider />
           <Spacer height={15} />
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Educational Attainment:</ThemedText>
@@ -178,9 +170,6 @@ const ResidentProfile = () => {
           <Spacer height={15} />
           <ThemedDivider />
           <Spacer height={15} />
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle={true}>Home Address:</ThemedText>
@@ -199,12 +188,10 @@ const ResidentProfile = () => {
         </ThemedCard>
 
         <Spacer height={30} />
-        <Spacer height={30} />
 
         <ThemedCard>
           <ThemedText title={true}>Household Infomation</ThemedText>
 
-          <Spacer height={10} />
           <Spacer height={10} />
 
           <View style={styles.row}>
@@ -230,13 +217,9 @@ const ResidentProfile = () => {
           <Spacer height={15} />
           <ThemedDivider />
           <Spacer height={15} />
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
 
           <ThemedText title={true}>Family Infomation</ThemedText>
 
-          <Spacer height={10} />
           <Spacer height={10} />
 
           <View style={styles.row}>
@@ -277,13 +260,9 @@ const ResidentProfile = () => {
           <Spacer height={15} />
           <ThemedDivider />
           <Spacer height={15} />
-          <Spacer height={15} />
-          <ThemedDivider />
-          <Spacer height={15} />
 
           <ThemedText title={true}>Family Members</ThemedText>
 
-          <Spacer height={10} />
           <Spacer height={10} />
 
           <View style={styles.familyList}>
@@ -367,4 +346,3 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
 })
-
