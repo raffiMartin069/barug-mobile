@@ -8,6 +8,8 @@ type Props = { route: string } // e.g. '/(profiling)/residentaddress'
 
 const ThemedMapAddress: React.FC<Props> = ({ route }) => {
   const router = useRouter()
+const ThemedMapAddress: React.FC<Props> = ({ route }) => {
+  const router = useRouter()
 
   const [location, setLocation] = useState({
     lat: 10.2951,
@@ -192,6 +194,8 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
         source={{ html: leaflet }}
         javaScriptEnabled
         domStorageEnabled
+        javaScriptEnabled
+        domStorageEnabled
         onMessage={(event) => {
           const data = JSON.parse(event.nativeEvent.data)
           if (data.loading !== undefined) setLoading(data.loading)
@@ -206,7 +210,9 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
         style={styles.webview}
       />
 
+
       <View style={styles.cardContainer}>
+        <Pressable disabled={!location.inside} onPress={handleAddress}>
         <Pressable disabled={!location.inside} onPress={handleAddress}>
           <ThemedCard>
             <Text style={styles.title}>Pinned Location</Text>
@@ -243,4 +249,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
   address: { fontSize: 12, color: '#555', marginTop: 5 },
   loading: { fontSize: 12, color: '#888', marginTop: 5, fontStyle: 'italic' },
+  container: { flex: 1 },
+  webview: { flex: 1 },
+  cardContainer: { position: 'absolute', bottom: 20, width: '100%' },
+  title: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
+  address: { fontSize: 12, color: '#555', marginTop: 5 },
+  loading: { fontSize: 12, color: '#888', marginTop: 5, fontStyle: 'italic' },
 })
+

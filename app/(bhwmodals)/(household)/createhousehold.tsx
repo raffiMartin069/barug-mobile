@@ -1,41 +1,69 @@
+import { useRouter } from 'expo-router'
+import React, { useState } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
+
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
-import ThemedDropdown from '@/components/ThemedDropdown'
+import ThemedDropdown from '@/components/ThemedDropdown_'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { useRouter } from 'expo-router'
-import React, { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
 
-type Hhead = {
-  person_id: string
-  full_name: string
-  person_code?: string
-  address?: string
-}
+import { houseOwnership } from '@/constants/houseOwnership'
+import { houseType } from '@/constants/houseType'
 
-const HHHEAD: Hhead[] = [
-  { person_id: 'P-001', full_name: 'Rogelio Santos', person_code: 'P03-R001', address: 'Purok 3, Sto. Niño' },
-  { person_id: 'P-002', full_name: 'Maria Santos', person_code: 'P03-R002', address: 'Purok 3, Sto. Niño' },
-  { person_id: 'P-003', full_name: 'Juan Dela Cruz', person_code: 'P05-R010', address: 'Purok 5, Sto. Niño' },
-  { person_id: 'P-004', full_name: 'Luz Rivera', person_code: 'P01-R020', address: 'Purok 1, Sto. Niño' },
-]
+import { useGeolocationStore } from '@/store/geolocationStore'
+import { useHouseholdCreationStore } from '@/store/householdCreationStore'
+
+import { useHouseholdCreation } from '@/hooks/useHouseholCreation'
+import { useNumericInput } from '@/hooks/useNumericInput'
+import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
+import { GeolocationType } from '@/types/geolocation'
+import { HouseholdCreation } from '@/types/householdCreation'
+import { HouseholdHead } from '@/types/householdHead'
+import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
 
 const CreateHousehold = () => {
   const router = useRouter()
-  
-  const [householdnum, setHouseholdNum] = useState('')
-  const [hAddress, setHAddress] = useState('')
-  const [hhhead, setHhHead] = useState('')
-  const [housetype, setHouseType] = useState('')
-  const [houseownership, setHouseOwnership] = useState('')
 
   const [headSearchText, setHeadSearchText] = useState('')
-  const residentItems = useMemo(() => HHHEAD, [])
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+
+  const setHouseholdNumber = useHouseholdCreationStore((state: HouseholdCreation) => state.setHouseholdNumber)
+  const setHouseholdHead = useHouseholdCreationStore((state: HouseholdCreation) => state.setHouseholdHead)
+  const setHouseType = useHouseholdCreationStore((state: HouseholdCreation) => state.setHouseType)
+  const setHouseOwnership = useHouseholdCreationStore((state: HouseholdCreation) => state.setHouseOwnership)
+
+  const householdNumber = useHouseholdCreationStore((state: HouseholdCreation) => state.householdNumber)
+  const householdHead = useHouseholdCreationStore((state: HouseholdCreation) => state.householdHead)
+  const houseHoldType = useHouseholdCreationStore((state: HouseholdCreation) => state.houseType)
+  const houseHoldOwnership = useHouseholdCreationStore((state: HouseholdCreation) => state.houseOwnership)
+
+  const houseNumber = useGeolocationStore((state: GeolocationType) => state.houseNumber)
+  const street = useGeolocationStore((state: GeolocationType) => state.street)
+  const purok = useGeolocationStore((state: GeolocationType) => state.purokSitio)
+  const barangay = useGeolocationStore((state: GeolocationType) => state.barangay)
+  const city = useGeolocationStore((state: GeolocationType) => state.city)
+  const address = useGeolocationStore((state: GeolocationType) => state.getFullAddress())
+
+  const [err, setErr] = useState<string>('')
+
+  const { results: residentItems, search } = usePersonSearchByKey()
+  const { saveHousehold } = useHouseholdCreation()
+
+  const validate = () => {
+    const newErrors: { [key: string]: string } = {}
+    if (!householdNumber) newErrors.householdNumber = 'Household number is required'
+    if (!address) newErrors.address = 'Address is required'
+    if (!householdHead) newErrors.householdHead = 'Household head is required'
+    if (!houseHoldType) newErrors.houseHoldType = 'Household type is required'
+    if (!houseHoldOwnership) newErrors.houseHoldOwnership = 'Household ownership is required'
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
 
   const handleHomeAddress = () => {
     router.push({
@@ -46,95 +74,122 @@ const CreateHousehold = () => {
     })
   }
 
+  const handleSave = async () => {
+    if (!validate()) return
+    const data: HouseholdCreationRequest = {
+      p_house_type_id: houseHoldType,
+      p_house_ownership_id: houseHoldOwnership,
+      p_city: city,
+      p_barangay: barangay,
+      p_sitio_purok: purok,
+      p_street: street,
+      p_added_by_id: '1',
+      p_household_num: householdNumber,
+      p_house_num: houseNumber,
+      p_household_head_id: householdHead,
+    }
+    const id = await saveHousehold(data);
+    console.info(id)
+    if(id) {
+      setHeadSearchText('')
+    }
+  }
+
+  useNumericInput(householdNumber, setHouseholdNumber)
+
   return (
     <ThemedView safe>
-        <ThemedAppBar
-            title='Register Household'
-            showNotif={false}
-            showProfile={false}
-        />
+      <ThemedAppBar
+        title='Register Household'
+        showNotif={false}
+        showProfile={false}
+      />
 
-        <ThemedKeyboardAwareScrollView>
-            <View>
-                <ThemedTextInput
-                    placeholder='Household Number'
-                    value={householdnum}
-                    onChangeText={setHouseholdNum}
-                />
+      <ThemedKeyboardAwareScrollView>
+        <View>
 
-                <Spacer height={10}/>
+          <ThemedText style={{ color: 'red' }} >{err}</ThemedText>
 
-                <Pressable onPress={handleHomeAddress}>
-                    <ThemedTextInput
-                        placeholder='Home Address'
-                        value={hAddress}
-                        onChangeText={setHAddress}
-                        editable={false}
-                        pointerEvents="none"
-                    />
-                </Pressable>
+          <ThemedTextInput
+            placeholder='Household Number'
+            value={householdNumber}
+            onChangeText={setHouseholdNumber}
+            keyboardType='numeric'
+          />
+          {errors.householdNumber && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.householdNumber}</ThemedText>}
+          <Spacer height={10} />
 
-                <Spacer height={10}/>
+          <Pressable onPress={handleHomeAddress}>
+            <ThemedTextInput
+              placeholder='Home Address'
+              value={address}
+              onChangeText={() => { }}
+              editable={false}
+              pointerEvents="none"
+            />
+          </Pressable>
+          {errors.address && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.address}</ThemedText>}
+          <Spacer height={10} />
 
-                <ThemedSearchSelect<Hhead>
-                    items={residentItems}
-                    getLabel={(p) =>
-                    p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
-                    }
-                    getSubLabel={(p) => p.address}
-                    inputValue={headSearchText}
-                    onInputValueChange={(t) => {
-                    setHeadSearchText(t)
-                    if (!t) setHhHead('') 
-                    }}
-                    placeholder='Search Household Head (Name / Resident ID)'
-                    filter={(p, q) => {
-                    const query = q.toLowerCase()
-                    return (
-                        p.full_name.toLowerCase().includes(query) ||
-                        (p.person_code || '').toLowerCase().includes(query) ||
-                        (p.address || '').toLowerCase().includes(query) ||
-                        query.includes(p.full_name.toLowerCase()) ||
-                        (p.person_code && query.includes(p.person_code.toLowerCase()))
-                    )
-                    }}
-                    onSelect={(p) => {
-                    setHhHead(p.person_id)
-                    setHeadSearchText(
-                        p.person_code
-                        ? `${p.full_name} · ${p.person_code}`
-                        : p.full_name
-                    )
-                    }}
-                />
+          <ThemedSearchSelect<HouseholdHead>
+            items={residentItems}
+            getLabel={(p) =>
+              p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
+            }
+            getSubLabel={(p) => p.address}
+            inputValue={headSearchText}
+            onInputValueChange={(t) => {
+              setHeadSearchText(t)
+              search(t)
+            }}
+            placeholder='Search Household Head (Name / Resident ID)'
+            filter={(p, q) => {
+              const query = q.toLowerCase()
+              return (
+                p.full_name.toLowerCase().includes(query) ||
+                (p.person_code || '').toLowerCase().includes(query) ||
+                (p.address || '').toLowerCase().includes(query) ||
+                query.includes(p.full_name.toLowerCase()) ||
+                (p.person_code && query.includes(p.person_code.toLowerCase()))
+              )
+            }}
+            onSelect={(p) => {
+              setHouseholdHead(p.person_id)
+              setHeadSearchText(
+                p.person_code
+                  ? `${p.full_name} · ${p.person_code}`
+                  : p.full_name
+              )
+            }}
+          />
+          {errors.householdHead && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.householdHead}</ThemedText>}
+          <ThemedDropdown
+            items={houseType}
+            value={houseHoldType}
+            setValue={setHouseType}
+            placeholder={'House Type'}
+            order={0}
+          />
+          {errors.houseHoldType && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.houseHoldType}</ThemedText>}
+          <Spacer height={10} />
 
-                <ThemedDropdown
-                    items={[]}
-                    value={housetype}
-                    setValue={setHouseType}
-                    placeholder={'House Type'}
-                    order={0}
-                />
+          <ThemedDropdown
+            items={houseOwnership}
+            value={houseHoldOwnership}
+            setValue={setHouseOwnership}
+            placeholder={'House Ownership'}
+            order={1}
+          />
+          {errors.houseHoldOwnership && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.houseHoldOwnership}</ThemedText>}
+        </View>
+        <Spacer height={15} />
 
-                <Spacer height={10}/>
-
-                <ThemedDropdown
-                    items={[]}
-                    value={houseownership}
-                    setValue={setHouseOwnership}
-                    placeholder={'House Ownership'}
-                    order={1}
-                />
-            </View>
-
-            <Spacer height={15}/>
-
-            <View>
-                <ThemedButton>
-                    <ThemedText btn>Continue</ThemedText>
-                </ThemedButton>
-            </View>
-        </ThemedKeyboardAwareScrollView>
+        <View>
+          <ThemedButton onPress={handleSave} disabled={Object.keys(errors).length > 0}>
+            <ThemedText btn>Continue</ThemedText>
+          </ThemedButton>
+        </View>
+      </ThemedKeyboardAwareScrollView>
     </ThemedView>
   )
 }

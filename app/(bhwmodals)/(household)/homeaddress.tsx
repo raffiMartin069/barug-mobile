@@ -5,9 +5,11 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { useGeolocationStore } from '@/store/geolocationStore'
+import { GeolocationType } from '@/types/geolocation'
 import { useRouter } from 'expo-router'
 import { useSearchParams } from 'expo-router/build/hooks'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 const HomeAddress = () => {
@@ -21,6 +23,20 @@ const HomeAddress = () => {
   const [puroksitio, setPurokSitio] = useState('')
   const [brgyState, setBrgy] = useState(brgy)
   const [cityState, setCity] = useState(city)
+
+    const globalHouseNumber = useGeolocationStore((state: GeolocationType) => state.setHouseNumber)
+    const globalStreet = useGeolocationStore((state: GeolocationType) => state.setStreet)
+    const globalPurokSitio = useGeolocationStore((state: GeolocationType) => state.setPurokSitio)
+    const globalBarangay = useGeolocationStore((state: GeolocationType) => state.setBarangay)
+    const globalCity = useGeolocationStore((state: GeolocationType) => state.setCity)
+
+    useEffect(() => {
+        globalHouseNumber(hnum)
+        globalStreet(streetState)
+        globalPurokSitio(puroksitio)
+        globalBarangay(brgyState)
+        globalCity(cityState)
+    }, [hnum, streetState, puroksitio, brgyState, cityState])
 
   const router = useRouter()
 
