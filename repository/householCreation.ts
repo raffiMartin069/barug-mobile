@@ -22,6 +22,7 @@ export class HouseholdCreation {
             console.error(error)
             throw new Error(error.message);
         }
+        console.log('Household created with ID:', data);
         return data;
     }
 }

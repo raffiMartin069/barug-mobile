@@ -1,18 +1,20 @@
-// import { PersonSearchService } from "@/services/personSearch";
-// import { useEffect } from "react";
+// hooks/usePersonSearchByKey.ts
+import { useState, useCallback } from 'react'
+import { PersonSearchService } from '@/services/personSearch'
+import { HouseholdHead } from '@/types/householdHead'
 
-// export const usePersonSearch = async (headSearchText, HHHEAD) => {
-//     useEffect(() => {
-//         const handlePersonSearch = async () => {
-//             if (!headSearchText) return;
-//             const search = new PersonSearchService(headSearchText);
-//             const result = await search.execute();
-//             console.log(result)
-//             result.forEach((person) => {
-//                 if (!HHHEAD.some(existing => existing.person_id === person.person_id)) {
-//                     HHHEAD.push(person);
-//                 }
-//             });
-//         }
-//     })
-// }
+
+export function usePersonSearchByKey() {
+    const [results, setResults] = useState<HouseholdHead[]>([])
+    const search = useCallback(async (query: string) => {
+        if (!query) return
+        const service = new PersonSearchService(query)
+        const data = await service.execute()
+        setResults((prev) => {
+            const ids = new Set(prev.map((p) => p.person_id))
+            const newItems = data.filter((p) => !ids.has(p.person_id))
+            return [...prev, ...newItems]
+        })
+    }, [])
+    return { results, search }
+}

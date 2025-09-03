@@ -12,4 +12,11 @@ export const useHouseholdCreationStore = create((set) => ({
     setHouseholdHead: (value: string) => set({ householdHead: value }),
     setHouseType: (value: string) => set({ houseType: value }),
     setHouseOwnership: (value: string) => set({ houseOwnership: value }),
+    clear: () => set({
+        householdNumber: '',
+        address: '',
+        householdHead: '',
+        houseType: '',
+        houseOwnership: '',
+    })
 }))

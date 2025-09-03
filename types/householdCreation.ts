@@ -9,4 +9,5 @@ export type HouseholdCreation = {
     setHouseholdHead: (value: string) => void;
     setHouseType: (value: string) => void;
     setHouseOwnership: (value: string) => void;
+    clear: () => void;
 }

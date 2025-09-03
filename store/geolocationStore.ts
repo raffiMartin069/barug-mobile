@@ -21,6 +21,16 @@ export const useGeolocationStore = create<GeolocationType & {
     setCity: (value: string) => set({ city: value }),
     getFullAddress: () => {
         const state = get();
+        if(!state.houseNumber || !state.street || !state.purokSitio || !state.barangay || !state.city) {
+            return '';
+        }
         return `${state.houseNumber}, ${state.street}, ${state.purokSitio}, ${state.barangay}, ${state.city}`;
     },
+    clear: () => set({
+        houseNumber: '',
+        street: '',
+        purokSitio: '',
+        barangay: '',
+        city: '',
+    })
 }));

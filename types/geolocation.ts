@@ -10,4 +10,5 @@ export type GeolocationType = {
     setBarangay: (value: string) => void;
     setCity: (value: string) => void;
     getFullAddress: () => string;
+    clear: () => void;
 }
