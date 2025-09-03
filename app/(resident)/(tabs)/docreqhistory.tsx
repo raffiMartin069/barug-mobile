@@ -139,7 +139,7 @@ const DocReqHistory = () => {
                     pillBgColor={ui.bg}
                     pillTextColor={ui.fg}
                     pillSize="sm"
-                    route={{ pathname: '/request/[id]', params: { id: req.id } }}
+                    route={{ pathname: '/requestdetails/[id]', params: { id: req.id } }}
                   />
                 </View>
               )
