@@ -14,6 +14,16 @@ type GuardianOption = {
   address?: string
 }
 
+const PURPOSE_OPTIONS = [
+  { label: 'School Requirement / Enrollment', value: 'school' },
+  { label: 'Scholarship / Educational Assistance', value: 'scholarship' },
+  { label: 'Government ID / Requirement', value: 'gov_id' },
+  { label: 'Travel / Visa', value: 'travel' },
+  { label: 'Medical / Hospital Requirement', value: 'medical' },
+  { label: 'Sports / Competition', value: 'sports' },
+  { label: 'Others (specify)', value: 'other' },
+]
+
 const ResidencyMinor = () => {
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
@@ -21,7 +31,13 @@ const ResidencyMinor = () => {
   const [resperiod, setResPeriod] = useState('')
   const [address, setAddress] = useState('')
   const [rel, setRel] = useState('')
-  const [purpose, setPurpose] = useState('')
+  const [purpose, setPurpose] = useState<string | null>(null)
+  const [otherPurpose, setOtherPurpose] = useState('')
+  const showOther = purpose === 'other'
+  const finalPurpose = useMemo(
+    () => (showOther ? otherPurpose.trim() : purpose || ''),
+    [showOther, otherPurpose, purpose]
+  )
 
   const [selectedGuardian, setSelectedGuardian] = useState<GuardianOption | null>(null)
   const guardianOptions: GuardianOption[] = useMemo(
@@ -126,11 +142,23 @@ const ResidencyMinor = () => {
       {/* Purpose */}
       <ThemedText style={styles.label}>Purpose</ThemedText>
       <ThemedDropdown
-        items={[]}
+        items={PURPOSE_OPTIONS}
         placeholder='Select Purpose'
         value={purpose}
         setValue={setPurpose}
       />
+
+      {showOther && (
+        <>
+          <Spacer height={10} />
+          <ThemedText style={styles.label}>Please specify</ThemedText>
+          <ThemedTextInput
+            placeholder='Type purpose here'
+            value={otherPurpose}
+            onChangeText={setOtherPurpose}
+          />
+        </>
+      )}
     </ThemedView>
   )
 }
