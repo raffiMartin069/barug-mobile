@@ -15,7 +15,7 @@ import {
     mnthlyPersonalIncomeMap,
     nationalityMap,
     religionMap,
-} from '@/constants/formOptions'
+} from '@/constants/formoptions'
 import { profileResident, type ProfileResidentArgs } from '@/services/profiling'
 import { useResidentFormStore } from '@/store/forms'
 import React, { useState } from 'react'

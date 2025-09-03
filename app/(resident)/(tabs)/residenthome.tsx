@@ -39,7 +39,7 @@ const ResidentHome = () => {
           {/* Full Verification prompt */}
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => router.push('validid')} // ← set your route here
+            onPress={() => router.push('/(bhwmodals)/(person)/validid')} // ← set your route here
           >
             <ThemedCard style={styles.verifyCard}>
               <View style={styles.verifyRow}>

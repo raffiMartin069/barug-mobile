@@ -10,7 +10,7 @@ import ThemedRadioButton from '@/components/ThemedRadioButton';
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
-import { civilStatusOptions, genderOptions, nationalityOptions, religionOptions, suffixOptions } from '@/constants/formOptions';
+import { civilStatusOptions, genderOptions, nationalityOptions, religionOptions, suffixOptions } from '@/constants/formoptions';
 import { useResidentFormStore } from '@/store/forms';
 import { useRouter } from 'expo-router';
 import { useSearchParams } from 'expo-router/build/hooks';

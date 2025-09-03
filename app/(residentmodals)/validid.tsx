@@ -8,7 +8,7 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { idTypeOptions } from '@/constants/formOptions'
+import { idTypeOptions } from '@/constants/formoptions'
 import { useProfilingWizard } from '@/store/profilingWizard'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
