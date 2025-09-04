@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-=======
 import ThemedCard from '@/components/ThemedCard'
->>>>>>> origin/develop
 import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { WebView } from 'react-native-webview'
-<<<<<<< HEAD
-import ThemedCard from './ThemedCard'
-=======
->>>>>>> origin/develop
 
 type Props = { route: string } // e.g. '/(profiling)/residentaddress'
 
@@ -24,32 +17,22 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
     barangay: '',
     city: '',
     inside: true,
-<<<<<<< HEAD
-=======
     purok_code: '',
     purok_name: '',
->>>>>>> origin/develop
   })
   const [loading, setLoading] = useState(true)
 
   const handleAddress = () => {
     router.replace({
-<<<<<<< HEAD
-      pathname: route,           // ✅ replace, don’t push
-=======
       pathname: route, // ✅ replace, don’t push
->>>>>>> origin/develop
       params: {
         street: location.street,
         brgy: location.barangay,
         city: location.city,
-<<<<<<< HEAD
-=======
         purok_code: location.purok_code ?? '',
         purok_name: location.purok_name ?? '',
         lat: String(location.lat),
         lng: String(location.lng),
->>>>>>> origin/develop
       },
     })
   }
@@ -66,24 +49,6 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
       <div id="map"></div>
       <img id="marker" src="https://cdn-icons-png.flaticon.com/512/684/684908.png" width="30" height="30"/>
       <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<<<<<<< HEAD
-      <script>
-        const map = L.map('map').setView([10.2951, 123.9028], 18);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-
-        const polygonCoords = [
-          [10.29731,123.90212],[10.29786,123.90201],[10.29764,123.90058],[10.29617,123.89806],[10.29501,123.89771],
-          [10.29378,123.89805],[10.29427,123.89904],[10.29420,123.89994],[10.29213,123.89934],[10.29193,123.89938],
-          [10.29210,123.90009],[10.28980,123.90065],[10.29069,123.90212],[10.29169,123.90181],[10.29180,123.90195],
-          [10.29194,123.90196],[10.29488,123.90334],[10.29580,123.90359],[10.29723,123.90382],[10.29753,123.90379],
-          [10.29724,123.90213],[10.29731,123.90212]
-        ];
-        const polygon = L.polygon(polygonCoords,{color:'#3388ff',fillColor:'#3388ff',fillOpacity:0.1,weight:2}).addTo(map);
-
-        function reverseGeocode(lat,lng){
-          const point = L.latLng(lat,lng);
-          const isInside = polygon.getBounds().contains(point);
-=======
       <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
       <script>
         const map = L.map('map').setView([10.2951, 123.9028], 18);
@@ -191,21 +156,10 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
 
         function reverseGeocode(lat,lng){
           const inside = barangayPoly.getBounds().contains(L.latLng(lat,lng));
->>>>>>> origin/develop
           window.ReactNativeWebView.postMessage(JSON.stringify({ loading: true }));
           fetch(\`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=\${lat}&lon=\${lng}\`)
             .then(r=>r.json())
             .then(data=>{
-<<<<<<< HEAD
-              const a=data.address||{};
-              const payload={
-                loading:false, inside:isInside,
-                fullAddress:data.display_name||"",
-                lat,lng,
-                street: a.road || a.pedestrian || "Unknown Street",
-                barangay: a.neighbourhood || a.suburb || "Señor Santo Niño",
-                city: a.city || a.town || a.municipality || "Unknown City",
-=======
               const a = data.address || {};
               const purok = findPurok(lat,lng);
               const payload = {
@@ -217,26 +171,16 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
                 city: a.city || a.town || a.municipality || "Unknown City",
                 purok_code: purok.code,
                 purok_name: purok.name,
->>>>>>> origin/develop
               };
               window.ReactNativeWebView.postMessage(JSON.stringify(payload));
             })
             .catch(_=>{
-<<<<<<< HEAD
-              window.ReactNativeWebView.postMessage(JSON.stringify({loading:false,inside:false,lat,lng,error:"Reverse geocoding failed"}));
-            });
-        }
-
-        reverseGeocode(map.getCenter().lat,map.getCenter().lng);
-        map.on('moveend',()=>{ const c=map.getCenter(); reverseGeocode(c.lat,c.lng); });
-=======
               window.ReactNativeWebView.postMessage(JSON.stringify({loading:false,inside:false,lat,lng,error:'Reverse geocoding failed'}));
             });
         }
 
         reverseGeocode(map.getCenter().lat, map.getCenter().lng);
         map.on('moveend',()=>{ const c = map.getCenter(); reverseGeocode(c.lat,c.lng); });
->>>>>>> origin/develop
       </script>
     </body></html>
   `
@@ -255,11 +199,8 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
           setLocation({
             lat: data.lat, lng: data.lng, fullAddress: data.fullAddress,
             street: data.street, barangay: data.barangay, city: data.city, inside: data.inside,
-<<<<<<< HEAD
-=======
             purok_code: data.purok_code || '',
             purok_name: data.purok_name || '',
->>>>>>> origin/develop
           })
         }}
         style={styles.webview}
@@ -302,8 +243,4 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
   address: { fontSize: 12, color: '#555', marginTop: 5 },
   loading: { fontSize: 12, color: '#888', marginTop: 5, fontStyle: 'italic' },
-<<<<<<< HEAD
 })
-=======
-})
->>>>>>> origin/develop

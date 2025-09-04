@@ -144,12 +144,9 @@ const LinkParentGuardian = () => {
         <Spacer height={15}/>
 
         <View>
-<<<<<<< HEAD
-=======
           <ThemedButton submit={false}>
             <ThemedText non_btn>Skip</ThemedText>
           </ThemedButton>
->>>>>>> origin/develop
           <ThemedButton>
             <ThemedText btn>Continue</ThemedText>
           </ThemedButton>

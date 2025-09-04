@@ -7,21 +7,6 @@ import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
 import { useSearchParams } from 'expo-router/build/hooks'
-<<<<<<< HEAD
-import React, { useState } from 'react'
-import { StyleSheet, View } from 'react-native'
-
-const ResidentAddress = () => {
-  const params = useSearchParams()
-  const street = params.get("street") ?? "";
-  const brgy = params.get("brgy") ?? "";
-  const city = params.get("city") ?? "";
-
-  const [streetState, setStreet] = useState(street)
-  const [puroksitio, setPurokSitio] = useState('')
-  const [brgyState, setBrgy] = useState(brgy)
-  const [cityState, setCity] = useState(city)
-=======
 import React, { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
@@ -72,21 +57,10 @@ const ResidentAddress = () => {
   const [purokCode]   = useState(purokCodeParam)   // hidden (from map)
   const [brgyState]   = useState(brgyParam)
   const [cityState]   = useState(cityParam)
->>>>>>> origin/develop
 
   const router = useRouter()
 
   const submitAddress = () => {
-<<<<<<< HEAD
-    router.push({
-        pathname: '/personalinfo',
-        params: {
-            street: streetState,
-            puroksitio: puroksitio,
-            brgy: brgyState,
-            city: cityState,
-        },
-=======
     // If you ever want to map to ID:
     // const purok_sitio_id = PUROK_ID_BY_CODE[purokCode] ?? undefined
     console.log("Submitting address with lat:", latParam);
@@ -104,52 +78,10 @@ const ResidentAddress = () => {
         lng: lngParam,
         // purok_sitio_id: purok_sitio_id?.toString() ?? '',
       },
->>>>>>> origin/develop
     })
   }
 
   return (
-<<<<<<< HEAD
-    <ThemedView safe={true}>
-        <ThemedAppBar
-            title='Home Address'
-            showNotif={false}
-            showProfile={false}
-        />
-        <ThemedKeyboardAwareScrollView>
-            <View>
-                <ThemedTextInput
-                    placeholder='Street'
-                    value={streetState}
-                    onChangeText={setStreet}
-                />
-                <Spacer height={10}/>
-                <ThemedTextInput
-                    placeholder='Purok or Sitio'
-                    value={puroksitio}
-                    onChangeText={setPurokSitio}
-                />
-                <Spacer height={10}/>
-                <ThemedTextInput
-                    placeholder='Barangay'
-                    value={brgyState}
-                    onChangeText={setBrgy}
-                />
-                <Spacer height={10}/>
-                <ThemedTextInput
-                    placeholder='City'
-                    value={cityState}
-                    onChangeText={setCity}
-                />
-            </View>
-            <Spacer height={15}/>
-            <View>
-                <ThemedButton onPress={submitAddress}>
-                    <ThemedText btn={true}>Continue</ThemedText>
-                </ThemedButton>
-            </View>
-        </ThemedKeyboardAwareScrollView>
-=======
     <ThemedView safe>
       <ThemedAppBar
         title='Home Address sa residentaddress.tsx'
@@ -198,7 +130,6 @@ const ResidentAddress = () => {
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>
->>>>>>> origin/develop
     </ThemedView>
   )
 }
@@ -206,16 +137,9 @@ const ResidentAddress = () => {
 export default ResidentAddress
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-    text: {
-        textAlign: 'center',
-    },
-})
-=======
   text: { textAlign: 'center' },
   // Applies to the TextInput (grays text and gives a subtle disabled feel)
   readonly: {
     color: '#8A8A8A',
   },
 })
->>>>>>> origin/develop

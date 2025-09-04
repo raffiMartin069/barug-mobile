@@ -47,8 +47,4 @@ const styles = StyleSheet.create({
   devText: { color: 'white', fontSize: 12, fontWeight: '600' },
   btn: { marginLeft: 6, paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 999 },
   btnText: { color: 'white', fontSize: 12, fontWeight: '700' },
-<<<<<<< HEAD
 })
-=======
-})
->>>>>>> origin/develop
