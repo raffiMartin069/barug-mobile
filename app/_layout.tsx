@@ -4,8 +4,6 @@ import React from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { NiceModalProvider } from '../hooks/NiceModalProvider'
 import { useRouteGuard } from '../hooks/useRouteGuard'
-// ✅ Make sure this is a VALUE import, not "import type { ... }"
-
 
 export default function RootLayout() {
   const { ready, authed, mpinSet, session, logoutNow } = useRouteGuard()

@@ -12,11 +12,15 @@ export const useGeolocationStore = create<GeolocationType & {
     houseNumber: '',
     street: '',
     purokSitio: '',
+    purokSitioCode: '',
     barangay: '',
     city: '',
+    lat: '',
+    lng: '',
     setHouseNumber: (value: string) => set({ houseNumber: value }),
     setStreet: (value: string) => set({ street: value }),
     setPurokSitio: (value: string) => set({ purokSitio: value }),
+    setPurokSitioCode: (value: string) => set({ purokSitioCode: value }),
     setBarangay: (value: string) => set({ barangay: value }),
     setCity: (value: string) => set({ city: value }),
     getFullAddress: () => {
@@ -26,11 +30,16 @@ export const useGeolocationStore = create<GeolocationType & {
         }
         return `${state.houseNumber}, ${state.street}, ${state.purokSitio}, ${state.barangay}, ${state.city}`;
     },
+    setLat: (value: string) => set({ lat: value }),
+    setLng: (value: string) => set({ lng: value }),
     clear: () => set({
         houseNumber: '',
         street: '',
         purokSitio: '',
         barangay: '',
         city: '',
+        lat: '',
+        lng: '',
+        purokSitioCode: ''
     })
 }));
