@@ -23,13 +23,18 @@ const ITEMS: Item[] =[
         key: 'register_resident',
         title: 'Register Resident',
         desc: 'Profile a resident.',
+<<<<<<< HEAD
         icon: 'person-add',
+=======
+        icon: 'person-add-outline',
+>>>>>>> origin/develop
         route: '/(bhwmodals)/(person)/personalinfo' as Href,
     },
     {
         key: 'register_household',
         title: 'Register Household',
         desc: 'Profile a household.',
+<<<<<<< HEAD
         icon: 'home',
         route: '/(bhwmodals)/(household)/createhousehold' as Href,
     },
@@ -45,6 +50,16 @@ const ITEMS: Item[] =[
         title: 'List of Households',
         desc: 'View and manage all registered households in the barangay.',
         icon: 'people',
+=======
+        icon: 'home-outline',
+        route: '/(bhwmodals)/(household)/createhousehold' as Href,
+    },
+    {
+        key: 'household_list',
+        title: 'List of Households',
+        desc: 'View and manage all registered households in the barangay.',
+        icon: 'people-outline',
+>>>>>>> origin/develop
         route: '/(bhwmodals)/(household)/householdlist' as Href,
     },
 ]
@@ -81,14 +96,24 @@ const Profiling = () => {
                                     <ThemedIcon
                                         name={item.icon}
                                         bgColor='#310101'
+<<<<<<< HEAD
                                         size={15}
+=======
+                                        size={18}
+>>>>>>> origin/develop
                                         containerSize={40}
                                     />
                                 </View>
 
+<<<<<<< HEAD
                                 <View>
                                     <ThemedText>{item.title}</ThemedText>
                                     <ThemedText style={{color: 'gray'}}>{item.desc}</ThemedText>
+=======
+                                <View style={{ flex: 1 }}>
+                                    <ThemedText style={{ fontSize: 16, fontWeight: '700' }}>{item.title}</ThemedText>
+                                    <ThemedText style={{ color: 'gray', flexWrap: 'wrap', flexShrink: 1 }}>{item.desc}</ThemedText>
+>>>>>>> origin/develop
                                 </View>
                             </View>
 
@@ -116,6 +141,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+<<<<<<< HEAD
+=======
+        flexWrap: 'nowrap',
+>>>>>>> origin/develop
     },
     row: {
         flexDirection: 'row',

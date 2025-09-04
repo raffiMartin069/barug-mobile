@@ -12,7 +12,7 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 
-import { indigentOptions, nhtsOptions } from '@/constants/formOptions'
+import { indigentOptions, nhtsOptions } from '@/constants/formoptions'
 import { HOUSEHOLD_TYPE } from '@/constants/householdType'
 import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
 import { RELATIONSHIP } from '@/constants/relationship'

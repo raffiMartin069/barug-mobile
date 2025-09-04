@@ -85,7 +85,7 @@ const ChatBot = () => {
 
   return (
 
-    <ThemedView style={{flex: 1}} safe={true}>
+    <ThemedView style={{flex: 1}} safe>
       <ThemedAppBar title="Barangay Assistant" showNotif={false} showProfile={false} />
 
       <ThemedView>

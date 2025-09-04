@@ -1,34 +1,51 @@
 import Spacer from '@/components/Spacer'
 import ThemedDropdown from '@/components/ThemedDropdown'
+import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import React, { useMemo, useState } from 'react'
 import { StyleSheet } from 'react-native'
 
+type GuardianOption = {
+  id: string
+  name: string
+  relationship: string
+  address?: string
+}
+
 const PURPOSE_OPTIONS = [
-  { label: 'Insurance Claim', value: 'insurance' },
-  { label: 'Burial / Funeral Requirement', value: 'burial' },
-  { label: 'Hospital / Medical Records', value: 'medical' },
-  { label: 'Government Benefit / Assistance', value: 'gov_benefit' },
-  { label: 'Inheritance / Legal Matters', value: 'inheritance' },
+  { label: 'Scholarship / Educational Assistance', value: 'scholarship' },
+  { label: 'School Requirement / Enrollment', value: 'school' },
+  { label: 'Medical / Hospital Assistance', value: 'medical' },
+  { label: 'Government Aid / Social Welfare', value: 'gov_aid' },
+  { label: 'Sports / Competition', value: 'sports' },
   { label: 'Others (specify)', value: 'other' },
 ]
 
-const Death = () => {
+const IndigencyMinor = () => {
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [nationality, setNationality] = useState('')
-  const [dateofdeath, setDateofDeath] = useState('')
-  const [placeofdeath, setPlaceofDeath] = useState('')
+  const [rel, setRel] = useState('')
   const [purpose, setPurpose] = useState<string | null>(null)
   const [otherPurpose, setOtherPurpose] = useState('')
-
   const showOther = purpose === 'other'
   const finalPurpose = useMemo(
     () => (showOther ? otherPurpose.trim() : purpose || ''),
     [showOther, otherPurpose, purpose]
   )
+  const [selectedGuardian, setSelectedGuardian] = useState<GuardianOption | null>(null)
+  const guardianOptions: GuardianOption[] = useMemo(
+    () => [
+      { id: '1', name: 'JUAN DELA CRUZ', relationship: 'FATHER', address: 'PUROK 1, SITIO ABC' },
+      { id: '2', name: 'MARIA DELA CRUZ', relationship: 'MOTHER', address: 'PUROK 1, SITIO ABC' },
+      { id: '3', name: 'PEDRO SANTOS', relationship: 'LEGAL GUARDIAN', address: 'PUROK 3, SITIO XYZ' },
+      { id: '4', name: 'ANA REYES', relationship: 'AUNT', address: 'PUROK 5, SITIO KLM' },
+    ],
+    []
+  )
+
   return (
     <ThemedView safe>
       {/* Full Name */}
@@ -42,10 +59,10 @@ const Death = () => {
 
       <Spacer height={10}/>
 
-      {/* Age at time of Death */}
-      <ThemedText style={styles.label}>Age at time of Death</ThemedText>
+      {/* Age */}
+      <ThemedText style={styles.label}>Age</ThemedText>
       <ThemedTextInput
-        placeholder='Age at time of Death'
+        placeholder='Age'
         value={age}
         onChangeText={setAge}
         editable={false}
@@ -64,23 +81,33 @@ const Death = () => {
 
       <Spacer height={10}/>
 
-      {/* Date of Death */}
-      <ThemedText style={styles.label}>Date of Death</ThemedText>
-      <ThemedTextInput
-        placeholder='Date of Death'
-        value={dateofdeath}
-        onChangeText={setDateofDeath}
-        editable={false}
+      {/* Parent / Guardian */}
+      <ThemedText style={styles.label}>Parent / Guardian</ThemedText>
+      <ThemedSearchSelect
+        items={guardianOptions}
+        getLabel={(g) => g.name}
+        getSubLabel={(g) =>
+          g.address ? `${g.relationship} • ${g.address}` : g.relationship
+        }
+        placeholder='Parent / Guardian'
+        onSelect={(g) => {
+          setSelectedGuardian(g)
+          setRel(g.relationship || '')
+        }}
+        value={selectedGuardian}
+        reflectSelectionInInput
+        autoCapitalize="words"
+        maxDropdownHeight={280}
       />
 
       <Spacer height={10}/>
 
-      {/* Place of Death */}
-      <ThemedText style={styles.label}>Place of Death</ThemedText>
+      {/* Relationship */}
+      <ThemedText style={styles.label}>Relationship to Parent / Guardian</ThemedText>
       <ThemedTextInput
-        placeholder='Place of Death'
-        value={placeofdeath}
-        onChangeText={setPlaceofDeath}
+        placeholder='Relationship'
+        value={rel}
+        onChangeText={setRel}
         editable={false}
       />
 
@@ -110,7 +137,7 @@ const Death = () => {
   )
 }
 
-export default Death
+export default IndigencyMinor
 
 const styles = StyleSheet.create({
   label: {

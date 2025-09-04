@@ -17,6 +17,7 @@ export type ProfileResidentArgs = {
   p_mobile_num: string
 
   p_residency_period: number
+  p_occupation: string
 
   p_sex_id: number                 // 1 = male, 2 = female (match your lookup)
   p_civil_status_id: number

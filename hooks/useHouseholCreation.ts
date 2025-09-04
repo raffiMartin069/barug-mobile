@@ -1,3 +1,4 @@
+// hooks/useHouseholdCreation.ts
 import { Alert } from 'react-native'
 import { HouseholdCreation as Repo } from '@/repository/householCreation'
 import { HouseholdCreationService } from '@/services/householdCreation'

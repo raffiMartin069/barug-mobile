@@ -10,7 +10,7 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } 
 
 const BarangayCases = () => {
   return (
-    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
+    <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe>
 
       <ThemedAppBar
         title='Barangay Cases'
@@ -23,12 +23,12 @@ const BarangayCases = () => {
 
            <View style={[styles.row, {paddingHorizontal: 25,}]}>
             <ThemedText style={styles.title}>Active Barangay Cases</ThemedText>
-            <ThemedText link={true}>View All</ThemedText>
+            <ThemedText link>View All</ThemedText>
           </View>
 
           <View>
             <Spacer height={10}/>
-            <ThemedText style={styles.no} subtitle={true}>No active barangay cases.</ThemedText>
+            <ThemedText style={styles.no} subtitle>No active barangay cases.</ThemedText>
           </View>
 
           <ThemedCard>
@@ -68,12 +68,12 @@ const BarangayCases = () => {
 
           <View style={[styles.row, {paddingHorizontal: 25,}]}>
             <ThemedText style={styles.title}>Barangay Cases History</ThemedText>
-            <ThemedText link={true}>View All</ThemedText>
+            <ThemedText link>View All</ThemedText>
           </View>
 
           <View>
             <Spacer height={10}/>
-            <ThemedText style={styles.no} subtitle={true}>No barangay cases history.</ThemedText>
+            <ThemedText style={styles.no} subtitle>No barangay cases history.</ThemedText>
           </View>
 
           <ThemedCard>

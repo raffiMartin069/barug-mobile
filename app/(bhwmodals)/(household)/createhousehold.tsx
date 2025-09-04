@@ -23,7 +23,7 @@ import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
-import { PersonSearchRequest } from '@/types/householdHead'
+import { HouseholdHead } from '@/types/householdHead'
 import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
 
 const CreateHousehold = () => {
@@ -49,6 +49,8 @@ const CreateHousehold = () => {
   const city = useGeolocationStore((state: GeolocationType) => state.city)
   const address = useGeolocationStore((state: GeolocationType) => state.getFullAddress())
 
+  const [err, setErr] = useState<string>('')
+
   const { results: residentItems, search } = usePersonSearchByKey()
   const { saveHousehold } = useHouseholdCreation()
 
@@ -65,7 +67,7 @@ const CreateHousehold = () => {
 
   const handleHomeAddress = () => {
     router.push({
-      pathname: '/mapaddress',
+      pathname: '/hh_mapaddress',
       params: {
         returnTo: '/homeaddress',
       }
@@ -106,6 +108,8 @@ const CreateHousehold = () => {
       <ThemedKeyboardAwareScrollView>
         <View>
 
+          <ThemedText style={{ color: 'red' }} >{err}</ThemedText>
+
           <ThemedTextInput
             placeholder='Household Number'
             value={householdNumber}
@@ -127,7 +131,7 @@ const CreateHousehold = () => {
           {errors.address && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.address}</ThemedText>}
           <Spacer height={10} />
 
-          <ThemedSearchSelect<PersonSearchRequest>
+          <ThemedSearchSelect<HouseholdHead>
             items={residentItems}
             getLabel={(p) =>
               p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
