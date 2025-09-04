@@ -217,7 +217,8 @@ const ResidentHome = () => {
               </View>
             </View>
           </ThemedCard>
-
+          
+          <ThemedCard>
           <Spacer height={20} />
             <View style={styles.activityItem}>
               <ThemedIcon
