@@ -15,7 +15,7 @@ export const useHouseholdCreationStore = create((set) => ({
     clear: () => set({
         householdNumber: '',
         address: '',
-        householdHeadId: '',
+        householdHead: '',
         houseType: '',
         houseOwnership: '',
     })

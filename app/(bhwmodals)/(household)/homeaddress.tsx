@@ -17,26 +17,42 @@ const HomeAddress = () => {
   const street = params.get("street") ?? "";
   const brgy = params.get("brgy") ?? "";
   const city = params.get("city") ?? "";
+  const lat = params.get("lat") ?? "";
+  const lng = params.get("lng") ?? "";
+  const sitio = params.get("purok_name") ?? "";
+  const sitioCode = params.get("purok_code") ?? "";
 
   const [hnum, setHNum] = useState('')
   const [streetState, setStreet] = useState(street)
-  const [puroksitio, setPurokSitio] = useState('')
+  const [puroksitio, setPurokSitio] = useState(sitio)
   const [brgyState, setBrgy] = useState(brgy)
   const [cityState, setCity] = useState(city)
 
-    const globalHouseNumber = useGeolocationStore((state: GeolocationType) => state.setHouseNumber)
-    const globalStreet = useGeolocationStore((state: GeolocationType) => state.setStreet)
-    const globalPurokSitio = useGeolocationStore((state: GeolocationType) => state.setPurokSitio)
-    const globalBarangay = useGeolocationStore((state: GeolocationType) => state.setBarangay)
-    const globalCity = useGeolocationStore((state: GeolocationType) => state.setCity)
+    const setHouseNumber = useGeolocationStore((state: GeolocationType) => state.setHouseNumber)
+    const setHomeStreet = useGeolocationStore((state: GeolocationType) => state.setStreet)
+    const setHomeSitio = useGeolocationStore((state: GeolocationType) => state.setPurokSitio)
+    const setHomeBarangay = useGeolocationStore((state: GeolocationType) => state.setBarangay)
+    const setHomeCity = useGeolocationStore((state: GeolocationType) => state.setCity)
+    const setLat = useGeolocationStore((state: GeolocationType) => state.setLat)
+    const setLng = useGeolocationStore((state: GeolocationType) => state.setLng)
+    const setSitioCode = useGeolocationStore((state: GeolocationType) => state.setPurokSitioCode)
 
     useEffect(() => {
-        globalHouseNumber(hnum)
-        globalStreet(streetState)
-        globalPurokSitio(puroksitio)
-        globalBarangay(brgyState)
-        globalCity(cityState)
-    }, [hnum, streetState, puroksitio, brgyState, cityState])
+        setHouseNumber(hnum)
+        setHomeStreet(streetState)
+        setHomeSitio(puroksitio)
+        setHomeBarangay(brgyState)
+        setHomeCity(cityState)
+        setLat(lat)
+        setLng(lng)
+        setSitioCode(sitioCode)
+    }, [
+        hnum, streetState, puroksitio, 
+        brgyState, cityState, lat, 
+        lng, sitioCode, setHouseNumber, setHomeStreet, 
+        setHomeSitio, setHomeBarangay, setHomeCity, 
+        setLat, setLng, setSitioCode
+    ])
 
   const router = useRouter()
 

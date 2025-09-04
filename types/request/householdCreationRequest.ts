@@ -9,4 +9,6 @@ export type HouseholdCreationRequest = {
     p_household_num: string;
     p_house_num: string;
     p_household_head_id: string
+    p_latitude: number;
+    p_longitude: number;
 }

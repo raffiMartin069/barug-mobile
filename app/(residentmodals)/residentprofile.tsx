@@ -365,8 +365,22 @@ const ResidentProfile = () => {
           </ThemedButton>
         </View>
 
+
         <Spacer height={20} />
       </ThemedKeyboardAwareScrollView>
+
+      {/* Shared NiceModal */}
+      <NiceModal
+        visible={modalOpen}
+        title={modalTitle}
+        message={modalMsg}
+        variant={modalVariant}
+        primaryText={modalPrimaryText}
+        secondaryText={modalSecondaryText}
+        onPrimary={() => { modalPrimary?.(); setModalOpen(false) }}
+        onSecondary={() => { modalSecondary?.(); setModalOpen(false) }}
+        onClose={() => setModalOpen(false)}
+      />
 
       {/* Shared NiceModal */}
       <NiceModal
