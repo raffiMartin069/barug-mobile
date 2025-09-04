@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import Spacer from '@/components/Spacer'
@@ -23,7 +23,7 @@ import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
-import { HouseholdHead } from '@/types/householdHead'
+import { PersonSearchRequest } from '@/types/householdHead'
 import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
 
 const CreateHousehold = () => {
@@ -48,6 +48,9 @@ const CreateHousehold = () => {
   const barangay = useGeolocationStore((state: GeolocationType) => state.barangay)
   const city = useGeolocationStore((state: GeolocationType) => state.city)
   const address = useGeolocationStore((state: GeolocationType) => state.getFullAddress())
+  const lat = useGeolocationStore((state: GeolocationType) => state.lat)
+  const lng = useGeolocationStore((state: GeolocationType) => state.lng)
+  const sitioCode = useGeolocationStore((state: GeolocationType) => state.purokSitioCode)
 
   const [err, setErr] = useState<string>('')
 
@@ -87,6 +90,8 @@ const CreateHousehold = () => {
       p_household_num: householdNumber,
       p_house_num: houseNumber,
       p_household_head_id: householdHead,
+      p_latitude: parseFloat(lat) || 0,
+      p_longitude: parseFloat(lng) || 0,
     }
     const id = await saveHousehold(data);
     console.info(id)
@@ -131,7 +136,7 @@ const CreateHousehold = () => {
           {errors.address && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.address}</ThemedText>}
           <Spacer height={10} />
 
-          <ThemedSearchSelect<HouseholdHead>
+          <ThemedSearchSelect<PersonSearchRequest>
             items={residentItems}
             getLabel={(p) =>
               p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
@@ -185,7 +190,7 @@ const CreateHousehold = () => {
         <Spacer height={15} />
 
         <View>
-          <ThemedButton onPress={handleSave} disabled={Object.keys(errors).length > 0}>
+          <ThemedButton onPress={handleSave}>
             <ThemedText btn>Continue</ThemedText>
           </ThemedButton>
         </View>
