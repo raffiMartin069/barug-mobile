@@ -18,10 +18,12 @@
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
     "@supabase/supabase-js": "^2.56.0",
+    "base64-arraybuffer": "^1.0.2",
     "expo": "~53.0.17",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.7",
     "expo-document-picker": "^13.1.6",
+    "expo-file-system": "~18.1.11",
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
     "expo-image": "~2.3.2",
@@ -46,7 +48,6 @@
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
     "zustand": "^5.0.8"
-
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
