@@ -19,6 +19,8 @@ export const options = { href: null }
 
 const ResidentProfile = () => {
   const router = useRouter()
+
+  // get user role (RESIDENT OR STAFF)
   const { role } = useAccountRole()
 
   // Modal state
@@ -36,6 +38,7 @@ const ResidentProfile = () => {
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // FETCH PROFILE RELATED DATA
   useEffect(() => {
     const init = async () => {
       setLoading(true)
@@ -58,6 +61,7 @@ const ResidentProfile = () => {
     init()
   }, [params?.profile])
 
+  
   const fullName = useMemo(() => {
     const fn = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix]
       .filter(Boolean)

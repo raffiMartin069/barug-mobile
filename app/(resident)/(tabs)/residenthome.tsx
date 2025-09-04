@@ -18,6 +18,7 @@ const ResidentHome = () => {
   const [details, setDetails] = useState<any | null>(null)
   const [isStaff, setIsStaff] = useState(false)
 
+  // Fetch Profile-Related
   useEffect(() => {
     let live = true
     ;(async () => {
