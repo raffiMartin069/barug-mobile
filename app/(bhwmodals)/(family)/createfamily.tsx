@@ -17,7 +17,6 @@ import { HOUSEHOLD_TYPE } from '@/constants/householdType'
 import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
 import { RELATIONSHIP } from '@/constants/relationship'
 
-import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 
 import { PersonSearchRequest } from '@/types/householdHead'
