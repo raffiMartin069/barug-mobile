@@ -20,12 +20,9 @@ import { RELATIONSHIP } from '@/constants/relationship'
 import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 
-import { FamilyCreationRepository } from '@/repository/familyCreation'
-import { HouseholdRepository } from '@/repository/householdRepository'
-import { FamilyCreationService } from '@/services/familyCreation'
-
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
+import { useFamilyCreation } from '@/hooks/useFamilyCreation'
 
 const CreateFamily = () => {
 
@@ -43,9 +40,6 @@ const CreateFamily = () => {
     const [ufcNum, setUfcNum] = useState<string>('')
     const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-    useNumericInput(famnum, setFamnum)
-    useNumericInput(ufcNum, setUfcNum)
-
     const handleValidation = useMemo(() => {
         const newErrors: { [key: string]: string } = {}
         if (!householdHeadId) newErrors.householdHeadId = 'Household head is required'
@@ -60,34 +54,40 @@ const CreateFamily = () => {
     }, [householdHeadId, famnum, famhead, hhheadrel, hhtype, ufcNum, incomesource, fammnthlyincome])
 
     const { results: residentItems, search } = usePersonSearchByKey()
+    const { createFamily, loading, error, success } = useFamilyCreation()
 
-    const familyCreationHandler = async () => {
+    const handleSubmit = async () => {
         const data: FamilyCreationRequest = {
             p_household_id: parseInt(householdHeadId),
             p_added_by_id: 1,
-            p_family_num: famnum,
+            p_family_num: famnum.trim(),
             p_ufc_num: ufcNum,
-            p_source_of_income: incomesource,
+            p_source_of_income: incomesource.trim(),
             p_family_mnthly_icnome_id: parseInt(fammnthlyincome),
             p_nhts_status_id: nhts === 'yes' ? 1 : 2,
             p_indigent_status_id: indigent === 'yes' ? 1 : 2,
             p_household_type_id: parseInt(hhtype),
             p_family_head_id: parseInt(famhead),
         }
-        const obj = new FamilyCreationService(
-            new FamilyCreationRepository(),
-            new HouseholdRepository()
-        )
-        try {
-            const result = await obj.createFamily(data)
-            if (!result) {
-                Alert.alert('Something went wrong', 'Failed to create family. Please try again.')
-                return;
-            }
-            Alert.alert('Success', 'Family created successfully.')
-        } catch (error) {
-            Alert.alert('Information', error.message)
+        const result = await createFamily(data)
+        if (!result) {
+            Alert.alert('Something went wrong.', error || 'Please try again later.')
+            return
         }
+        setHouseholdHeadId('')
+        setHouseholdHeadText('')
+        setFamnum('')
+        setFamHeadText('')
+        setHhheadrel('')
+        setNhts('no')
+        setIndigent('no')
+        setIncomeSource('')
+        setFamMonthlyIncome('')
+        setHhType('')
+        setFamhead('')
+        setUfcNum('')
+        setErrors({})
+        Alert.alert('Success', 'Family unit created successfully.')
     }
 
     return (
@@ -256,8 +256,8 @@ const CreateFamily = () => {
                             setErrors(validationErrors)
                             return
                         }
-                        familyCreationHandler();
-                    }}>
+                        handleSubmit();
+                    }} loading={loading} disabled={loading}>
                         <ThemedText btn>Continue</ThemedText>
                     </ThemedButton>
                 </View>

@@ -49,8 +49,6 @@ const CreateHousehold = () => {
   const city = useGeolocationStore((state: GeolocationType) => state.city)
   const address = useGeolocationStore((state: GeolocationType) => state.getFullAddress())
 
-  const [err, setErr] = useState<string>('')
-
   const { results: residentItems, search } = usePersonSearchByKey()
   const { saveHousehold } = useHouseholdCreation()
 
@@ -107,8 +105,6 @@ const CreateHousehold = () => {
 
       <ThemedKeyboardAwareScrollView>
         <View>
-
-          <ThemedText style={{ color: 'red' }} >{err}</ThemedText>
 
           <ThemedTextInput
             placeholder='Household Number'
