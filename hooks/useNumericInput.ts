@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 
-export function useNumericInput(householdNumber: string, setHouseholdNumber: (value: string) => void) {
+export function useNumericInput(val: string, setVal: (value: string) => void) {
     useEffect(() => {
-        setHouseholdNumber(householdNumber.replace(/[^0-9]/g, ''))
-    }, [householdNumber])
+        setVal(val.replace(/[^0-9]/g, ''))
+    }, [val])
 }

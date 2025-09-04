@@ -1,11 +1,11 @@
 // hooks/usePersonSearchByKey.ts
-import { useState, useCallback } from 'react'
 import { PersonSearchService } from '@/services/personSearch'
-import { HouseholdHead } from '@/types/householdHead'
+import { PersonSearchRequest } from '@/types/householdHead'
+import { useCallback, useState } from 'react'
 
 
 export function usePersonSearchByKey() {
-    const [results, setResults] = useState<HouseholdHead[]>([])
+    const [results, setResults] = useState<PersonSearchRequest[]>([])
     const search = useCallback(async (query: string) => {
         if (!query) return
         const service = new PersonSearchService(query)

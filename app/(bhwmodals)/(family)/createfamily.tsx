@@ -1,3 +1,6 @@
+import React, { useMemo, useState } from 'react'
+import { Alert, StyleSheet, View } from 'react-native'
+
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
@@ -8,26 +11,24 @@ import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+
 import { indigentOptions, nhtsOptions } from '@/constants/formOptions'
-import React, { useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { HOUSEHOLD_TYPE } from '@/constants/householdType'
+import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
+import { RELATIONSHIP } from '@/constants/relationship'
 
-type Famhead = {
-    person_id: string
-    full_name: string
-    person_code?: string
-    address?: string
-}
+import { useNumericInput } from '@/hooks/useNumericInput'
+import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 
-// 🔹 mock data — replace with your Supabase query later
-const FAMHEAD: Famhead[] = [
-    { person_id: 'P-001', full_name: 'Rogelio Santos', person_code: 'P03-R001', address: 'Purok 3, Sto. Niño' },
-    { person_id: 'P-002', full_name: 'Maria Santos', person_code: 'P03-R002', address: 'Purok 3, Sto. Niño' },
-    { person_id: 'P-003', full_name: 'Juan Dela Cruz', person_code: 'P05-R010', address: 'Purok 5, Sto. Niño' },
-    { person_id: 'P-004', full_name: 'Luz Rivera', person_code: 'P01-R020', address: 'Purok 1, Sto. Niño' },
-]
+import { FamilyCreationRepository } from '@/repository/familyCreation'
+import { HouseholdRepository } from '@/repository/householdRepository'
+import { FamilyCreationService } from '@/services/familyCreation'
+
+import { PersonSearchRequest } from '@/types/householdHead'
+import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
 
 const CreateFamily = () => {
+
     const [famnum, setFamnum] = useState('')
     const [famhead, setFamhead] = useState('')
     const [famHeadText, setFamHeadText] = useState('')
@@ -37,8 +38,57 @@ const CreateFamily = () => {
     const [incomesource, setIncomeSource] = useState('')
     const [fammnthlyincome, setFamMonthlyIncome] = useState('')
     const [hhtype, setHhType] = useState('')
+    const [householdHeadId, setHouseholdHeadId] = useState('')
+    const [householdHeadText, setHouseholdHeadText] = useState('')
+    const [ufcNum, setUfcNum] = useState<string>('')
+    const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
-    const residentItems = useMemo(() => FAMHEAD, [])
+    useNumericInput(famnum, setFamnum)
+    useNumericInput(ufcNum, setUfcNum)
+
+    const handleValidation = useMemo(() => {
+        const newErrors: { [key: string]: string } = {}
+        if (!householdHeadId) newErrors.householdHeadId = 'Household head is required'
+        if (!famnum) newErrors.famnum = 'Family number is required'
+        if (!famhead) newErrors.famhead = 'Family head is required'
+        if (!hhheadrel) newErrors.hhheadrel = 'Relationship to household head is required'
+        if (!hhtype) newErrors.hhtype = 'Household type is required'
+        if (!ufcNum) newErrors.ufcNum = 'Unique Family Control Number (UFC) is required'
+        if (!incomesource) newErrors.incomesource = 'Source of income is required'
+        if (!fammnthlyincome) newErrors.fammnthlyincome = 'Family monthly income is required'
+        return Object.keys(newErrors).length === 0 ? null : newErrors
+    }, [householdHeadId, famnum, famhead, hhheadrel, hhtype, ufcNum, incomesource, fammnthlyincome])
+
+    const { results: residentItems, search } = usePersonSearchByKey()
+
+    const familyCreationHandler = async () => {
+        const data: FamilyCreationRequest = {
+            p_household_id: parseInt(householdHeadId),
+            p_added_by_id: 1,
+            p_family_num: famnum,
+            p_ufc_num: ufcNum,
+            p_source_of_income: incomesource,
+            p_family_mnthly_icnome_id: parseInt(fammnthlyincome),
+            p_nhts_status_id: nhts === 'yes' ? 1 : 2,
+            p_indigent_status_id: indigent === 'yes' ? 1 : 2,
+            p_household_type_id: parseInt(hhtype),
+            p_family_head_id: parseInt(famhead),
+        }
+        const obj = new FamilyCreationService(
+            new FamilyCreationRepository(),
+            new HouseholdRepository()
+        )
+        try {
+            const result = await obj.createFamily(data)
+            if (!result) {
+                Alert.alert('Something went wrong', 'Failed to create family. Please try again.')
+                return;
+            }
+            Alert.alert('Success', 'Family created successfully.')
+        } catch (error) {
+            Alert.alert('Information', error.message)
+        }
+    }
 
     return (
         <ThemedView safe>
@@ -49,15 +99,52 @@ const CreateFamily = () => {
             />
             <ThemedKeyboardAwareScrollView>
                 <View>
+
+                    <ThemedSearchSelect<PersonSearchRequest>
+                        items={residentItems}
+                        getLabel={(p) =>
+                            p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
+                        }
+                        getSubLabel={(p) => p.address}
+                        inputValue={householdHeadText}
+                        onInputValueChange={(t) => {
+                            setHouseholdHeadText(t)
+                            search(t)
+                            if (!t) setHouseholdHeadId('')
+                        }}
+                        placeholder='Household Head (Name / Resident ID)'
+                        filter={(p, q) => {
+                            const query = q.toLowerCase()
+                            return (
+                                p.full_name.toLowerCase().includes(query) ||
+                                (p.person_code || '').toLowerCase().includes(query) ||
+                                (p.address || '').toLowerCase().includes(query) ||
+                                query.includes(p.full_name.toLowerCase()) ||
+                                (p.person_code && query.includes(p.person_code.toLowerCase()))
+                            )
+                        }}
+                        onSelect={(p) => {
+                            setHouseholdHeadId(p.person_id)
+                            setHouseholdHeadText(
+                                p.person_code
+                                    ? `${p.full_name} · ${p.person_code}`
+                                    : p.full_name
+                            )
+                        }}
+                    />
+                    {errors.householdHeadId && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.householdHeadId}</ThemedText>}
+                    <Spacer height={10} />
+
                     <ThemedTextInput
                         placeholder='Family Number'
                         value={famnum}
                         onChangeText={setFamnum}
+                        keyboardType="numeric"
                     />
-
+                    {errors.famnum && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.famnum}</ThemedText>}
                     <Spacer height={10} />
 
-                    <ThemedSearchSelect<Famhead>
+                    <ThemedSearchSelect<PersonSearchRequest>
                         items={residentItems}
                         getLabel={(p) =>
                             p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
@@ -66,6 +153,7 @@ const CreateFamily = () => {
                         inputValue={famHeadText}
                         onInputValueChange={(t) => {
                             setFamHeadText(t)
+                            search(t)
                             if (!t) setFamhead('')
                         }}
                         placeholder='Family Head (Name / Resident ID)'
@@ -88,31 +176,31 @@ const CreateFamily = () => {
                             )
                         }}
                     />
-
+                    {errors.famhead && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.famhead}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
-                        items={[]}
+                        items={RELATIONSHIP}
                         value={hhheadrel}
                         setValue={setHhheadrel}
                         placeholder='Relationship to Household Head'
                         order={0}
                     />
-
+                    {errors.hhheadrel && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.hhheadrel}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
-                        items={[]}
+                        items={HOUSEHOLD_TYPE}
                         value={hhtype}
                         setValue={setHhType}
                         placeholder='Household Type'
                         order={1}
                     />
-
+                    {errors.hhtype && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.hhtype}</ThemedText>}
                     <Spacer height={15} />
 
-                    <View style={{ flexDirection: 'row', gap: 10, }}>
-                        <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ flex: 1, alignItems: 'center' }}>
                             <ThemedText subtitle={true}>NHTS Status</ThemedText>
 
                             <ThemedRadioButton
@@ -122,7 +210,7 @@ const CreateFamily = () => {
                             />
                         </View>
 
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, alignItems: 'center' }}>
                             <ThemedText subtitle={true}>Indigent Status</ThemedText>
 
                             <ThemedRadioButton
@@ -134,26 +222,42 @@ const CreateFamily = () => {
                     </View>
 
                     <ThemedTextInput
+                        placeholder='Unique Family Control Number (UFC)'
+                        value={ufcNum}
+                        onChangeText={setUfcNum}
+                        keyboardType="numeric"
+                    />
+                    {errors.ufcNum && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.ufcNum}</ThemedText>}
+                    <Spacer height={10} />
+
+                    <ThemedTextInput
                         placeholder='Source of Income'
                         value={incomesource}
                         onChangeText={setIncomeSource}
                     />
-
+                    {errors.incomesource && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.incomesource}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
-                        items={[]}
+                        items={MONTHLY_INCOME}
                         value={fammnthlyincome}
                         setValue={setFamMonthlyIncome}
                         placeholder='Family Monthly Income'
                         order={2}
                     />
+                    {errors.fammnthlyincome && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.fammnthlyincome}</ThemedText>}
                 </View>
-
                 <Spacer height={15} />
 
                 <View>
-                    <ThemedButton>
+                    <ThemedButton onPress={() => {
+                        const validationErrors = handleValidation
+                        if (validationErrors) {
+                            setErrors(validationErrors)
+                            return
+                        }
+                        familyCreationHandler();
+                    }}>
                         <ThemedText btn>Continue</ThemedText>
                     </ThemedButton>
                 </View>

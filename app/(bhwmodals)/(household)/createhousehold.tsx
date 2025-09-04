@@ -23,7 +23,7 @@ import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
-import { HouseholdHead } from '@/types/householdHead'
+import { PersonSearchRequest } from '@/types/householdHead'
 import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
 
 const CreateHousehold = () => {
@@ -131,7 +131,7 @@ const CreateHousehold = () => {
           {errors.address && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.address}</ThemedText>}
           <Spacer height={10} />
 
-          <ThemedSearchSelect<HouseholdHead>
+          <ThemedSearchSelect<PersonSearchRequest>
             items={residentItems}
             getLabel={(p) =>
               p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
