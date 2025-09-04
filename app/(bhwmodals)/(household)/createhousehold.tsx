@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router'
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 import Spacer from '@/components/Spacer'
@@ -52,8 +52,6 @@ const CreateHousehold = () => {
   const lng = useGeolocationStore((state: GeolocationType) => state.lng)
   const sitioCode = useGeolocationStore((state: GeolocationType) => state.purokSitioCode)
 
-  const [err, setErr] = useState<string>('')
-
   const { results: residentItems, search } = usePersonSearchByKey()
   const { saveHousehold } = useHouseholdCreation()
 
@@ -94,7 +92,6 @@ const CreateHousehold = () => {
       p_longitude: parseFloat(lng) || 0,
     }
     const id = await saveHousehold(data);
-    console.info(id)
     if(id) {
       setHeadSearchText('')
     }
@@ -112,8 +109,6 @@ const CreateHousehold = () => {
 
       <ThemedKeyboardAwareScrollView>
         <View>
-
-          <ThemedText style={{ color: 'red' }} >{err}</ThemedText>
 
           <ThemedTextInput
             placeholder='Household Number'
@@ -144,6 +139,7 @@ const CreateHousehold = () => {
             getSubLabel={(p) => p.address}
             inputValue={headSearchText}
             onInputValueChange={(t) => {
+              resetHouseholdheadIfEmpty(t, setHouseholdHead)
               setHeadSearchText(t)
               search(t)
             }}
@@ -202,3 +198,12 @@ const CreateHousehold = () => {
 export default CreateHousehold
 
 const styles = StyleSheet.create({})
+
+function resetHouseholdheadIfEmpty(t: string, setHouseholdHead: (value: string) => void) {
+  // this will ensure that if the text is empty the value of the household head stays empty or resets to empty
+  // if removed, the householhead text will take the previously selected value and treat it as is even if the text is empty
+  // please do not remove this function. thanks!
+  if (t === '' || t === null || t === undefined || t.length === 0) {
+    setHouseholdHead('')
+  }
+}

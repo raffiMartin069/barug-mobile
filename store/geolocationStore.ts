@@ -38,5 +38,8 @@ export const useGeolocationStore = create<GeolocationType & {
         purokSitio: '',
         barangay: '',
         city: '',
+        lat: '',
+        lng: '',
+        purokSitioCode: ''
     })
 }));
