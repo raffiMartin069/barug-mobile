@@ -5,6 +5,7 @@ import { FamilyCreationRequest } from "@/types/request/familyCreationRequest";
 export class FamilyCreationRepository {
 
     async createFamily(req: FamilyCreationRequest) {
+        console.log("Creating family with request:", req);
         const { data, error } = await supabase.rpc("insert_family_unit", req);
         if (error) {
             if (error.message === "An active family with the same Family Number or UFC Number already exists." && error.code === "P5009") {
