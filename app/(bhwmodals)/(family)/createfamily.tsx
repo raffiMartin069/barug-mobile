@@ -64,6 +64,7 @@ const CreateFamily = () => {
             p_source_of_income: incomesource.trim(),
             p_family_mnthly_icnome_id: parseInt(fammnthlyincome),
             p_nhts_status_id: nhts === 'yes' ? 1 : 2,
+            p_rel_to_hhold_head_id: 1, 
             p_indigent_status_id: indigent === 'yes' ? 1 : 2,
             p_household_type_id: parseInt(hhtype),
             p_family_head_id: parseInt(famhead),

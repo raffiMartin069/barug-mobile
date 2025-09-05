@@ -157,7 +157,7 @@ const PersonalInfo = () => {
             openModal('Validation Error', error, 'warn');
             return;
         }
-        router.push({ pathname: '/socioeconomicinfo' });
+        router.push({ pathname: '/linkparentguardian' });
     };
 
     const handleHomeAddress = () => {

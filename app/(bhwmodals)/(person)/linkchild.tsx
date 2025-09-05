@@ -9,126 +9,119 @@ import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useResidentFormStore } from '@/store/forms'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Modal, Pressable, StyleSheet, View } from 'react-native'
 
-// ✅ pull the same search hook & type used in CreateFamily
+// 🔎 bring in the same search hook & type used in CreateFamily
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { PersonSearchRequest } from '@/types/householdHead'
 
-type Rel = 'MOTHER' | 'FATHER' | 'GUARDIAN'
-type Linked = { id: string; name: string; rel: Rel }
-type RelItem = { label: string; value: Rel; disabled?: boolean }
+type CRel = 'CHILD' | 'SON' | 'DAUGHTER'
+type LinkedChild = { id: string; name: string; rel: CRel }
+type RelItem = { label: string; value: CRel; disabled?: boolean }
 
-const LinkParentGuardian = () => {
+const LinkChild = () => {
   const router = useRouter()
 
-  // 🔗 store fields & helpers (single source of truth for links)
-  const {
-    motherId, motherName,
-    fatherId, fatherName,
-    guardianIds, guardianNames,
-    setMother, setFather,
-    addGuardian, removeGuardian,
-  } = useResidentFormStore()
+  // 🔗 store fields & helpers
+  const { childIds, childNames, addChild, removeChild } = useResidentFormStore()
 
-  // 🔍 live search hook (same usage as in CreateFamily)
-  // - results: array of residents from your API
-  // - search: function to update results by query string
-  const { results: residentItems, search } = usePersonSearchByKey()
-
-  // UI state for relationship picker + search input value
-  const [rel, setRel] = useState<Rel | ''>('')
+  // Relationship picker + search input state
+  const [rel, setRel] = useState<CRel | ''>('')
   const [searchText, setSearchText] = useState('')
 
-  // Derive chips directly from the store so page is re-entrant
-  const linked: Linked[] = useMemo(() => {
-    const out: Linked[] = []
-    if (motherId) out.push({ id: motherId, name: motherName ?? 'Mother', rel: 'MOTHER' })
-    if (fatherId) out.push({ id: fatherId, name: fatherName ?? 'Father', rel: 'FATHER' })
-    guardianIds.forEach((id, i) => out.push({ id, name: guardianNames[i] ?? 'Guardian', rel: 'GUARDIAN' }))
-    return out
-  }, [motherId, motherName, fatherId, fatherName, guardianIds, guardianNames])
+  // ✅ live search (results + search() trigger) — mirrors CreateFamily usage
+  const { results: residentItems, search } = usePersonSearchByKey()
 
-  const hasMother = !!motherId
-  const hasFather = !!fatherId
-
-  // Dropdown options — Mother/Father disabled when already set
+  // Relationship options (multiple children allowed)
   const relItems: RelItem[] = [
-    { label: 'Mother',   value: 'MOTHER',   disabled: hasMother },
-    { label: 'Father',   value: 'FATHER',   disabled: hasFather },
-    { label: 'Guardian', value: 'GUARDIAN' },
+    { label: 'Child (unspecified)', value: 'CHILD' },
+    { label: 'Son', value: 'SON' },
+    { label: 'Daughter', value: 'DAUGHTER' },
   ]
 
-  const canAdd = (r: Rel | '') => {
-    if (r === 'MOTHER') return !hasMother
-    if (r === 'FATHER') return !hasFather
-    if (r === 'GUARDIAN') return true
-    return false
-  }
+  // Chips derived from store (single source of truth).
+  // If you later persist per-child relation, swap 'CHILD' below for that stored value.
+  const linked: LinkedChild[] = useMemo(
+    () => childIds.map((id, i) => ({ id, name: childNames[i] ?? 'Child', rel: 'CHILD' })),
+    [childIds, childNames]
+  )
 
-  // When a resident is chosen from the search list, write to the store
+  const canAdd = (r: CRel | '') => !!r
+
+  // When the user picks a resident from the search list
   const onPick = (p: PersonSearchRequest) => {
     if (!rel) return
-    const r: Rel = rel
+    const r: CRel = rel
     if (!canAdd(r)) return
+    if (childIds.includes(p.person_id)) return // avoid duplicates
 
-    // Prevent duplicates via store state
-    if (r === 'MOTHER' && motherId) return
-    if (r === 'FATHER' && fatherId) return
-    if (r === 'GUARDIAN' && guardianIds.includes(p.person_id)) return
+    // Store child (name for review screen; ids for payload later)
+    // If you want to persist r (SON/DAUGHTER), add a parallel array in the store.
+    addChild(p.person_id, p.full_name)
 
-    // Update the centralized store
-    if (r === 'MOTHER') setMother(p.person_id, p.full_name)
-    else if (r === 'FATHER') setFather(p.person_id, p.full_name)
-    else addGuardian(p.person_id, p.full_name)
-
-    // Reset the picker and clear the search text
+    // Clear UI
     setRel('')
     setSearchText('')
-    // Optionally clear results: search('')  // keep or remove depending on UX preference
+    // Optionally: search('') // to clear remote results too
   }
 
   // Manage modal state
   const [manageVisible, setManageVisible] = useState(false)
-  const [selected, setSelected] = useState<Linked | null>(null)
+  const [selected, setSelected] = useState<LinkedChild | null>(null)
 
-  const openManage = useCallback((item: Linked) => {
+  const openManage = useCallback((item: LinkedChild) => {
     setSelected(item)
     setManageVisible(true)
   }, [])
-  const closeManage = () => { setManageVisible(false); setSelected(null) }
+
+  const closeManage = () => {
+    setManageVisible(false)
+    setSelected(null)
+  }
 
   const unlinkSelected = () => {
     if (!selected) return
-    if (selected.rel === 'MOTHER') setMother(null, null)
-    else if (selected.rel === 'FATHER') setFather(null, null)
-    else removeGuardian(selected.id)
+    removeChild(selected.id)
     closeManage()
+  }
+
+  // Icon per relation (visual only on chips)
+  const getIcon = (r: CRel) => {
+    if (r === 'SON') return <Ionicons name="male" size={14} color="#2563EB" />
+    if (r === 'DAUGHTER') return <Ionicons name="female" size={14} color="#DB2777" />
+    return null
   }
 
   return (
     <ThemedView safe>
-      <ThemedAppBar title='Link Parent(s) / Guardian' showNotif={false} showProfile={false} />
+      <ThemedAppBar title='Link Child / Children' showNotif={false} showProfile={false} />
 
       <ThemedKeyboardAwareScrollView>
-
-        {/* Linked preview chips */}
+        {/* Linked list */}
         <View>
           <ThemedCard>
-            <ThemedText title>Linked Parent(s)/Guardian</ThemedText>
+            <ThemedText title>Linked Child / Children</ThemedText>
             <ThemedText style={{ opacity: 0.75 }}>Tap a chip to manage.</ThemedText>
-            <Spacer height={10}/>
+            <Spacer height={10} />
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {linked.length === 0 ? (
                 <ThemedText style={{ opacity: 0.6 }}>No linked records yet</ThemedText>
               ) : (
-                linked.map((k) => (
+                linked.map(k => (
                   <ThemedChip
-                    key={`${k.id}-${k.rel}`}
+                    key={`${k.id}`}
+                    // If/when you persist rel per child, use the icon rendering below:
+                    // label={
+                    //   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    //     {getIcon(k.rel)}
+                    //     <ThemedText non_btn>{`${k.name} • ${k.rel}`}</ThemedText>
+                    //   </View>
+                    // }
                     label={`${k.name} • ${k.rel}`}
-                    filled={k.rel !== 'GUARDIAN'}
+                    filled
                     onPress={() => openManage(k)}
                   />
                 ))
@@ -138,40 +131,40 @@ const LinkParentGuardian = () => {
 
           <Spacer />
 
-          {/* Search + relationship picker */}
+          {/* Link form */}
           <ThemedCard>
-            <ThemedText title>Link Parent(s)/Guardian</ThemedText>
+            <ThemedText title>Link a Child</ThemedText>
             <ThemedText style={{ opacity: 0.75 }}>Search existing resident.</ThemedText>
 
             <View>
-              {/* Relation picker (Mother/Father/Guardian) */}
               <ThemedDropdown
                 items={relItems}
                 value={rel}
-                setValue={(v: Rel) => setRel(v)}
+                setValue={(v: CRel) => setRel(v)}
                 placeholder='Relationship'
               />
 
-              <Spacer height={10}/>
+              <Spacer height={10} />
 
-              {/* 🔍 ThemedSearchSelect using live API search results */}
+              {/* 🔎 Live-search select (same pattern as CreateFamily) */}
               <ThemedSearchSelect<PersonSearchRequest>
-                items={residentItems}               // results from the hook
-                getLabel={(p) =>
-                  p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
-                }
+                items={residentItems}   // results from the hook
+                getLabel={(p) => (p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name)}
                 getSubLabel={(p) => p.address}
-                // Keep input controlled so we can trigger the hook's search() on each change
-                inputValue={searchText}
-                onInputValueChange={(t) => {
-                  setSearchText(t)      // update UI
-                  search(t)             // 🔑 fetch/filter results on the server (or hook’s logic)
-                }}
                 placeholder='Search resident by name…'
                 emptyText='No matches'
+
+                // Controlled input so we can call search() on every change
+                inputValue={searchText}
+                onInputValueChange={(t) => {
+                  setSearchText(t) // update UI
+                  search(t)        // 🔑 trigger hook to fetch/filter server-side
+                }}
+
                 onSelect={onPick}
                 fillOnSelect={false}
-                // Client-side fallback filter (kept from your previous version)
+
+                // Optional client-side fallback filter (kept from your version)
                 filter={(p, q) => {
                   const query = q.toLowerCase()
                   return (
@@ -187,7 +180,7 @@ const LinkParentGuardian = () => {
           </ThemedCard>
         </View>
 
-        <Spacer height={15}/>
+        <Spacer height={15} />
 
         {/* Footer actions */}
         <View>
@@ -195,7 +188,7 @@ const LinkParentGuardian = () => {
             <ThemedText non_btn>Skip</ThemedText>
           </ThemedButton>
           <ThemedButton
-            onPress={() => router.push('/(bhwmodals)/(person)/linkchild')}
+            onPress={() => router.push('/(bhwmodals)/(person)/socioeconomicinfo')}
           >
             <ThemedText btn>Continue</ThemedText>
           </ThemedButton>
@@ -214,11 +207,11 @@ const LinkParentGuardian = () => {
           <Pressable style={StyleSheet.absoluteFill} onPress={closeManage} />
           <View style={styles.modalCard}>
             <ThemedText title>Manage Link</ThemedText>
-            <Spacer height={10}/>
-            <ThemedText subtitle style={{opacity: 0.75}}>
+            <Spacer height={10} />
+            <ThemedText subtitle style={{ opacity: 0.75 }}>
               {selected ? `${selected.name} • ${selected.rel}` : ''}
             </ThemedText>
-            <Spacer height={10}/>
+            <Spacer height={10} />
             <View style={styles.modalActions}>
               <ThemedButton style={styles.modalAction} onPress={unlinkSelected}>
                 <ThemedText btn>Unlink</ThemedText>
@@ -230,12 +223,11 @@ const LinkParentGuardian = () => {
           </View>
         </View>
       </Modal>
-
     </ThemedView>
   )
 }
 
-export default LinkParentGuardian
+export default LinkChild
 
 const styles = StyleSheet.create({
   modalOverlay: {
