@@ -137,8 +137,8 @@ const Mpin = () => {
         return
       }
 
-      // ✅ Success
-      markUnlocked()
+      // ✅ Success — persist unlock, then continue
+      await markUnlocked()
       attemptsRef.current = 0
       setPin('')
       openModal('Unlocked', 'Welcome back!', 'success', {

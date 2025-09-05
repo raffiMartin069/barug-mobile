@@ -6,12 +6,12 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    StyleSheet,
-    View,
-    useColorScheme,
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+  useColorScheme,
 } from 'react-native'
 
 // 🎨 Barangay color palette

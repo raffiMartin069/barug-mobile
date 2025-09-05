@@ -9,8 +9,8 @@ export const genderOptions = [
 ];
 
 export const genderMap = {
-  male: 'Male',
-  female: 'Female',
+  male: 'MALE',
+  female: 'FEMALE',
 };
 
 // ✅ Civil Status Options
@@ -23,13 +23,15 @@ export const civilStatusOptions = [
 ];
 
 // Note: number-keyed map (1..5)
+// Note: number-keyed map (1..5)
 export const civilStatusMap: Record<number | string, string> = {
-  1: 'Single',
-  2: 'Married',
-  3: 'Widowed',
-  4: 'Separated',
-  5: 'Divorced',
+  1:'SINGLE',
+  2:'MARRIED',
+  3:'WIDOWED',
+  4:'SEPARATED',
+  5:'DIVORCED',
 };
+
 
 // ✅ Nationality Options
 export const nationalityOptions = [
@@ -57,26 +59,26 @@ export const nationalityOptions = [
 
 // Note: string-keyed map ('1'..'20')
 export const nationalityMap: Record<number | string, string> = {
-  '1': 'American',
-  '2': 'Australian',
-  '3': 'Brazilian',
-  '4': 'British',
-  '5': 'Canadian',
-  '6': 'Chinese',
-  '7': 'Filipino',
-  '8': 'French',
-  '9': 'German',
-  '10': 'Indian',
-  '11': 'Indonesian',
-  '12': 'Italian',
-  '13': 'Japanese',
-  '14': 'Korean',
-  '15': 'Malaysian',
-  '16': 'Russian',
-  '17': 'Saudi',
-  '18': 'Spanish',
-  '19': 'Thai',
-  '20': 'Vietnamese',
+  '1': 'AMERICAN',
+  '2': 'AUSTRALIAN',
+  '3': 'BRAZILIAN',
+  '4': 'BRITISH',
+  '5': 'CANADIAN',
+  '6': 'CHINESE',
+  '7': 'FILIPINO',
+  '8': 'FRENCH',
+  '9': 'GERMAN',
+  '10': 'INDIAN',
+  '11': 'INDONESIAN',
+  '12': 'ITALIAN',
+  '13': 'JAPANESE',
+  '14': 'KOREAN',
+  '15': 'MALAYSIAN',
+  '16': 'RUSSIAN',
+  '17': 'SAUDI',
+  '18': 'SPANISH',
+  '19': 'THAI',
+  '20': 'VIETNAMESE',
 };
 
 // ✅ Religion Options
@@ -100,21 +102,21 @@ export const religionOptions = [
 
 // ✅ Fixed to match options (number-keyed)
 export const religionMap: Record<number | string, string> = {
-  1: 'Agnostic',
-  2: 'Amish',
-  3: 'Born Again',
-  4: 'Buddhist',
-  5: 'Christian',
-  6: 'Evangelical',
-  7: 'Hindu',
-  8: 'Iglesia Ni Cristo',
-  9: 'Islam',
-  10: "Jehovah's Witness",
-  11: 'Orthodox',
-  12: 'Protestant',
-  13: 'Roman Catholic',
-  14: 'Seventh-Day Adventist',
-  15: 'Others',
+  1: 'AGNOSTIC',
+  2: 'AMISH',
+  3: 'BORN AGAIN',
+  4: 'BUDDHIST',
+  5: 'CHRISTIAN',
+  6: 'EVANGELICAL',
+  7: 'HINDU',
+  8: 'IGLESIA NI CRISTO',
+  9: 'ISLAM',
+  10: "JEHOVAH'S WITNESS",
+  11: 'ORTHODOX',
+  12: 'PROTESTANT',
+  13: 'ROMAN CATHOLIC',
+  14: 'SEVENTH-DAY ADVENTIST',
+  15: 'OTHERS',
 };
 
 // Local suffix options (values stored uppercase for backend consistency)
@@ -134,22 +136,22 @@ export const educAttainmentOptions = [
   { label: 'Elementary Graduate', value: '3' },
   { label: 'High School Level', value: '4' },
   { label: 'High School Graduate', value: '5' },
-  { label: 'Vocational', value: '6' },
+  { label: 'Vocational Course', value: '6' },
   { label: 'College Level', value: '7' },
   { label: 'College Graduate', value: '8' },
   { label: 'Postgraduate', value: '9' },
 ];
 
 export const educAttainmentMap: Record<number | string, string> = {
-  1: 'No Formal Education',
-  2: 'Elementary Level',
-  3: 'Elementary Graduate',
-  4: 'High School Level',
-  5: 'High School Graduate',
-  6: 'Vocational',
-  7: 'College Level',
-  8: 'College Graduate',
-  9: 'Postgraduate',
+  1: 'NO FORMAL EDUCATION',
+  2: 'ELEMENTARY LEVEL',
+  3: 'ELEMENTARY GRADUATE',
+  4: 'HIGH SCHOOL LEVEL',
+  5: 'HIGH SCHOOL GRADUATE',
+  6: 'VOCATIONAL COURSE',
+  7: 'COLLEGE LEVEL',
+  8: 'COLLEGE GRADUATE',
+  9: 'POSTGRADUATE',
 };
 
 // ✅ Employment Status Options
@@ -172,20 +174,20 @@ export const empStatOptions = [
 
 // ✅ Employment Status Map
 export const empStatMap: Record<number | string, string> = {
-  1: 'Employed',
-  2: 'Unemployed',
+  1: 'EMPLOYED',
+  2: 'UNEMPLOYED',
   3: 'OFW',
-  4: 'Student',
-  5: 'Retired',
-  6: 'Self-Employed',
-  7: 'Pensioner',
-  8: 'Housewife',
-  9: 'Freelancer',
-  10: 'Disabled',
-  11: 'Looking for Work',
-  12: 'Part-Time',
-  13: 'Full-Time',
-  14: 'Underemployed',
+  4: 'STUDENT',
+  5: 'RETIRED',
+  6: 'SELF-EMPLOYED',
+  7: 'PENSIONER',
+  8: 'HOUSEWIFE',
+  9: 'FREELANCER',
+  10: 'DISABLED',
+  11: 'LOOKING FOR WORK',
+  12: 'PART-TIME',
+  13: 'FULL-TIME',
+  14: 'UNDEREMPLOYED',
 };
 
 // ✅ Monthly Personal Income Options
@@ -227,13 +229,13 @@ export const govProgOptions = [
 
 // ✅ Government Programs Map
 export const govProgMap: Record<number | string, string> = {
-  1: '4Ps',
+  1: '4PS',
   2: 'GSIS',
-  3: 'PhilHealth',
+  3: 'PHILHEALTH',
   4: 'PWD',
-  5: 'Senior Citizen',
+  5: 'SENIOR CITIZEN',
   6: 'SSS',
-  7: 'None',
+  7: 'NONE',
 };
 
 

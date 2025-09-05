@@ -1,3 +1,4 @@
+// app/residentprofile.tsx
 import NiceModal, { type ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -9,19 +10,20 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { supabase } from '@/constants/supabase'
-import { fetchResidentPlus } from '@/services/profile'
 import { useAccountRole } from '@/store/useAccountRole'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 
 export const options = { href: null }
 
-const ResidentProfile = () => {
-  const router = useRouter()
+// keep in sync with your guard/sessionUnlock
+const UNLOCKED_SESSION_KEY = 'unlocked_session'
 
-  // get user role (RESIDENT OR STAFF)
-  const { role } = useAccountRole()
+export default function ResidentProfile() {
+  const router = useRouter()
+  const { currentRole, staffId, getProfile, ensureLoaded, clearAll } = useAccountRole()
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
@@ -33,35 +35,33 @@ const ResidentProfile = () => {
   const [modalPrimaryText, setModalPrimaryText] = useState('Got it')
   const [modalSecondaryText, setModalSecondaryText] = useState<string | undefined>(undefined)
 
-  // Data (from params or fetch fallback)
+  // Data (from params or cached store)
   const params = useLocalSearchParams<{ profile?: string }>()
-  const [profile, setProfile] = useState<any | null>(null)
-  const [loading, setLoading] = useState(true)
+  const role = currentRole ?? 'resident'
 
-  // FETCH PROFILE RELATED DATA
+  const parsedFromParams = (() => {
+    if (!params?.profile) return null
+    try { return JSON.parse(String(params.profile)) } catch { return null }
+  })()
+
+  const cached = getProfile(role)
+  const initial = parsedFromParams ?? cached ?? null
+
+  const [profile, setProfile] = useState<any | null>(initial)
+  const [loading, setLoading] = useState(!initial)
+
+  // SWR: ensure profile is present/fresh (store decides via TTL; no fetch if fresh)
   useEffect(() => {
-    const init = async () => {
-      setLoading(true)
-      try {
-        if (params?.profile) {
-          try {
-            const parsed = JSON.parse(String(params.profile))
-            setProfile(parsed)
-            return
-          } catch {
-            // fall through to fetch
-          }
-        }
-        const { details } = await fetchResidentPlus()
-        setProfile(details)
-      } finally {
-        setLoading(false)
-      }
-    }
-    init()
-  }, [params?.profile])
+    let live = true
+    ;(async () => {
+      const fresh = await ensureLoaded('resident') // you can branch by role when staff/business are implemented
+      if (!live) return
+      if (fresh) setProfile(fresh)
+      setLoading(false)
+    })()
+    return () => { live = false }
+  }, [role, ensureLoaded])
 
-  
   const fullName = useMemo(() => {
     const fn = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix]
       .filter(Boolean)
@@ -103,9 +103,16 @@ const ResidentProfile = () => {
       {
         primaryText: 'Sign out',
         onPrimary: async () => {
-          await supabase.auth.signOut()
-          router.dismissAll()
-          router.replace('/(auth)/phone')
+          try {
+            await AsyncStorage.removeItem(UNLOCKED_SESSION_KEY) // lock app again
+          } catch {}
+          try {
+            await supabase.auth.signOut()
+          } finally {
+            clearAll() // wipe cached profiles/role from store (and AsyncStorage via persist)
+            router.dismissAll()
+            router.replace('/(auth)/phone')
+          }
         },
         secondaryText: 'Cancel',
       }
@@ -137,7 +144,7 @@ const ResidentProfile = () => {
   }
 
   return (
-    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
+    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe>
       <ThemedAppBar title='Profile' showProfile={false} showNotif={false} showSettings={true} />
 
       <ThemedKeyboardAwareScrollView>
@@ -146,7 +153,7 @@ const ResidentProfile = () => {
         <ThemedCard>
           <View style={{ alignItems: 'center' }}>
             <ThemedImage
-              // change to {uri: profile?.profile_picture} if you store a URL
+              // change to { uri: profile?.profile_picture } if you store a URL
               src={require('@/assets/images/default-image.jpg')}
               size={90}
             />
@@ -156,16 +163,17 @@ const ResidentProfile = () => {
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle>Resident ID:</ThemedText>
-            <ThemedText subtitle>{profile?.person_id ?? '—'} role: {role}</ThemedText>
+            <ThemedText subtitle>
+              {profile?.person_id ?? '—'}  role: {role}{staffId && role === 'staff' ? ` (staffId: ${staffId})` : ''}
+            </ThemedText>
           </View>
 
           {role === 'staff' && (
             <View style={styles.row}>
               <ThemedText style={styles.bold} subtitle>Staff ID:</ThemedText>
-              <ThemedText subtitle>{profile?.staff_id ?? '—'}</ThemedText>
+              <ThemedText subtitle>{staffId ?? profile?.staff_id ?? '—'}</ThemedText>
             </View>
           )}
-
 
           <View style={styles.row}>
             <ThemedText style={styles.bold} subtitle>Name:</ThemedText>
@@ -365,24 +373,10 @@ const ResidentProfile = () => {
           </ThemedButton>
         </View>
 
-
         <Spacer height={20} />
       </ThemedKeyboardAwareScrollView>
 
-      {/* Shared NiceModal */}
-      <NiceModal
-        visible={modalOpen}
-        title={modalTitle}
-        message={modalMsg}
-        variant={modalVariant}
-        primaryText={modalPrimaryText}
-        secondaryText={modalSecondaryText}
-        onPrimary={() => { modalPrimary?.(); setModalOpen(false) }}
-        onSecondary={() => { modalSecondary?.(); setModalOpen(false) }}
-        onClose={() => setModalOpen(false)}
-      />
-
-      {/* Shared NiceModal */}
+      {/* Shared NiceModal (single instance) */}
       <NiceModal
         visible={modalOpen}
         title={modalTitle}
@@ -398,13 +392,9 @@ const ResidentProfile = () => {
   )
 }
 
-export default ResidentProfile
-
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 },
   bold: { fontWeight: '600' },
-  relationship: { color: '#808080' },
-  member: { backgroundColor: '#310101' },
   familyList: { gap: 10 },
   familyCard: { backgroundColor: '#f3f4f6', padding: 12, borderRadius: 8 },
 })

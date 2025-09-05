@@ -1,3 +1,4 @@
+// app/(resident)/(tabs)/residenthome.tsx
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedCard from '@/components/ThemedCard'
@@ -6,34 +7,50 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { fetchResidentPlus } from '@/services/profile'
+import { useAccountRole } from '@/store/useAccountRole'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const ResidentHome = () => {
   const router = useRouter()
+  const roleStore = useAccountRole()
 
-  const [loading, setLoading] = useState(true)
-  const [details, setDetails] = useState<any | null>(null)
-  const [isStaff, setIsStaff] = useState(false)
+  // Use currentRole if set; default to 'resident'
+  const role = roleStore.currentRole ?? 'resident'
 
-  // Fetch Profile-Related
+  // Pull the cached profile immediately (no network)
+  const cached = roleStore.getProfile(role)
+
+  const [loading, setLoading] = useState(!cached)
+  const [details, setDetails] = useState<any | null>(cached ?? null)
+
+  // 🔄 Ensure data is loaded (fetches only if missing/stale; TTL handled in store)
   useEffect(() => {
     let live = true
     ;(async () => {
-      setLoading(true)
+      const fresh = await roleStore.ensureLoaded('resident')
+      if (!live) return
+      if (fresh) setDetails(fresh)
+      setLoading(false)
+
+      // 🧪 debug: inspect persisted store once you land here
       try {
-        const { details, is_staff } = await fetchResidentPlus()
-        if (!live) return
-        setDetails(details)
-        setIsStaff(!!is_staff)
-      } finally {
-        if (live) setLoading(false)
+        const raw = await AsyncStorage.getItem('role-store-v1')
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          console.log('[ResidentHome] role-store-v1:', parsed)
+        } else {
+          console.log('[ResidentHome] role-store-v1: <empty>')
+        }
+      } catch (e) {
+        console.log('[ResidentHome] failed to read role-store-v1:', e)
       }
     })()
     return () => { live = false }
-  }, [])
+    // it's fine to depend on the stable store functions/role
+  }, [role, roleStore.ensureLoaded])
 
   const fullName = useMemo(() => {
     const fn = [details?.first_name, details?.middle_name, details?.last_name, details?.suffix]
@@ -59,7 +76,7 @@ const ResidentHome = () => {
   }
 
   return (
-    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
+    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe>
       <ThemedAppBar
         title={'Barangay Sto. Niño'}
         showBack={false}
@@ -71,9 +88,11 @@ const ResidentHome = () => {
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
           <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
-            <ThemedText title={true}>Welcome, {details?.first_name ?? fullName}! ID: {details?.person_id}</ThemedText>
+            <ThemedText title={true}>
+              Welcome, {details?.first_name ?? fullName}! ID: {details?.person_id}
+            </ThemedText>
             <ThemedImage
-              // if you store a URL in profile_picture, you can switch to {uri: details?.profile_picture}
+              // if you store a URL in profile_picture, you can switch to { uri: details?.profile_picture }
               src={require('@/assets/images/default-image.jpg')}
               size={60}
             />
@@ -134,6 +153,7 @@ const ResidentHome = () => {
                 <ThemedText style={styles.badgeText}>Approved</ThemedText>
               </View>
             </View>
+
             <View style={styles.activityItem}>
               <ThemedIcon
                 name={'newspaper'}
@@ -175,6 +195,7 @@ const ResidentHome = () => {
                 <ThemedText style={styles.badgeText}>Processing</ThemedText>
               </View>
             </View>
+
             <View style={styles.activityItem}>
               <ThemedIcon
                 name={'receipt'}
@@ -217,9 +238,9 @@ const ResidentHome = () => {
               </View>
             </View>
           </ThemedCard>
-          
+
           <ThemedCard>
-          <Spacer height={20} />
+            <Spacer height={20} />
             <View style={styles.activityItem}>
               <ThemedIcon
                 name={'folder-open'}

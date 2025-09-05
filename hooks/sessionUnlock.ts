@@ -1,14 +1,13 @@
 // hooks/sessionUnlock.ts
-let unlocked = false
+import AsyncStorage from '@react-native-async-storage/async-storage'
+export const UNLOCKED_SESSION = 'unlocked_session'
 
-export function isUnlocked() {
-  return unlocked
+export async function isUnlocked() {
+  return !!(await AsyncStorage.getItem(UNLOCKED_SESSION))
 }
-
-export function markUnlocked() {
-  unlocked = true
+export async function markUnlocked() {
+  await AsyncStorage.setItem(UNLOCKED_SESSION, '1')
 }
-
-export function resetUnlocked() {
-  unlocked = false
+export async function resetUnlocked() {
+  await AsyncStorage.removeItem(UNLOCKED_SESSION)
 }
