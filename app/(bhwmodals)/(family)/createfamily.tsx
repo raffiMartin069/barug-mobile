@@ -19,9 +19,9 @@ import { RELATIONSHIP } from '@/constants/relationship'
 
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 
+import { useFamilyCreation } from '@/hooks/useFamilyCreation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
-import { useFamilyCreation } from '@/hooks/useFamilyCreation'
 
 const CreateFamily = () => {
 

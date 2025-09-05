@@ -36,7 +36,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
         )}
   
         {showProfile && (
-          <TouchableOpacity onPress={() => router.push('/')}>
+          <TouchableOpacity onPress={() => router.push('/residentprofile')}>
               <Ionicons name='person' size={20} color={theme.background}/>
           </TouchableOpacity>
         )}
