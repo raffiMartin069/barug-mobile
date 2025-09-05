@@ -1,5 +1,7 @@
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { fetchResidentPlus } from '@/services/profile'
+import { useAccountRole } from '@/store/useAccountRole'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
@@ -11,7 +13,6 @@ import {
     View,
     useColorScheme,
 } from 'react-native'
-import { supabase } from '../../constants/supabase'
 
 // 🎨 Barangay color palette
 const COLORS = {
@@ -31,36 +32,57 @@ type Option = {
 }
 
 export default function ChooseAccount() {
-  const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [details, setDetails] = useState<any | null>(null)
+  const [isStaff, setIsStaff] = useState(false)
+  const [staffId, setStaffId] = useState<number | null>(null)
+
   const router = useRouter()
   const scheme = useColorScheme()
+  const roleStore = useAccountRole()
+
+  // build a safe full name
+  const fullName = useMemo(() => {
+    if (!details) return undefined
+    const parts = [details.first_name, details.middle_name, details.last_name, details.suffix]
+      .filter(Boolean)
+      .join(' ')
+    return parts || undefined
+  }, [details])
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    let live = true
+    ;(async () => {
       setLoading(true)
-      const { data, error } = await supabase.rpc('me_profile')
-      if (error) console.error(error)
-      setProfile(data ?? {})
-      setLoading(false)
+      try {
+        const { details, is_staff, staff_id } = await fetchResidentPlus()
+        if (!live) return
+        setDetails(details)
+        setIsStaff(!!is_staff)
+        setStaffId(staff_id ?? null)
+      } finally {
+        if (live) setLoading(false)
+      }
+    })()
+    return () => {
+      live = false
     }
-    fetchProfile()
   }, [])
 
   const options: Option[] = useMemo(() => {
-    if (!profile) return []
     const list: Option[] = []
 
-    if (profile.person_id) {
+    if (details?.person_id) {
       list.push({
         label: 'Login as Resident',
         type: 'resident',
-        subtitle: profile.full_name || undefined,
+        subtitle: fullName,
         icon: 'person',
       })
     }
 
-    if (profile.is_business_owner) {
+    // keep business option if you support it later
+    if (details?.is_business_owner) {
       list.push({
         label: 'Login as Business Owner',
         type: 'business',
@@ -69,21 +91,17 @@ export default function ChooseAccount() {
       })
     }
 
-    if (profile.staff && Array.isArray(profile.staff) && profile.staff.length > 0) {
-      const staffSummary =
-        profile.staff.length === 1
-          ? `${profile.staff[0].staff_code ?? 'Staff Account'}`
-          : `${profile.staff.length} staff accounts`
+    if (isStaff && staffId) {
       list.push({
         label: 'Login as Staff',
         type: 'staff',
-        subtitle: staffSummary,
+        subtitle: `Staff ID: ${staffId}`,
         icon: 'shield-checkmark',
       })
     }
 
     return list
-  }, [profile])
+  }, [details, isStaff, staffId, fullName])
 
   useEffect(() => {
     if (!loading && options.length === 1) {
@@ -93,9 +111,19 @@ export default function ChooseAccount() {
   }, [loading, options.length])
 
   const handleChoose = (type: Option['type']) => {
-    if (type === 'resident') router.replace('/(resident)/(tabs)/residenthome')
-    if (type === 'business') router.replace('/(resident)/(tabs)/residenthome')
-    if (type === 'staff') router.replace('/(bhw)/(tabs)/bhwhome')
+    if (type === 'resident') {
+      roleStore.setResident()
+      return router.replace('/(resident)/(tabs)/residenthome')
+    }
+    if (type === 'business') {
+      // change route when your business area is ready
+      roleStore.setResident()
+      return router.replace('/(resident)/(tabs)/residenthome')
+    }
+    if (type === 'staff' && staffId) {
+      roleStore.setStaff(staffId)
+      return router.replace('/(bhw)/(tabs)/bhwhome')
+    }
   }
 
   if (loading) {
