@@ -2,14 +2,16 @@ import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
+import ThemedChip from '@/components/ThemedChip'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import React, { useMemo } from 'react'
+import { Pressable, StyleSheet, View } from 'react-native'
 
 export const options = {
   href: null,
@@ -17,6 +19,15 @@ export const options = {
 
 const ResidentProfile = () => {
   const router = useRouter()
+
+  const familyMembers = useMemo(
+    () => [
+      { name: 'Maria Lourdes A. Cruz' },
+      { name: 'Renzo Gabriel A. Cruz' },
+      { name: 'Andrei A. Cruz' },
+    ],
+    []
+  )
   
   return (
     <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe={true}>
@@ -214,22 +225,54 @@ const ResidentProfile = () => {
 
           <Spacer height={10}/>  
 
-          <View style={styles.familyList}>
-          {[
-            { name: 'Maria Lourdes A. Cruz' },
-            { name: 'Renzo Gabriel A. Cruz' },
-            { name: 'Andrei A. Cruz' },
-          ].map((member, index) => (
-            <View key={index} style={styles.familyCard}>
-              <ThemedText subtitle={true}>
-                {member.name}
-              </ThemedText>
-            </View>
-          ))}
-        </View>
+           <View style={styles.chipsWrap}>
+            {familyMembers.map((m, idx) => (
+              <ThemedChip
+                key={`${m.name}-${idx}`}
+                label={m.name}
+                filled={false}
+                onPress={() => {}}
+              />
+            ))}
+          </View>
 
         <Spacer height={15}/>
       
+        </ThemedCard>
+
+        <Spacer />
+
+        <ThemedCard>
+          <ThemedText title>Other Services</ThemedText>
+
+          <Spacer height={10}/>
+          <ThemedDivider />
+          <Spacer height={10}/>
+
+          <View>
+            <Pressable
+              onPress={() => router.push('/businessinfo')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flex: 1,
+                paddingVertical: 12,
+              }}
+            >
+
+              <View style={{ flexShrink: 1 }}>
+                <ThemedText style={{ fontSize: 16, fontWeight: '700' }}>
+                  Business Profile
+                </ThemedText>
+                <ThemedText style={{ color: 'gray', flexWrap: 'wrap' }}>
+                  Apply for a Business Profile
+                </ThemedText>
+              </View>
+
+              <Ionicons name="chevron-forward" size={18} />
+            </Pressable>
+          </View>
         </ThemedCard>
 
         <Spacer height={15}/>
@@ -264,12 +307,8 @@ const styles = StyleSheet.create({
   member: {
     backgroundColor: "#310101",
   },
-  familyList: {
-    gap: 10,
-  },
-  familyCard: {
-    backgroundColor: '#f3f4f6',
-    padding: 12,
-    borderRadius: 8,
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
 })

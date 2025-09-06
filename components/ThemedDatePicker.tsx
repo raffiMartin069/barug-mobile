@@ -18,8 +18,10 @@ const ThemedDatePicker = ({ style = null, placeholder, value, onChange, mode, mi
   };
 
   const displayValue = value
-    ? value.toLocaleDateString()
-    : '';
+  ? mode === 'time'
+    ? value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : value.toLocaleDateString()
+  : '';
 
   return (
     <>
@@ -57,6 +59,8 @@ const ThemedDatePicker = ({ style = null, placeholder, value, onChange, mode, mi
           onChange={handleDateChange}
           minimumDate={minimumDate}
           maximumDate={maximumDate}
+          themeVariant="light"         // or "dark"
+          accentColor="#310101"  
         />
       )}
     </>
