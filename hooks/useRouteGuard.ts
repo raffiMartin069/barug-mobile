@@ -31,10 +31,10 @@ async function debugDumpAsyncStorage(tag: string) {
         dump[k] = v
       }
     }
-    console.log(`[Guard][${tag}] keys:`, keys)
-    console.log(`[Guard][${tag}] dump:`, dump)
+    //console.log(`[Guard][${tag}] keys:`, keys)
+    //console.log(`[Guard][${tag}] dump:`, dump)
   } catch (e) {
-    console.log(`[Guard][${tag}] dump error:`, e)
+    //console.log(`[Guard][${tag}] dump error:`, e)
   }
 }
 
@@ -53,7 +53,7 @@ export function useRouteGuard(): GuardState {
     bootClearedRef.current = true
     ;(async () => {
       await AsyncStorage.removeItem(UNLOCKED_SESSION)
-      console.log('[Guard] Cleared unlocked_session on boot')
+      // console.log('[Guard] Cleared unlocked_session on boot')
       await debugDumpAsyncStorage('after-boot-clear')
     })()
   }, [])
@@ -204,7 +204,7 @@ export function useRouteGuard(): GuardState {
             staffId ? 'staff' : null,
           ].filter(Boolean) as string[]
 
-          console.log('[Guard] computed roles:', roles)
+          // console.log('[Guard] computed roles:', roles)
           await debugDumpAsyncStorage('before-exit-auth')
 
           if (roles.length <= 1) {

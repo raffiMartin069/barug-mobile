@@ -3,15 +3,18 @@
 // =============================================
 
 // ✅ Gender Options
+// ✅ Gender Options (use numeric-string values to match lookup IDs)
 export const genderOptions = [
-  { label: 'Male', value: 'male' },
-  { label: 'Female', value: 'female' },
+  { label: 'Male', value: '1' },
+  { label: 'Female', value: '2' },
 ];
 
-export const genderMap = {
-  male: 'MALE',
-  female: 'FEMALE',
+// ✅ Number-keyed map to support reverse lookup by label
+export const genderMap: Record<number | string, string> = {
+  1: 'MALE',
+  2: 'FEMALE',
 };
+
 
 // ✅ Civil Status Options
 export const civilStatusOptions = [
@@ -83,40 +86,38 @@ export const nationalityMap: Record<number | string, string> = {
 
 // ✅ Religion Options
 export const religionOptions = [
-  { label: 'Roman Catholic', value: '13' },
-  { label: 'Islam', value: '9' },
-  { label: 'Born Again', value: '3' },
-  { label: 'Iglesia Ni Cristo', value: '8' },
+  { label: 'Roman Catholic', value: '12' },
+  { label: 'Islam', value: '8' },
+  { label: 'Born Again', value: '2' },
+  { label: 'Iglesia Ni Cristo', value: '7' },
   { label: 'Agnostic', value: '1' },
-  { label: 'Amish', value: '2' },
-  { label: 'Buddhist', value: '4' },
-  { label: 'Christian', value: '5' },
-  { label: 'Evangelical', value: '6' },
-  { label: 'Hindu', value: '7' },
-  { label: "Jehovah's Witness", value: '10' },
-  { label: 'Orthodox', value: '11' },
-  { label: 'Protestant', value: '12' },
-  { label: 'Seventh-Day Adventist', value: '14' },
-  { label: 'Others', value: '15' },
+  { label: 'Buddhist', value: '3' },
+  { label: 'Christian', value: '4' },
+  { label: 'Evangelical', value: '5' },
+  { label: 'Hindu', value: '6' },
+  { label: "Jehovah's Witness", value: '9' },
+  { label: 'Orthodox', value: '10' },
+  { label: 'Protestant', value: '11' },
+  { label: 'Seventh-Day Adventist', value: '13' },
+  { label: 'Others', value: '14' },
 ];
 
 // ✅ Fixed to match options (number-keyed)
 export const religionMap: Record<number | string, string> = {
   1: 'AGNOSTIC',
-  2: 'AMISH',
-  3: 'BORN AGAIN',
-  4: 'BUDDHIST',
-  5: 'CHRISTIAN',
-  6: 'EVANGELICAL',
-  7: 'HINDU',
-  8: 'IGLESIA NI CRISTO',
-  9: 'ISLAM',
-  10: "JEHOVAH'S WITNESS",
-  11: 'ORTHODOX',
-  12: 'PROTESTANT',
-  13: 'ROMAN CATHOLIC',
-  14: 'SEVENTH-DAY ADVENTIST',
-  15: 'OTHERS',
+  2: 'BORN AGAIN',
+  3: 'BUDDHIST',
+  4: 'CHRISTIAN',
+  5: 'EVANGELICAL',
+  6: 'HINDU',
+  7: 'IGLESIA NI CRISTO',
+  8: 'ISLAM',
+  9: "JEHOVAH'S WITNESS",
+  10: 'ORTHODOX',
+  11: 'PROTESTANT',
+  12: 'ROMAN CATHOLIC',
+  13: 'SEVENTH-DAY ADVENTIST',
+  14: 'OTHERS',
 };
 
 // Local suffix options (values stored uppercase for backend consistency)
@@ -189,6 +190,31 @@ export const empStatMap: Record<number | string, string> = {
   13: 'FULL-TIME',
   14: 'UNDEREMPLOYED',
 };
+
+
+/** ---------- Residential Status ---------- */
+export const residentialStatusMap: Record<string, string> = {
+  '1': 'PENDING',
+  '2': 'RESIDENT',
+  '3': 'MOVED OUT',
+  '4': 'MIGRATED',
+  '5': 'TRANSIENT',
+  '6': 'NON RESIDENT',
+  '7': 'BUSINESS OWNER',
+}
+
+export const residentialStatusOptions = [
+  { label: 'PENDING', value: '1' },
+  { label: 'RESIDENT', value: '2' },
+  { label: 'MOVED OUT', value: '3' },
+  { label: 'MIGRATED', value: '4' },
+  { label: 'TRANSIENT', value: '5' },
+  { label: 'NON RESIDENT', value: '6' },
+  { label: 'BUSINESS OWNER', value: '7' },
+];
+
+
+
 
 // ✅ Monthly Personal Income Options
 export const mnthlyPerosonalIncomeOptions = [

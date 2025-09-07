@@ -1,4 +1,4 @@
-// services/profiling.ts
+// services/profile.ts
 import { supabase } from '@/constants/supabase'
 
 export async function getMyProfile() {
@@ -141,3 +141,65 @@ export async function updateResident(args: UpdateResidentArgs) {
   if (error) throw error
   return data
 }
+
+// services/profile.ts
+
+// --- helpers (local to this file) ---
+function coerceNullable(v: number | 0 | null | undefined) {
+  // Keep 0 (sentinel = clear), convert undefined to null, otherwise pass-through
+  if (v === 0) return 0
+  if (v == null) return null
+  return v
+}
+function emptyToNull<T>(arr: T[] | null | undefined) {
+  return arr && arr.length ? arr : null
+}
+
+// --- types (you already declared this; keep if not exported elsewhere) ---
+export type UpdateRelationsArgs = {
+  p_performed_by: number
+  p_person_id: number
+  p_reason: string
+  /** Parent links:
+   *  - number  = set to that person_id
+   *  - 0       = clear existing link
+   *  - null    = leave as-is (no change)
+   */
+  p_mother_id: number | 0 | null
+  p_father_id: number | 0 | null
+
+  /** Optional single guardian link:
+   *   - number = set guardian
+   *   - 0      = clear guardian
+   *   - null   = leave as-is
+   * If you’ll support multiple guardians in SQL later, we can extend this.
+   */
+  p_guardian_id: number | 0 | null
+
+  /** Children diffs (server will only add/remove what’s provided) */
+  p_children_add: number[] | null
+  p_children_remove: number[] | null
+}
+
+// --- NEW: update_person_relations RPC wrapper ---
+export async function updatePersonRelations(args: UpdateRelationsArgs) {
+  const payload = {
+    p_performed_by: args.p_performed_by,
+    p_person_id: args.p_person_id,
+    p_reason: args.p_reason?.trim() ?? '',
+
+    // parents / guardian: keep 0 as sentinel to CLEAR, null for "no change"
+    p_mother_id: coerceNullable(args.p_mother_id),
+    p_father_id: coerceNullable(args.p_father_id),
+    p_guardian_id: coerceNullable(args.p_guardian_id),
+
+    // children diffs: send null (not []) to mean "no change"
+    p_children_add: emptyToNull(args.p_children_add),
+    p_children_remove: emptyToNull(args.p_children_remove),
+  } as const
+
+  const { data, error } = await supabase.rpc('update_person_relations', payload)
+  if (error) throw error
+  return data
+}
+

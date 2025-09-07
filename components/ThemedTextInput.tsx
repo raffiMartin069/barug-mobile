@@ -60,7 +60,7 @@ const styles = StyleSheet.create ({
         paddingHorizontal: 12,
     },
     textinput: {
-        paddingVertical: 15,
+        paddingVertical: 10,
     },
     iconContainer: {
         paddingHorizontal: 5,

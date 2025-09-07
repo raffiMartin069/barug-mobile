@@ -16,6 +16,7 @@ const MPIN_LEN = 4
 const ATTEMPT_LIMIT = 5
 const LOCK_SECONDS = 60
 const LOCK_KEY = 'mpin_lock_until_ts'
+const UNLOCKED_SESSION = 'unlocked_session'
 
 function maskPH(phone?: string) {
   if (!phone) return ''
@@ -137,10 +138,13 @@ const Mpin = () => {
         return
       }
 
-      // ✅ Success — persist unlock, then continue
+      // ✅ Success — persist unlock, clear any previous lock, then move on
       await markUnlocked()
+      await AsyncStorage.removeItem(LOCK_KEY) // clear any existing lock token
       attemptsRef.current = 0
+      setLockedUntil(0)
       setPin('')
+
       openModal('Unlocked', 'Welcome back!', 'success', {
         onPrimary: () => {
           router.replace('/(auth)/choose-account')
@@ -188,6 +192,10 @@ const Mpin = () => {
       {
         primaryText: 'Sign out',
         onPrimary: async () => {
+          try {
+            await AsyncStorage.removeItem(UNLOCKED_SESSION) // re-lock the app
+            await AsyncStorage.removeItem(LOCK_KEY)         // clear any lock token
+          } catch {}
           await supabase.auth.signOut()
           router.replace('/(auth)/phone')
         },
@@ -254,9 +262,6 @@ const Mpin = () => {
         <Pressable onPress={confirmForgot} disabled={busy}>
           <ThemedText style={styles.link}>Forgot MPIN?</ThemedText>
         </Pressable>
-        {/* <Pressable onPress={() => router.push('/(auth)/change-mpin')} disabled={busy}>
-          <ThemedText style={styles.link}>Change MPIN</ThemedText>
-        </Pressable> */}
         <Pressable onPress={confirmUseAnother} disabled={busy}>
           <ThemedText style={styles.link}>Use another number</ThemedText>
         </Pressable>

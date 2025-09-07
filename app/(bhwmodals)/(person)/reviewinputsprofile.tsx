@@ -7,14 +7,14 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import {
-    civilStatusMap,
-    educAttainmentMap,
-    empStatMap,
-    genderMap,
-    govProgMap,
-    mnthlyPersonalIncomeMap,
-    nationalityMap,
-    religionMap,
+  civilStatusMap,
+  educAttainmentMap,
+  empStatMap,
+  genderMap,
+  govProgMap,
+  mnthlyPersonalIncomeMap,
+  nationalityMap,
+  religionMap,
 } from '@/constants/formoptions'
 import { profileResident, type ProfileResidentArgs } from '@/services/profiling'
 import { useResidentFormStore } from '@/store/forms'
@@ -58,9 +58,7 @@ const toIntOrNull = (v?: string | number | null) => {
 /** Normalize an array of IDs into integer[] (DB wants integer[]) */
 const toIntArray = (arr?: Array<string | number> | null): number[] => {
   if (!Array.isArray(arr)) return []
-  return arr
-    .map((x) => Number(x))
-    .filter((n) => Number.isFinite(n)) as number[]
+  return arr.map((x) => Number(x)).filter((n) => Number.isFinite(n)) as number[]
 }
 
 /** Normalize numeric input to number|null (for latitude/longitude) */
@@ -111,6 +109,10 @@ const ReviewInputsProfile = () => {
       const performerId = 5
       const residencyPeriod = 0
 
+      console.log("MOTHER ID: ", data.motherId)
+      console.log("FATHER ID: ", data.fatherId)
+      console.log("GUARDIAN ID: ", data.guardianId)
+      
       const payload: ProfileResidentArgs = {
         p_performer_id: performerId,
         p_last_name: last,
@@ -123,8 +125,8 @@ const ReviewInputsProfile = () => {
         p_residency_period: residencyPeriod,
         p_occupation: data.occupation?.trim() || '',
 
-        // lookups -> integer
-        p_sex_id: 1,
+        // lookups -> integer (use selected gender id; no hardcode)
+        p_sex_id: toIntOrNull(data.gender) ?? 0,
         p_civil_status_id: toIntOrNull(data.civilStatus) ?? 0,
         p_nationality_id: toIntOrNull(data.nationality) ?? 0,
         p_religion_id: toIntOrNull(data.religion) ?? 0,
@@ -146,7 +148,11 @@ const ReviewInputsProfile = () => {
         // relationships (ids must be integer or null / integer[])
         p_mother_person_id: toIntOrNull(data.motherId),
         p_father_person_id: toIntOrNull(data.fatherId),
-        p_guardian_person_ids: toIntArray(data.guardianIds),
+
+        // ✅ single guardian -> send as 0 or [id] depending on your RPC contract
+        // ProfileResidentArgs expects integer[], so pass [] or [guardianId]
+        p_guardian_person_ids: toIntArray(data.guardianId ? [data.guardianId] : []),
+
         p_child_person_ids: toIntArray(data.childIds),
 
         // flags
@@ -154,7 +160,7 @@ const ReviewInputsProfile = () => {
         p_is_email_verified: false,
         p_is_id_valid: false,
       }
-
+      console.log("DEBUG payload: ", payload)
       await profileResident(payload)
 
       openModal({
@@ -320,12 +326,11 @@ const ReviewInputsProfile = () => {
             <ThemedText subtitle>{data.fatherName || '—'}</ThemedText>
           </View>
 
+          {/* ✅ Single guardian */}
           <Spacer height={10} />
           <View style={styles.row}>
-            <ThemedText subtitle>Guardian(s):</ThemedText>
-            <ThemedText subtitle>
-              {data.guardianNames.length ? data.guardianNames.join(', ') : '—'}
-            </ThemedText>
+            <ThemedText subtitle>Guardian:</ThemedText>
+            <ThemedText subtitle>{data.guardianName || '—'}</ThemedText>
           </View>
 
           {/* Children list */}
@@ -348,8 +353,6 @@ const ReviewInputsProfile = () => {
 
                     <View style={{ flex: 1 }}>
                       <ThemedText subtitle>{name}</ThemedText>
-                      {/* If you later store per-child relation (SON/DAUGHTER), add a tiny sub label here */}
-                      {/* <ThemedText style={{opacity: 0.6, fontSize: 12}}>{childRels[idx]}</ThemedText> */}
                     </View>
                   </View>
                 ))}

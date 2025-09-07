@@ -20,9 +20,9 @@ export default function RootLayout() {
       try {
         const keys = await AsyncStorage.getAllKeys()
         const entries = await AsyncStorage.multiGet(keys)
-        console.log('🔎 [AsyncStorage dump]:')
+        // console.log('🔎 [AsyncStorage dump]:')
         entries.forEach(([k, v]) => {
-          console.log(`  ${k}:`, v)
+          // console.log(`  ${k}:`, v)
         })
       } catch (err) {
         console.warn('Failed to read AsyncStorage:', err)

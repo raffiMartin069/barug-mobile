@@ -1,8 +1,9 @@
+// app/(auth)/choose-account.tsx
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { fetchResidentPlus } from '@/services/profile'
 import { useAccountRole } from '@/store/useAccountRole'
 import { Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
@@ -11,17 +12,15 @@ import {
   Pressable,
   StyleSheet,
   View,
-  useColorScheme,
 } from 'react-native'
 
-// 🎨 Barangay color palette
 const COLORS = {
   bg: '#F7F8FA',
   card: '#FFFFFF',
   text: '#111827',
   muted: '#6B7280',
   border: '#E5E7EB',
-  primary: '#4d0602ff', // deep maroon brand color
+  primary: '#4d0602ff',
 }
 
 type Option = {
@@ -32,16 +31,41 @@ type Option = {
 }
 
 export default function ChooseAccount() {
-  const [loading, setLoading] = useState(true)
-  const [details, setDetails] = useState<any | null>(null)
-  const [isStaff, setIsStaff] = useState(false)
-  const [staffId, setStaffId] = useState<number | null>(null)
-
   const router = useRouter()
-  const scheme = useColorScheme()
-  const roleStore = useAccountRole()
+  const store = useAccountRole()
 
-  // build a safe full name
+  const cached = store.getProfile('resident')
+  const [details, setDetails] = useState<any | null>(cached ?? null)
+  const [loading, setLoading] = useState(!cached)
+
+  // Ensure we have a fresh resident profile (store handles TTL)
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      try {
+        const fresh = await store.ensureLoaded('resident')
+        if (!live) return
+        if (fresh) setDetails(fresh)
+
+        // If we learned staff_id here and store doesn't have it yet, set it
+        if (fresh?.is_staff && fresh?.staff_id && store.staffId !== fresh.staff_id) {
+          store.setStaff(fresh.staff_id)
+          // But keep currentRole resident to start
+          store.setResident()
+        }
+
+        // Debug: show persisted role-store snapshot
+        try {
+          const raw = await AsyncStorage.getItem('role-store-v1')
+          // if (raw) console.log('[ChooseAccount] role-store-v1:', JSON.parse(raw))
+        } catch {}
+      } finally {
+        if (live) setLoading(false)
+      }
+    })()
+    return () => { live = false }
+  }, [store])
+
   const fullName = useMemo(() => {
     if (!details) return undefined
     const parts = [details.first_name, details.middle_name, details.last_name, details.suffix]
@@ -49,25 +73,6 @@ export default function ChooseAccount() {
       .join(' ')
     return parts || undefined
   }, [details])
-
-  useEffect(() => {
-    let live = true
-    ;(async () => {
-      setLoading(true)
-      try {
-        const { details, is_staff, staff_id } = await fetchResidentPlus()
-        if (!live) return
-        setDetails(details)
-        setIsStaff(!!is_staff)
-        setStaffId(staff_id ?? null)
-      } finally {
-        if (live) setLoading(false)
-      }
-    })()
-    return () => {
-      live = false
-    }
-  }, [])
 
   const options: Option[] = useMemo(() => {
     const list: Option[] = []
@@ -81,7 +86,6 @@ export default function ChooseAccount() {
       })
     }
 
-    // keep business option if you support it later
     if (details?.is_business_owner) {
       list.push({
         label: 'Login as Business Owner',
@@ -91,18 +95,19 @@ export default function ChooseAccount() {
       })
     }
 
-    if (isStaff && staffId) {
+    if ((details?.is_staff && (details?.staff_id || store.staffId))) {
       list.push({
         label: 'Login as Staff',
         type: 'staff',
-        subtitle: `Staff ID: ${staffId}`,
+        subtitle: `Staff ID: ${details?.staff_id ?? store.staffId}`,
         icon: 'shield-checkmark',
       })
     }
 
     return list
-  }, [details, isStaff, staffId, fullName])
+  }, [details, fullName, store.staffId])
 
+  // Auto-forward if only one role
   useEffect(() => {
     if (!loading && options.length === 1) {
       handleChoose(options[0].type)
@@ -112,17 +117,20 @@ export default function ChooseAccount() {
 
   const handleChoose = (type: Option['type']) => {
     if (type === 'resident') {
-      roleStore.setResident()
+      store.setResident()
       return router.replace('/(resident)/(tabs)/residenthome')
     }
     if (type === 'business') {
-      // change route when your business area is ready
-      roleStore.setResident()
+      // placeholder until business area exists
+      store.setResident()
       return router.replace('/(resident)/(tabs)/residenthome')
     }
-    if (type === 'staff' && staffId) {
-      roleStore.setStaff(staffId)
-      return router.replace('/(bhw)/(tabs)/bhwhome')
+    if (type === 'staff') {
+      const sid = details?.staff_id ?? store.staffId
+      if (sid) {
+        store.setStaff(sid)
+        return router.replace('/(bhw)/(tabs)/bhwhome')
+      }
     }
   }
 
@@ -141,7 +149,6 @@ export default function ChooseAccount() {
     <ThemedView safe style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
         <View style={styles.cardContainer}>
-          {/* Header with Logo */}
           <View style={{ alignItems: 'center', marginBottom: 16 }}>
             <Image
               source={require('@/assets/images/icon-.png')}
@@ -156,7 +163,6 @@ export default function ChooseAccount() {
             </ThemedText>
           </View>
 
-          {/* Account options */}
           <View style={{ gap: 12 }}>
             {options.map((opt) => (
               <Pressable
@@ -225,12 +231,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 24, fontWeight: '700', textAlign: 'center' },
   subtitleHeader: { fontSize: 14, textAlign: 'center', marginTop: 4 },
-  optionCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
+  optionCard: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 14 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconWrap: {
     width: 40,

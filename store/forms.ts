@@ -29,13 +29,16 @@ type ResidentFormState = {
   mnthlypersonalincome: string
   govprogrm: string
 
-  // 🔗 RELATIONSHIPS (NEW)
+  // 🔗 RELATIONSHIPS
   motherId: string | null
   motherName: string | null
   fatherId: string | null
   fatherName: string | null
-  guardianIds: string[]
-  guardianNames: string[]        // same order as guardianIds
+
+  // ✅ single guardian to match backend
+  guardianId: string | null
+  guardianName: string | null
+
   childIds: string[]
   childNames: string[]           // same order as childIds
 
@@ -43,13 +46,16 @@ type ResidentFormState = {
   setMany: (patch: Partial<ResidentFormState>) => void
   reset: () => void
 
-  // 🔧 relationship helpers
+  // relationship helpers
   setMother: (id: string | null, name?: string | null) => void
   setFather: (id: string | null, name?: string | null) => void
-  addGuardian: (id: string, name?: string) => void
-  removeGuardian: (id: string) => void
+  setGuardian: (id: string | null, name?: string | null) => void
+  clearGuardian: () => void
   addChild: (id: string, name?: string) => void
   removeChild: (id: string) => void
+
+  // optional: adapter when loading DB row
+  loadFromProfileRow: (row: any) => void
 }
 
 export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
@@ -65,60 +71,88 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
   educattainment: '', employmentstat: '', occupation: '',
   mnthlypersonalincome: '', govprogrm: '',
 
-  // 🔗 RELATIONSHIPS (NEW defaults)
+  // RELATIONSHIPS
   motherId: null, motherName: null,
   fatherId: null, fatherName: null,
-  guardianIds: [], guardianNames: [],
+
+  // ✅ single guardian
+  guardianId: null, guardianName: null,
+
   childIds: [], childNames: [],
 
   setMany: (patch) => set(patch),
 
-  reset: () => set({
-    fname: '', mname: '', lname: '', suffix: '',
-    gender: '', dob: null,
-    civilStatus: '', nationality: '', religion: '',
-    haddress: '', street: '', purokSitio: '', brgy: '', city: '',
-    latitude: '', longitude: '',
-    mobnum: '', email: '',
-    educattainment: '', employmentstat: '', occupation: '',
-    mnthlypersonalincome: '', govprogrm: '',
-    motherId: null, motherName: null,
-    fatherId: null, fatherName: null,
-    guardianIds: [], guardianNames: [],
-    childIds: [], childNames: [],
-  }),
+  reset: () =>
+    set({
+      fname: '', mname: '', lname: '', suffix: '',
+      gender: '', dob: null,
+      civilStatus: '', nationality: '', religion: '',
+      haddress: '', street: '', purokSitio: '', brgy: '', city: '',
+      latitude: '', longitude: '',
+      mobnum: '', email: '',
+      educattainment: '', employmentstat: '', occupation: '',
+      mnthlypersonalincome: '', govprogrm: '',
+      motherId: null, motherName: null,
+      fatherId: null, fatherName: null,
+      guardianId: null, guardianName: null,
+      childIds: [], childNames: [],
+    }),
 
-  // 🔧 RELATIONSHIP HELPERS
+  // RELATIONSHIP HELPERS
   setMother: (id, name = null) => set({ motherId: id, motherName: name }),
   setFather: (id, name = null) => set({ fatherId: id, fatherName: name }),
 
-  addGuardian: (id, name = '') => {
-    const { guardianIds, guardianNames } = get()
-    if (guardianIds.includes(id)) return
-    set({ guardianIds: [...guardianIds, id], guardianNames: [...guardianNames, name] })
-  },
-
-  removeGuardian: (id) => {
-    const { guardianIds, guardianNames } = get()
-    const idx = guardianIds.indexOf(id)
-    if (idx === -1) return
-    const ids = guardianIds.slice(); ids.splice(idx, 1)
-    const names = guardianNames.slice(); names.splice(idx, 1)
-    set({ guardianIds: ids, guardianNames: names })
-  },
+  setGuardian: (id, name = null) => set({ guardianId: id, guardianName: name }),
+  clearGuardian: () => set({ guardianId: null, guardianName: null }),
 
   addChild: (id, name = '') => {
-    const { childIds, childNames } = get()
-    if (childIds.includes(id)) return
-    set({ childIds: [...childIds, id], childNames: [...childNames, name] })
+    const { childIds, childNames } = get();
+    if (childIds.includes(id)) return;
+    set({ childIds: [...childIds, id], childNames: [...childNames, name] });
   },
 
   removeChild: (id) => {
-    const { childIds, childNames } = get()
-    const idx = childIds.indexOf(id)
-    if (idx === -1) return
-    const ids = childIds.slice(); ids.splice(idx, 1)
-    const names = childNames.slice(); names.splice(idx, 1)
-    set({ childIds: ids, childNames: names })
+    const { childIds, childNames } = get();
+    const idx = childIds.indexOf(id);
+    if (idx === -1) return;
+    const ids = childIds.slice(); ids.splice(idx, 1);
+    const names = childNames.slice(); names.splice(idx, 1);
+    set({ childIds: ids, childNames: names });
+  },
+
+  // 🔌 Load a DB row (like your sample) into the store
+  loadFromProfileRow: (row: any) => {
+    set({
+      fname: row.first_name ?? '',
+      mname: row.middle_name ?? '',
+      lname: row.last_name ?? '',
+      suffix: row.suffix ?? '',
+      gender: row.sex ?? '',
+      dob: row.birthdate ? new Date(row.birthdate) : null,
+      civilStatus: row.civil_status ?? '',
+      nationality: row.nationality ?? '',
+      religion: row.religion ?? '',
+      haddress: row.street_name ?? '',
+      street: row.street_name ?? '',
+      purokSitio: row.purok_sitio_name ?? '',
+      brgy: row.barangay_name ?? '',
+      city: row.city_name ?? '',
+      latitude: '', longitude: '',
+      mobnum: row.mobile_num ?? '',
+      email: row.email ?? '',
+      educattainment: row.education ?? '',
+      employmentstat: row.employment_status ?? '',
+      occupation: row.occupation ?? '',
+      mnthlypersonalincome: row.personal_monthly_income ?? '',
+      govprogrm: row.gov_program ?? '',
+      motherId: row.mother_id?.toString?.() ?? null,
+      motherName: row.mother_name ?? null,
+      fatherId: row.father_id?.toString?.() ?? null,
+      fatherName: row.father_name ?? null,
+      guardianId: row.guardian_id?.toString?.() ?? null,
+      guardianName: row.guardian_name ?? null,
+      childIds: Array.isArray(row.children_ids) ? row.children_ids.map((x: any) => String(x)) : [],
+      childNames: Array.isArray(row.children_names) ? row.children_names : [],
+    });
   },
 }));

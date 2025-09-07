@@ -13,7 +13,6 @@ import { useRouter } from 'expo-router'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Modal, Pressable, StyleSheet, View } from 'react-native'
 
-// ✅ pull the same search hook & type used in CreateFamily
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { PersonSearchRequest } from '@/types/householdHead'
 
@@ -24,73 +23,62 @@ type RelItem = { label: string; value: Rel; disabled?: boolean }
 const LinkParentGuardian = () => {
   const router = useRouter()
 
-  // 🔗 store fields & helpers (single source of truth for links)
+  // Store fields (now single guardian)
   const {
     motherId, motherName,
     fatherId, fatherName,
-    guardianIds, guardianNames,
+    guardianId, guardianName,
     setMother, setFather,
-    addGuardian, removeGuardian,
+    setGuardian, clearGuardian,
   } = useResidentFormStore()
 
-  // 🔍 live search hook (same usage as in CreateFamily)
-  // - results: array of residents from your API
-  // - search: function to update results by query string
   const { results: residentItems, search } = usePersonSearchByKey()
 
-  // UI state for relationship picker + search input value
   const [rel, setRel] = useState<Rel | ''>('')
   const [searchText, setSearchText] = useState('')
 
-  // Derive chips directly from the store so page is re-entrant
+  // Build chips: mother, father, guardian (single)
   const linked: Linked[] = useMemo(() => {
     const out: Linked[] = []
-    if (motherId) out.push({ id: motherId, name: motherName ?? 'Mother', rel: 'MOTHER' })
-    if (fatherId) out.push({ id: fatherId, name: fatherName ?? 'Father', rel: 'FATHER' })
-    guardianIds.forEach((id, i) => out.push({ id, name: guardianNames[i] ?? 'Guardian', rel: 'GUARDIAN' }))
+    if (motherId) out.push({ id: String(motherId), name: motherName ?? 'Mother', rel: 'MOTHER' })
+    if (fatherId) out.push({ id: String(fatherId), name: fatherName ?? 'Father', rel: 'FATHER' })
+    if (guardianId) out.push({ id: String(guardianId), name: guardianName ?? 'Guardian', rel: 'GUARDIAN' })
     return out
-  }, [motherId, motherName, fatherId, fatherName, guardianIds, guardianNames])
+  }, [motherId, motherName, fatherId, fatherName, guardianId, guardianName])
 
   const hasMother = !!motherId
   const hasFather = !!fatherId
+  const hasGuardian = !!guardianId
 
-  // Dropdown options — Mother/Father disabled when already set
+  // Disable “Guardian” if already set
   const relItems: RelItem[] = [
     { label: 'Mother',   value: 'MOTHER',   disabled: hasMother },
     { label: 'Father',   value: 'FATHER',   disabled: hasFather },
-    { label: 'Guardian', value: 'GUARDIAN' },
+    { label: 'Guardian', value: 'GUARDIAN', disabled: hasGuardian },
   ]
 
   const canAdd = (r: Rel | '') => {
     if (r === 'MOTHER') return !hasMother
     if (r === 'FATHER') return !hasFather
-    if (r === 'GUARDIAN') return true
+    if (r === 'GUARDIAN') return !hasGuardian
     return false
   }
 
-  // When a resident is chosen from the search list, write to the store
+  // When a resident is chosen from search
   const onPick = (p: PersonSearchRequest) => {
     if (!rel) return
     const r: Rel = rel
     if (!canAdd(r)) return
 
-    // Prevent duplicates via store state
-    if (r === 'MOTHER' && motherId) return
-    if (r === 'FATHER' && fatherId) return
-    if (r === 'GUARDIAN' && guardianIds.includes(p.person_id)) return
+    if (r === 'MOTHER') setMother(String(p.person_id), p.full_name)
+    else if (r === 'FATHER') setFather(String(p.person_id), p.full_name)
+    else setGuardian(String(p.person_id), p.full_name) // single guardian
 
-    // Update the centralized store
-    if (r === 'MOTHER') setMother(p.person_id, p.full_name)
-    else if (r === 'FATHER') setFather(p.person_id, p.full_name)
-    else addGuardian(p.person_id, p.full_name)
-
-    // Reset the picker and clear the search text
     setRel('')
     setSearchText('')
-    // Optionally clear results: search('')  // keep or remove depending on UX preference
   }
 
-  // Manage modal state
+  // Manage modal
   const [manageVisible, setManageVisible] = useState(false)
   const [selected, setSelected] = useState<Linked | null>(null)
 
@@ -104,7 +92,7 @@ const LinkParentGuardian = () => {
     if (!selected) return
     if (selected.rel === 'MOTHER') setMother(null, null)
     else if (selected.rel === 'FATHER') setFather(null, null)
-    else removeGuardian(selected.id)
+    else clearGuardian() // single guardian remover
     closeManage()
   }
 
@@ -144,42 +132,40 @@ const LinkParentGuardian = () => {
             <ThemedText style={{ opacity: 0.75 }}>Search existing resident.</ThemedText>
 
             <View>
-              {/* Relation picker (Mother/Father/Guardian) */}
+              {/* Relation picker */}
               <ThemedDropdown
                 items={relItems}
                 value={rel}
-                setValue={(v: Rel) => setRel(v)}
+                setValue={(v: unknown) => setRel((v ?? '') as Rel | '')}
                 placeholder='Relationship'
               />
 
               <Spacer height={10}/>
 
-              {/* 🔍 ThemedSearchSelect using live API search results */}
+              {/* Live search select */}
               <ThemedSearchSelect<PersonSearchRequest>
-                items={residentItems}               // results from the hook
+                items={residentItems ?? []}
                 getLabel={(p) =>
                   p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
                 }
                 getSubLabel={(p) => p.address}
-                // Keep input controlled so we can trigger the hook's search() on each change
                 inputValue={searchText}
-                onInputValueChange={(t) => {
-                  setSearchText(t)      // update UI
-                  search(t)             // 🔑 fetch/filter results on the server (or hook’s logic)
-                }}
+                onInputValueChange={(t) => { setSearchText(t); search(t) }}
                 placeholder='Search resident by name…'
                 emptyText='No matches'
                 onSelect={onPick}
                 fillOnSelect={false}
-                // Client-side fallback filter (kept from your previous version)
                 filter={(p, q) => {
-                  const query = q.toLowerCase()
+                  const query = (q || '').toLowerCase()
+                  const name = (p.full_name || '').toLowerCase()
+                  const code = (p.person_code || '').toLowerCase()
+                  const addr = (p.address || '').toLowerCase()
                   return (
-                    p.full_name.toLowerCase().includes(query) ||
-                    (p.person_code || '').toLowerCase().includes(query) ||
-                    (p.address || '').toLowerCase().includes(query) ||
-                    query.includes(p.full_name.toLowerCase()) ||
-                    (p.person_code && query.includes(p.person_code.toLowerCase()))
+                    name.includes(query) ||
+                    code.includes(query) ||
+                    addr.includes(query) ||
+                    query.includes(name) ||
+                    (code && query.includes(code))
                   )
                 }}
               />
@@ -191,12 +177,10 @@ const LinkParentGuardian = () => {
 
         {/* Footer actions */}
         <View>
-          <ThemedButton submit={false}>
+          <ThemedButton submit={false} onPress={() => router.push('/(bhwmodals)/(person)/linkchild')}>
             <ThemedText non_btn>Skip</ThemedText>
           </ThemedButton>
-          <ThemedButton
-            onPress={() => router.push('/(bhwmodals)/(person)/linkchild')}
-          >
+          <ThemedButton onPress={() => router.push('/(bhwmodals)/(person)/linkchild')}>
             <ThemedText btn>Continue</ThemedText>
           </ThemedButton>
         </View>
