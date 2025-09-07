@@ -56,6 +56,9 @@ const ValidId = () => {
   const [modalMsg, setModalMsg] = useState<string | undefined>()
   const [modalVariant, setModalVariant] = useState<ModalVariant>('info')
 
+  // Help/info modal state (NEW)
+  const [infoOpen, setInfoOpen] = useState(false)
+
   // ====== FETCH PROFILE ======
   useEffect(() => {
     let live = true
@@ -205,151 +208,185 @@ const ValidId = () => {
 
         showModal('Verified', 'Your ID was verified and saved.', 'success')
       } else {
-      const reason =
-        Array.isArray(res?.checks_failed) && res.checks_failed.length
-          ? `\n\nChecks failed: ${res.checks_failed.join(', ')}`
-          : undefined
-      showModal('Verification failed', `Name or ID type did not match the uploaded ID.${reason ?? ''}`, 'error')
+        const reason =
+          Array.isArray(res?.checks_failed) && res.checks_failed.length
+            ? `\n\nChecks failed: ${res.checks_failed.join(', ')}`
+            : undefined
+        showModal('Verification failed', `Name or ID type did not match the uploaded ID.${reason ?? ''}`, 'error')
+      }
+    } catch (e: any) {
+      showModal('Error', e?.message || 'Something went wrong.', 'error')
+    } finally {
+      setSubmitting(false)
     }
-  } catch (e: any) {
-    showModal('Error', e?.message || 'Something went wrong.', 'error')
-  } finally {
-    setSubmitting(false)
   }
-}
 
-// ===== Small card-like thumbnail render =====
-const renderPreview = (file: Picked | null) => {
-  if (!file) return null
-  const thumbSrc =
-    file?.uri ||
-    (file?.base64 ? `data:${file?.mimeType || 'image/*'};base64,${file.base64}` : undefined)
-  if (!thumbSrc) return null
+  // ===== Small card-like thumbnail render =====
+  const renderPreview = (file: Picked | null) => {
+    if (!file) return null
+    const thumbSrc =
+      file?.uri ||
+      (file?.base64 ? `data:${file?.mimeType || 'image/*'};base64,${file.base64}` : undefined)
+    if (!thumbSrc) return null
+
+    return (
+      <Pressable onPress={() => openPreview(file)} style={styles.previewCard}>
+        <Image source={{ uri: thumbSrc }} style={styles.previewImage} resizeMode="cover" />
+        <ThemedText style={styles.previewLabel} numberOfLines={1}>
+          {file.fileName || file.name || 'Selected'}
+        </ThemedText>
+      </Pressable>
+    )
+  }
 
   return (
-    <Pressable onPress={() => openPreview(file)} style={styles.previewCard}>
-      <Image source={{ uri: thumbSrc }} style={styles.previewImage} resizeMode="cover" />
-      <ThemedText style={styles.previewLabel} numberOfLines={1}>
-        {file.fileName || file.name || 'Selected'}
-      </ThemedText>
-    </Pressable>
-  )
-}
+    <ThemedView safe>
+      <ThemedAppBar title="Valid ID" showNotif={false} showProfile={false} />
 
-return (
-  <ThemedView safe>
-    <ThemedAppBar title="Valid ID" showNotif={false} showProfile={false} />
+      <ThemedKeyboardAwareScrollView>
+        <View style={styles.container}>
+          {/* Instructions */}
+          <View style={styles.headerBlock}>
+            <ThemedText style={styles.headerTitle}>
+              PROVIDE A <ThemedText style={styles.headerTitleEm}>CLEAR & VALID</ThemedText> IMAGE OF YOUR ID
+            </ThemedText>
+            <ThemedText style={styles.headerNote}>Scanned copies are sharper and easier to verify than photos.</ThemedText>
 
-    <ThemedKeyboardAwareScrollView>
-      <View style={styles.container}>
-        {/* Who are we verifying for */}
-        {/* {loadingProfile ? (
-            <View style={{ paddingVertical: 6 }}>
-              <ActivityIndicator />
-              <ThemedText style={{ textAlign: 'center', marginTop: 6 }}>Loading profile…</ThemedText>
-            </View>
-          ) : (
-            !!profileName && (
-              <ThemedText style={{ fontSize: 12, opacity: 0.9, marginBottom: 6 }}>
-                Verifying for: <ThemedText style={{ fontWeight: '700' }}>{profileName}</ThemedText> (ID: {personId})
-              </ThemedText>
-            )
-          )} */}
-
-        {/* Instructions */}
-        <View style={styles.headerBlock}>
-          <ThemedText style={styles.headerTitle}>
-            PROVIDE A <ThemedText style={styles.headerTitleEm}>CLEAR & VALID</ThemedText> IMAGE OF YOUR ID
-          </ThemedText>
-          <ThemedText style={styles.headerNote}>Scanned copies are sharper and easier to verify than photos.</ThemedText>
-
-          <TouchableOpacity onPress={() => setPreviewOpen(true)} activeOpacity={0.85} style={styles.infoBanner}>
-            <View style={styles.infoBannerLeft}>
-              <Ionicons name="information-circle-outline" size={22} color="#6d2932" />
-              <ThemedText style={styles.infoBannerText}>How to scan your ID properly?</ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#6d2932" />
-          </TouchableOpacity>
-        </View>
-
-        <Spacer height={16} />
-
-        {/* ID Type */}
-        <ThemedDropdown items={ocr_idTypeOptions} value={idType} setValue={setIdType} placeholder="ID Type" order={0} />
-
-        <Spacer height={16} />
-
-        <ThemedText subtitle>Upload a Valid ID:</ThemedText>
-
-        <ThemedFileInput
-          placeholder="Front of the ID"
-          selectedFile={frontId}
-          onFileSelected={(f: Picked) => setFrontId(f)}
-          onFileRemoved={() => setFrontId(null)}
-        />
-        {renderPreview(frontId)}
-
-        <Spacer height={12} />
-
-        <ThemedFileInput
-          placeholder="Back of the ID"
-          selectedFile={backId}
-          onFileSelected={(f: Picked) => setBackId(f)}
-          onFileRemoved={() => setBackId(null)}
-        />
-        {renderPreview(backId)}
-
-        <Spacer height={16} />
-
-        <ThemedText subtitle>Upload a Selfie Holding the Valid ID:</ThemedText>
-
-        <ThemedFileInput
-          placeholder="Selfie Holding the ID"
-          selectedFile={selfie}
-          onFileSelected={(f: Picked) => setSelfie(f)}
-          onFileRemoved={() => setSelfie(null)}
-        />
-        {renderPreview(selfie)}
-
-        <Spacer height={20} />
-
-        {/* Submit */}
-        <View style={styles.buttons}>
-          <ThemedButton onPress={handleSubmit} disabled={submitting || loadingProfile}>
-            {submitting ? (
-              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                <ActivityIndicator />
-                <ThemedText btn>Verifying…</ThemedText>
+            <TouchableOpacity
+              onPress={() => setInfoOpen(true)}  // open help modal
+              activeOpacity={0.85}
+              style={styles.infoBanner}
+            >
+              <View style={styles.infoBannerLeft}>
+                <Ionicons name="information-circle-outline" size={22} color="#6d2932" />
+                <ThemedText style={styles.infoBannerText}>How to scan your ID properly?</ThemedText>
               </View>
-            ) : (
-              <ThemedText btn>Submit</ThemedText>
-            )}
-          </ThemedButton>
-        </View>
-      </View>
-    </ThemedKeyboardAwareScrollView>
+              <Ionicons name="chevron-forward" size={20} color="#6d2932" />
+            </TouchableOpacity>
+          </View>
 
-    {/* Full-screen image preview modal */}
-    <Modal visible={previewOpen} transparent animationType="fade" onRequestClose={closePreview}>
-      <Pressable style={styles.modalBackdrop} onPress={closePreview}>
-        <View style={styles.modalInner}>
-          {previewSrc && <Image source={{ uri: previewSrc }} style={styles.fullImage} resizeMode="contain" />}
-          <ThemedText style={styles.tapToClose}>Tap anywhere to close</ThemedText>
-        </View>
-      </Pressable>
-    </Modal>
+          <Spacer height={16} />
 
-    {/* NiceModal */}
-    <NiceModal
-      visible={modalOpen}
-      title={modalTitle}
-      message={modalMsg}
-      variant={modalVariant}
-      onPrimary={() => setModalOpen(false)}
-      onClose={() => setModalOpen(false)}
-    />
-  </ThemedView>
-)
+          {/* ID Type */}
+          <ThemedDropdown items={ocr_idTypeOptions} value={idType} setValue={setIdType} placeholder="ID Type" order={0} />
+
+          <Spacer height={16} />
+
+          <ThemedText subtitle>Upload a Valid ID:</ThemedText>
+
+          <ThemedFileInput
+            placeholder="Front of the ID"
+            selectedFile={frontId}
+            onFileSelected={(f: Picked) => setFrontId(f)}
+            onFileRemoved={() => setFrontId(null)}
+          />
+          {renderPreview(frontId)}
+
+          <Spacer height={12} />
+
+          <ThemedFileInput
+            placeholder="Back of the ID"
+            selectedFile={backId}
+            onFileSelected={(f: Picked) => setBackId(f)}
+            onFileRemoved={() => setBackId(null)}
+          />
+          {renderPreview(backId)}
+
+          <Spacer height={16} />
+
+          <ThemedText subtitle>Upload a Selfie Holding the Valid ID:</ThemedText>
+
+          <ThemedFileInput
+            placeholder="Selfie Holding the ID"
+            selectedFile={selfie}
+            onFileSelected={(f: Picked) => setSelfie(f)}
+            onFileRemoved={() => setSelfie(null)}
+          />
+          {renderPreview(selfie)}
+
+          <Spacer height={20} />
+
+          {/* Submit */}
+          <View style={styles.buttons}>
+            <ThemedButton onPress={handleSubmit} disabled={submitting || loadingProfile}>
+              {submitting ? (
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <ActivityIndicator />
+                  <ThemedText btn>Verifying…</ThemedText>
+                </View>
+              ) : (
+                <ThemedText btn>Submit</ThemedText>
+              )}
+            </ThemedButton>
+          </View>
+        </View>
+      </ThemedKeyboardAwareScrollView>
+
+      {/* Full-screen image preview modal */}
+      <Modal visible={previewOpen} transparent animationType="fade" onRequestClose={closePreview}>
+        <Pressable style={styles.modalBackdrop} onPress={closePreview}>
+          <View style={styles.modalInner}>
+            {previewSrc && <Image source={{ uri: previewSrc }} style={styles.fullImage} resizeMode="contain" />}
+            <ThemedText style={styles.tapToClose}>Tap anywhere to close</ThemedText>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Help modal (like your screenshot) */}
+      <Modal
+        visible={infoOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setInfoOpen(false)}
+      >
+        <Pressable style={styles.infoBackdrop} onPress={() => setInfoOpen(false)}>
+          <View style={styles.infoCard}>
+            <ThemedText style={styles.infoTitle}>How to Scan Your ID</ThemedText>
+            <ThemedText style={styles.infoSubtitle}>
+              For best results, scan your ID instead of taking a photo.
+            </ThemedText>
+
+            {/* Sample images from assets */}
+            <Image
+              source={require('@/assets/images/scanned_front_id_sample.jpg')}
+              style={styles.sampleImage}
+              resizeMode="contain"
+            />
+            <Image
+              source={require('@/assets/images/scanned_back_id_sample.jpg')}
+              style={[styles.sampleImage, { marginTop: 12 }]}
+              resizeMode="contain"
+            />
+            <ThemedText style={styles.creditsText}>
+              Sample courtesy of Philippine Statistics Authority
+            </ThemedText>
+
+            {/* Quick steps */}
+            <ThemedText style={styles.quickTitle}>Quick Steps</ThemedText>
+            <ThemedText style={styles.quickList}>
+              1. Install a scanner app like CamScanner.{'\n'}
+              2. Scan the front and back of your ID.{'\n'}
+              3. Save and upload the scanned copies here.
+            </ThemedText>
+
+            <ThemedButton onPress={() => setInfoOpen(false)} style={{ borderRadius: 999 }}>
+              <ThemedText btn>Got it</ThemedText>
+            </ThemedButton>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* NiceModal */}
+      <NiceModal
+        visible={modalOpen}
+        title={modalTitle}
+        message={modalMsg}
+        variant={modalVariant}
+        onPrimary={() => setModalOpen(false)}
+        onClose={() => setModalOpen(false)}
+      />
+    </ThemedView>
+  )
 }
 
 export default ValidId
@@ -394,4 +431,34 @@ const styles = StyleSheet.create({
   modalInner: { width: '100%', maxWidth: 720, alignItems: 'center' },
   fullImage: { width: '100%', height: '80%', borderRadius: 12 },
   tapToClose: { marginTop: 12, fontSize: 13, color: '#fff', opacity: 0.8 },
+
+  // Help modal styles
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  infoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  infoTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  infoSubtitle: { fontSize: 14, opacity: 0.85, textAlign: 'center', marginTop: 4, marginBottom: 12 },
+  sampleImage: { width: '100%', height: 180, borderRadius: 8},
+  creditsText: {
+    fontSize: 11,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  quickTitle: { fontSize: 16, fontWeight: '700', marginBottom: 6 },
+  quickList: { fontSize: 14, lineHeight: 22, marginBottom: 14 },
 })

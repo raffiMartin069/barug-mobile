@@ -269,7 +269,7 @@ export const govProgMap: Record<number | string, string> = {
 export const ocr_idTypeOptions = [
   { label: 'PHILIPPINE PASSPORT', value: '1' },
   { label: 'ePHILID', value: 'ephil_id' },
-  { label: 'PHILIPPINE NATIONAL ID OCR 3', value: 'philippine_national_id' },
+  { label: 'PHILIPPINE NATIONAL ID', value: 'philippine_national_id' },
   { label: 'SSS/UMID CARD', value: '3' },
   { label: 'GSIS ECARD', value: '4' },
   { label: 'PRC ID', value: '5' },
@@ -291,7 +291,7 @@ export const ocr_idTypeOptions = [
 
 export const ocr_idTypeMap: Record<number | string, string> = {
   1: 'PHILIPPINE PASSPORT',
-  2: 'PHILIPPINE NATIONAL ID ocr',
+  2: 'PHILIPPINE NATIONAL',
   3: 'SSS/UMID CARD',
   4: 'GSIS ECARD',
   5: 'PRC ID',
