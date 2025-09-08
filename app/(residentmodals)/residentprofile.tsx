@@ -10,19 +10,13 @@ import ThemedImage from '@/components/ThemedImage'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-<<<<<<< HEAD
 import { supabase } from '@/constants/supabase'
 import { useAccountRole } from '@/store/useAccountRole'
+import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
-=======
-import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
->>>>>>> 2abdca8d3d7fe5655fe5e0670abc36bbcd8a1598
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 export const options = { href: null }
 
@@ -31,7 +25,15 @@ const UNLOCKED_SESSION_KEY = 'unlocked_session'
 
 export default function ResidentProfile() {
   const router = useRouter()
-<<<<<<< HEAD
+
+  const familyMembers = useMemo(
+    () => [
+      { name: 'Maria Lourdes A. Cruz' },
+      { name: 'Renzo Gabriel A. Cruz' },
+      { name: 'Andrei A. Cruz' },
+    ],
+    []
+  )
   const { currentRole, staffId, getProfile, ensureLoaded, clearAll } = useAccountRole()
 
   // Modal state
@@ -152,18 +154,6 @@ export default function ResidentProfile() {
     )
   }
 
-=======
-
-  const familyMembers = useMemo(
-    () => [
-      { name: 'Maria Lourdes A. Cruz' },
-      { name: 'Renzo Gabriel A. Cruz' },
-      { name: 'Andrei A. Cruz' },
-    ],
-    []
-  )
-  
->>>>>>> 2abdca8d3d7fe5655fe5e0670abc36bbcd8a1598
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe>
       <ThemedAppBar title='Profile' showProfile={false} showNotif={false} showSettings={true} />
@@ -363,17 +353,6 @@ export default function ResidentProfile() {
 
           <Spacer height={10} />
 
-<<<<<<< HEAD
-          <View style={styles.familyList}>
-            {(profile?.other_family_members ?? []).map((name: string, idx: number) => (
-              <View key={idx} style={styles.familyCard}>
-                <ThemedText subtitle>{name}</ThemedText>
-              </View>
-            ))}
-            {(!profile?.other_family_members || profile.other_family_members.length === 0) && (
-              <ThemedText subtitle>—</ThemedText>
-            )}
-=======
            <View style={styles.chipsWrap}>
             {familyMembers.map((m, idx) => (
               <ThemedChip
@@ -383,15 +362,11 @@ export default function ResidentProfile() {
                 onPress={() => {}}
               />
             ))}
->>>>>>> 2abdca8d3d7fe5655fe5e0670abc36bbcd8a1598
           </View>
 
           <Spacer height={15} />
         </ThemedCard>
 
-<<<<<<< HEAD
-        <Spacer height={15} />
-=======
         <Spacer />
 
         <ThemedCard>
@@ -427,8 +402,7 @@ export default function ResidentProfile() {
           </View>
         </ThemedCard>
 
-        <Spacer height={15}/>
->>>>>>> 2abdca8d3d7fe5655fe5e0670abc36bbcd8a1598
+        <Spacer height={15} />
 
         {/* Switch Account / Logout */}
         <View style={{ paddingHorizontal: 15 }}>
@@ -465,13 +439,6 @@ export default function ResidentProfile() {
 }
 
 const styles = StyleSheet.create({
-<<<<<<< HEAD
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 },
-  bold: { fontWeight: '600' },
-  familyList: { gap: 10 },
-  familyCard: { backgroundColor: '#f3f4f6', padding: 12, borderRadius: 8 },
-})
-=======
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -492,4 +459,3 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
 })
->>>>>>> 2abdca8d3d7fe5655fe5e0670abc36bbcd8a1598
