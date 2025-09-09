@@ -644,13 +644,38 @@ const UpdateResident = () => {
                     />
                     <Spacer height={5} />
                     <View style={styles.headerActions}>
-                        <ThemedButton onPress={clearSelectedResident} variant="secondary">
-                            <ThemedText btn>Clear</ThemedText>
-                        </ThemedButton>
-                        <ThemedButton onPress={() => setIsEditing(v => !v)} disabled={!selectedPersonId}>
-                            <ThemedText btn>{isEditing ? 'Stop Editing' : 'Edit Fields'}</ThemedText>
-                        </ThemedButton>
+                        {/* Clear button */}
+                        <Pressable
+                            style={[styles.actionBtn, styles.clearBtn, !selectedPersonId && styles.disabledBtn]}
+                            onPress={clearSelectedResident}
+                            disabled={!selectedPersonId}
+                        >
+                            <Ionicons name="refresh-circle" size={18} color="#dc2626" style={{ marginRight: 6 }} />
+                            <ThemedText style={[styles.actionBtnText, { color: '#dc2626' }]}>Clear</ThemedText>
+                        </Pressable>
+
+                        {/* Edit button */}
+                        <Pressable
+                            style={[
+                                styles.actionBtn,
+                                styles.editBtn,
+                                !selectedPersonId && styles.disabledBtn,
+                            ]}
+                            onPress={() => setIsEditing(v => !v)}
+                            disabled={!selectedPersonId}
+                        >
+                            <Ionicons
+                                name={isEditing ? 'close-circle' : 'create-outline'}
+                                size={18}
+                                color="#2563eb"
+                                style={{ marginRight: 6 }}
+                            />
+                            <ThemedText style={[styles.actionBtnText, { color: '#2563eb' }]}>
+                                {isEditing ? 'Stop Editing' : 'Edit Fields'}
+                            </ThemedText>
+                        </Pressable>
                     </View>
+
                 </ThemedCard>
 
                 <Spacer />
@@ -1096,9 +1121,38 @@ const styles = StyleSheet.create({
     },
     headerActions: {
         flexDirection: 'row',
-        gap: 8,
-        alignItems: 'center',
+        gap: 10,
+        marginTop: 6,
     },
+
+    actionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flex: 1, // equal width
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+
+    clearBtn: {
+        borderColor: '#dc2626',
+        backgroundColor: '#fee2e2',
+    },
+
+    editBtn: {
+        borderColor: '#2563eb',
+        backgroundColor: '#dbeafe',
+    },
+
+    actionBtnText: {
+        fontWeight: '600',
+    },
+
+    disabledBtn: {
+        opacity: 0.5,
+    },
+
     modalBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.35)',

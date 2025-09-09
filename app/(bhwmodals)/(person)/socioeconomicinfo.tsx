@@ -100,7 +100,7 @@ const SocioeconomicInfo = () => {
   return (
     <ThemedView safe>
       <ThemedAppBar title='Socioeconomic Information' showNotif={false} showProfile={false} />
-      <ThemedProgressBar step={2} totalStep={2} />
+      <ThemedProgressBar step={4} totalStep={4} />
 
       <ThemedKeyboardAwareScrollView>
         <View>
