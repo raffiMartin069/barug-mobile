@@ -323,7 +323,20 @@ const HouseholdList = () => {
                         </View>
                       </View>
 
-                      <ThemedText style={{ fontWeight: '700', marginBottom: 6, marginTop: 10 }}>Members</ThemedText>
+                      <Spacer height={10}/>
+
+                      <View style={styles.sectionHeaderRow}>
+                        <ThemedText style={styles.sectionTitle}>
+                          Members
+                        </ThemedText>
+
+                        <ThemedChip
+                          label={'Add Member'}
+                          onPress={() => router.push('/addmember')}
+                          filled={false}
+                        />
+                      </View>
+
                       {fam.members.length > 0 ? (
                         <View style={styles.memberGrid}>
                           {fam.members.map((m) => (
@@ -378,7 +391,7 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fff',
   },
-  memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
+  memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
   badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
   badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   badgeText:   { fontSize: 12, color: '#334155' },

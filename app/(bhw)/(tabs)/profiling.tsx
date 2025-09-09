@@ -18,7 +18,7 @@ type Item = {
     params?: Record<string, string | number>
 }
 
-const ITEMS: Item[] =[
+const ITEMS: Item[] = [
     {
         key: 'register_resident',
         title: 'Register Resident',
@@ -40,66 +40,73 @@ const ITEMS: Item[] =[
         icon: 'people-outline',
         route: '/(bhwmodals)/(household)/householdlist' as Href,
     },
+    {
+        key: 'update_resident',
+        title: 'Update Resident',
+        desc: 'Search and update an existing resident.',
+        icon: 'create-outline',
+        route: '/(bhwmodals)/(person)/update-resident' as Href,
+    },
 ]
 
 const Profiling = () => {
-  const router = useRouter()
+    const router = useRouter()
 
-  const go = (item: Item) => {
-    if (!item.params) {
-      router.push(item.route)         // ok with Href<string>
-      return
+    const go = (item: Item) => {
+        if (!item.params) {
+            router.push(item.route)         // ok with Href<string>
+            return
+        }
+        router.push({
+            pathname: item.route,           // no casts needed
+            params: item.params,
+        })
     }
-    router.push({
-      pathname: item.route,           // no casts needed
-      params: item.params,
-    })
-  }
 
 
-  return (
-    <ThemedView safe style={{flex: 1, justifyContent: 'flex-start'}}>
-        <ThemedAppBar/>
+    return (
+        <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
+            <ThemedAppBar />
 
-        <ScrollView>
+            <ScrollView>
 
-            <Spacer />
+                <Spacer />
 
-            {ITEMS.map((item) => (
-                <View key={item.key}>
-                    <ThemedCard>
-                        <Pressable style={styles.container} onPress={() => go(item)}>
-                            <View style={styles.row}>
-                                <View style={{paddingRight: 10}}>
-                                    <ThemedIcon
-                                        name={item.icon}
-                                        bgColor='#310101'
+                {ITEMS.map((item) => (
+                    <View key={item.key}>
+                        <ThemedCard>
+                            <Pressable style={styles.container} onPress={() => go(item)}>
+                                <View style={styles.row}>
+                                    <View style={{ paddingRight: 10 }}>
+                                        <ThemedIcon
+                                            name={item.icon}
+                                            bgColor='#310101'
+                                            size={18}
+                                            containerSize={40}
+                                        />
+                                    </View>
+
+                                    <View style={{ flex: 1 }}>
+                                        <ThemedText style={{ fontSize: 16, fontWeight: '700' }}>{item.title}</ThemedText>
+                                        <ThemedText style={{ color: 'gray', flexWrap: 'wrap', flexShrink: 1 }}>{item.desc}</ThemedText>
+                                    </View>
+                                </View>
+
+                                <View>
+                                    <Ionicons
+                                        name='chevron-forward'
                                         size={18}
-                                        containerSize={40}
                                     />
                                 </View>
+                            </Pressable>
+                        </ThemedCard>
 
-                                <View style={{ flex: 1 }}>
-                                    <ThemedText style={{ fontSize: 16, fontWeight: '700' }}>{item.title}</ThemedText>
-                                    <ThemedText style={{ color: 'gray', flexWrap: 'wrap', flexShrink: 1 }}>{item.desc}</ThemedText>
-                                </View>
-                            </View>
-
-                            <View>
-                                <Ionicons
-                                    name='chevron-forward'
-                                    size={18}
-                                />
-                            </View>
-                        </Pressable>
-                    </ThemedCard>
-
-                    <Spacer height={15}/>
-                </View>
-            ))}
-        </ScrollView>
-    </ThemedView>
-  )
+                        <Spacer height={15} />
+                    </View>
+                ))}
+            </ScrollView>
+        </ThemedView>
+    )
 }
 
 export default Profiling

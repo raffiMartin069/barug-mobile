@@ -42,7 +42,7 @@ const ThemedAppBar = ({style = null, title = '', unreadCount = 0, showBack = tru
         )}
 
         {showSettings && (
-          <TouchableOpacity onPress={() => router.push('/')}>
+          <TouchableOpacity onPress={() => router.push('/settings')}>
             <Ionicons name='settings-outline' size={20} color={theme.background}/>
           </TouchableOpacity>
         )}

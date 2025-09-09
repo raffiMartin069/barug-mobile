@@ -1,13 +1,14 @@
 // hooks/useRouteGuard.ts
+import { useAccountRole } from '@/store/useAccountRole'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router, usePathname, useSegments } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../constants/supabase'
+import { UNLOCKED_SESSION, resetUnlocked } from './sessionUnlock'
 
 const JUST_SET_MPIN = 'just_set_mpin'
 const FORCE_SETUP_ONCE = 'force_setup_once'
 const LOCAL_MPIN_NOT_SET = 'local_mpin_not_set'
-const UNLOCKED_SESSION = 'unlocked_session'
 
 type GuardState = {
   ready: boolean
@@ -17,6 +18,26 @@ type GuardState = {
   logoutNow: () => Promise<void>
 }
 
+// 🔎 Debug helper: dump AsyncStorage nicely (parses role-store-v1 if present)
+async function debugDumpAsyncStorage(tag: string) {
+  try {
+    const keys = await AsyncStorage.getAllKeys()
+    const pairs = await AsyncStorage.multiGet(keys)
+    const dump: Record<string, any> = {}
+    for (const [k, v] of pairs) {
+      if (k === 'role-store-v1' && v) {
+        try { dump[k] = JSON.parse(v) } catch { dump[k] = v }
+      } else {
+        dump[k] = v
+      }
+    }
+    //console.log(`[Guard][${tag}] keys:`, keys)
+    //console.log(`[Guard][${tag}] dump:`, dump)
+  } catch (e) {
+    //console.log(`[Guard][${tag}] dump error:`, e)
+  }
+}
+
 export function useRouteGuard(): GuardState {
   const pathname = usePathname()
   const segments = useSegments() as unknown as string[]
@@ -24,6 +45,18 @@ export function useRouteGuard(): GuardState {
   const [authed, setAuthed] = useState(false)
   const [session, setSession] = useState<any>(null)
   const [mpinSet, setMpinSet] = useState<boolean | null>(null)
+
+  // ✅ Force app-lock on every cold start / dev refresh
+  const bootClearedRef = useRef(false)
+  useEffect(() => {
+    if (bootClearedRef.current) return
+    bootClearedRef.current = true
+    ;(async () => {
+      await AsyncStorage.removeItem(UNLOCKED_SESSION)
+      // console.log('[Guard] Cleared unlocked_session on boot')
+      await debugDumpAsyncStorage('after-boot-clear')
+    })()
+  }, [])
 
   // single-flight redirect to avoid churn
   const lastTargetRef = useRef<string | null>(null)
@@ -43,7 +76,7 @@ export function useRouteGuard(): GuardState {
     setMpinSet(error ? null : !!data?.mpin_set)
   }, [])
 
-  // session wiring
+  // session wiring (+ warm resident cache + set default role)
   useEffect(() => {
     let mounted = true
     const init = async () => {
@@ -51,9 +84,32 @@ export function useRouteGuard(): GuardState {
       if (!mounted) return
       setSession(session)
       setAuthed(!!session)
-      if (session) await fetchMe()
+
+      if (session) {
+        await fetchMe()
+
+        // ✅ Warm resident profile cache (fetches only if missing/stale) and set default role
+        try {
+          const resident = await useAccountRole.getState().ensureLoaded('resident')
+          if (resident?.is_staff && resident?.staff_id) {
+            // store staff id for later (no navigation here)
+            useAccountRole.getState().setStaff(resident.staff_id)
+            // show resident UI by default
+            useAccountRole.setState({ currentRole: 'resident' })
+          } else {
+            useAccountRole.setState({ currentRole: 'resident' })
+          }
+          await debugDumpAsyncStorage('after-warm-resident')
+        } catch {
+          // ignore warm errors; guard still handles routes
+        }
+      } else {
+        setMpinSet(null)
+      }
+
       setReady(true)
     }
+
     const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
       if (!mounted) return
       setSession(s)
@@ -61,6 +117,7 @@ export function useRouteGuard(): GuardState {
       if (s) await fetchMe()
       else setMpinSet(null)
     })
+
     init()
     return () => { mounted = false; sub.subscription.unsubscribe() }
   }, [fetchMe])
@@ -94,7 +151,7 @@ export function useRouteGuard(): GuardState {
     }
 
     // 2) Just forced to setup after a reset
-    (async () => {
+    ;(async () => {
       const forceSetup = await AsyncStorage.getItem(FORCE_SETUP_ONCE)
       if (forceSetup) {
         await AsyncStorage.removeItem(FORCE_SETUP_ONCE)
@@ -133,19 +190,49 @@ export function useRouteGuard(): GuardState {
         return
       }
 
-      // 6) Unlocked & inside auth → send to app
+      // 6) Unlocked & inside auth → decide where to go based on role count
       if (mpinSet === true && unlocked && inAuth) {
-        safeReplace('/(resident)/(tabs)/residenthome')
+        try {
+          // ensure resident is cached (no-op if already fresh)
+          const store = useAccountRole.getState()
+          const resident = store.getProfile('resident') ?? await store.ensureLoaded('resident')
+
+          const staffId = store.staffId ?? resident?.staff_id ?? null
+          const roles = [
+            resident?.person_id ? 'resident' : null,
+            resident?.is_business_owner ? 'business' : null,
+            staffId ? 'staff' : null,
+          ].filter(Boolean) as string[]
+
+          // console.log('[Guard] computed roles:', roles)
+          await debugDumpAsyncStorage('before-exit-auth')
+
+          if (roles.length <= 1) {
+            // default to resident UI and go straight to home
+            store.setResident()
+            safeReplace('/(resident)/(tabs)/residenthome')
+          } else {
+            // let user pick
+            safeReplace('/(auth)/choose-account')
+          }
+        } catch (e) {
+          console.log('[Guard] role decision error:', e)
+          // fallback if anything fails
+          safeReplace('/(resident)/(tabs)/residenthome')
+        }
         return
       }
+
       // else: already in the app; proceed silently
     })()
   }, [ready, authed, mpinSet, inAuth, leaf, safeReplace, fetchMe, unauthAllowed, authAllowedWhenLocked])
 
   const logoutNow = useCallback(async () => {
     try {
-      await AsyncStorage.removeItem(UNLOCKED_SESSION)
-      await supabase.auth.signOut()
+      await resetUnlocked()                           // clear unlock flag
+      await supabase.auth.signOut()                   // clear session
+      useAccountRole.getState().clearAll()            // wipe cached profiles/role
+      await debugDumpAsyncStorage('after-logout')
     } finally {
       safeReplace('/(auth)/phone')
     }
