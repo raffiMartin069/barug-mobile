@@ -1,0 +1,42 @@
+[
+    {
+        "active_family_count": 1,
+        "address": "LEGASPI STREET, MAUCO, SEÑOR SANTO NIÑO, CEBU CITY",
+        "household_head_name": "KIMBERLY D. DAYUJA",
+        "household_id": 55,
+        "household_num": "003",
+        "household_status": "Active"
+    },
+    {
+        "active_family_count": 2,
+        "address": "OSMEÑA BOULEVARD, KANIPAAN, SEÑOR SANTO NIÑO, CEBU CITY",
+        "household_head_name": "INTERNAL T. TEST TEST",
+        "household_id": 50,
+        "household_num": "256",
+        "household_status": "Active"
+    },
+    {
+        "active_family_count": 1,
+        "address": "LEGASPI STREET, MAUCO, SEÑOR SANTO NIÑO, CEBU CITY",
+        "household_head_name": "FIRST-FOURR M. LAST-FOUR JR.",
+        "household_id": 52,
+        "household_num": "646466",
+        "household_status": "Active"
+    },
+    {
+        "active_family_count": 0,
+        "address": "ZONE 2, PAMPANGO, STO. NIÑO, CEBU CITY",
+        "household_head_name": "MARIA L. DELA CRUZ",
+        "household_id": 1,
+        "household_num": "HH-001",
+        "household_status": "Active"
+    },
+    {
+        "active_family_count": 0,
+        "address": "ZONE 3, PAMPANGO, STO. NIÑO, CEBU CITY",
+        "household_head_name": "PEDRO G. VILLANUEVA",
+        "household_id": 3,
+        "household_num": "HH-002",
+        "household_status": "Active"
+    }
+]
