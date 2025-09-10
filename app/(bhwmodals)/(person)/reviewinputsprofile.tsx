@@ -18,6 +18,7 @@ import {
 } from '@/constants/formoptions'
 import { profileResident, type ProfileResidentArgs } from '@/services/profiling'
 import { useResidentFormStore } from '@/store/forms'
+import { useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
@@ -69,22 +70,31 @@ const toNumberOrNull = (v?: string | number | null) => {
 }
 
 const ReviewInputsProfile = () => {
+  const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
 
-  // 🔔 NiceModal local state
+  // 🔔 NiceModal local state (with optional success callback)
   const [modal, setModal] = useState<{
     visible: boolean
     title: string
     message?: string
     variant?: ModalVariant
+    _onOk?: () => void
   }>({ visible: false, title: '', message: '', variant: 'info' })
 
-  const openModal = (opts: { title: string; message?: string; variant?: ModalVariant }) =>
-    setModal({ visible: true, ...opts })
+  const openModal = (opts: { title: string; message?: string; variant?: ModalVariant; onOk?: () => void }) =>
+    setModal({ visible: true, _onOk: opts.onOk, title: opts.title, message: opts.message, variant: opts.variant ?? 'info' })
   const closeModal = () => setModal((m) => ({ ...m, visible: false }))
 
   // Pull the entire draft from the in-memory store (includes relationships)
   const data = useResidentFormStore()
+  const resetForm = useResidentFormStore((s) => s.reset)
+
+  const handleSuccessOk = () => {
+    closeModal()
+    // ✅ take the user out of the flow after OK
+    router.replace('/(bhw)/(tabs)/profiling')
+  }
 
   const handleSubmit = async () => {
     try {
@@ -149,8 +159,7 @@ const ReviewInputsProfile = () => {
         p_mother_person_id: toIntOrNull(data.motherId),
         p_father_person_id: toIntOrNull(data.fatherId),
 
-        // ✅ single guardian -> send as 0 or [id] depending on your RPC contract
-        // ProfileResidentArgs expects integer[], so pass [] or [guardianId]
+        // ✅ single guardian -> ProfileResidentArgs expects integer[]
         p_guardian_person_ids: toIntArray(data.guardianId ? [data.guardianId] : []),
 
         p_child_person_ids: toIntArray(data.childIds),
@@ -163,13 +172,15 @@ const ReviewInputsProfile = () => {
       console.log("DEBUG payload: ", payload)
       await profileResident(payload)
 
+      // ✅ Clear everything in the form store immediately after success
+      resetForm()
+
       openModal({
         title: 'Success',
         message: 'Resident profile submitted successfully.',
         variant: 'success',
+        onOk: handleSuccessOk,
       })
-      // Optionally clear the draft:
-      // useResidentFormStore.getState().reset()
     } catch (err: any) {
       openModal({
         title: 'Submission failed',
@@ -378,7 +389,9 @@ const ReviewInputsProfile = () => {
         message={modal.message}
         variant={modal.variant}
         primaryText="OK"
-        onPrimary={closeModal}
+        onPrimary={() => {
+          modal._onOk ? modal._onOk() : closeModal()
+        }}
         onClose={closeModal}
       />
     </ThemedView>

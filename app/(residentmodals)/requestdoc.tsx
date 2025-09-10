@@ -23,8 +23,9 @@ import ThemedView from '@/components/ThemedView'
 
 import { documentOptions } from '@/constants/formoptions'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
-import { fetchResidentPlus } from '@/services/profile'
 import { uploadToStorage } from '@/services/storage'
+import { useAccountRole } from '@/store/useAccountRole'
+import type { PersonSearchRequest } from '@/types/householdHead'
 
 // ⬇️ Document-specific forms (unchanged)
 import ClearanceAdult from './(docreq)/clearanceadult'
@@ -151,13 +152,31 @@ export default function RequestDoc() {
   })
   const [authLetter, setAuthLetter] = useState<Picked | null>(null)
 
-  // 🔹 Requester details
-  const [me, setMe] = useState<PersonMinimal | null>(null)
-  const [loadingMe, setLoadingMe] = useState<boolean>(true)
+  // 🔹 Requester details — load like resident-home.tsx (useAccountRole cache + ensureLoaded)
+  const roleStore = useAccountRole()
+  const role = roleStore.currentRole ?? 'resident'
+  const cached = roleStore.getProfile(role)
+
+  const [loadingMe, setLoadingMe] = useState<boolean>(!cached)
+  const [me, setMe] = useState<PersonMinimal | null>(cached ? mapToPersonMinimal(cached) : null)
   const [expandRequester, setExpandRequester] = useState(false)
 
-  // 🔎 Person search hook for "others"
-  const { searchPeople } = usePersonSearchByKey()
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      const fresh = await roleStore.ensureLoaded('resident')
+      if (!live) return
+      const details = fresh ?? cached
+      setMe(details ? mapToPersonMinimal(details) : null)
+      setLoadingMe(false)
+    })()
+    return () => { live = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleStore.ensureLoaded])
+
+  // 🔎 Person search — use the exact pattern from update-resident.tsx
+  const { results: searchResults, search } = usePersonSearchByKey()
+  const [searchText, setSearchText] = useState('')
 
   // 🎯 Active doc form
   const SelectedDocument = useMemo(() => DOC_COMPONENTS[document] ?? null, [document])
@@ -167,49 +186,6 @@ export default function RequestDoc() {
     if (!document) return DEFAULT_PURPOSES
     return PURPOSE_BY_DOC[document] ?? DEFAULT_PURPOSES
   }, [document])
-
-  // 🧾 Load requester details
-  useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      try {
-        setLoadingMe(true)
-        const profile = await fetchResidentPlus()
-        if (mounted && profile) {
-          const fullAddress =
-            [
-              profile?.haddress,
-              profile?.street,
-              profile?.purok_sitio,
-              profile?.barangay,
-              profile?.city,
-            ]
-              .filter(Boolean)
-              .join(', ') || undefined
-
-          setMe({
-            person_id: profile.person_id,
-            first_name: profile.first_name,
-            middle_name: profile.middle_name,
-            last_name: profile.last_name,
-            suffix: profile.suffix,
-            sex: profile.sex,
-            birth_date: profile.birth_date,
-            mobile_number: profile.mobile_number,
-            email: profile.email,
-            address: fullAddress,
-          })
-        }
-      } catch {
-        // keep UI resilient
-      } finally {
-        if (mounted) setLoadingMe(false)
-      }
-    })()
-    return () => {
-      mounted = false
-    }
-  }, [])
 
   // 🔄 Reset dependent fields
   useEffect(() => {
@@ -233,7 +209,7 @@ export default function RequestDoc() {
 
   const handleSubmit = async () => {
     const err = hasInlineErrors()
-    if (err) return // errors are shown inline; no alert()
+    if (err) return // errors are shown inline
 
     let authUploadPath: string | null = null
     if (forWhom === 'OTHER') {
@@ -243,7 +219,6 @@ export default function RequestDoc() {
         const { path } = await uploadToStorage('authorization-letters', filePath, fileName)
         authUploadPath = path
       } catch {
-        // inline error display instead of alert
         return
       }
     }
@@ -255,7 +230,7 @@ export default function RequestDoc() {
   }
 
   const inlineError = hasInlineErrors()
-  const estimatedFee = '₱60.00' // you can compute based on document/purpose later
+  const estimatedFee = '₱100.00' // you can compute based on document/purpose later
 
   return (
     <ThemedView safe>
@@ -267,14 +242,9 @@ export default function RequestDoc() {
         extraScrollHeight={24}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.stepPill}>
-          <ThemedText small muted>Step 1 of 3</ThemedText>
-        </View>
 
-        <Spacer height={100} />
-
-        {/* 1) Requester details */}
-        <ThemedCard>
+        {/* 1) Requester details (filled like resident-home) */}
+        <ThemedCard style={{ marginTop: 12 }}>
           <View style={styles.cardHeaderRow}>
             <ThemedText style={styles.sectionTitle}>Requester Details</ThemedText>
             <TouchableOpacity onPress={() => setExpandRequester(v => !v)}>
@@ -299,11 +269,12 @@ export default function RequestDoc() {
                 <Row label="Mobile" value={me.mobile_number || '—'} />
                 <Row label="Email" value={me.email || '—'} />
                 <Row label="Address" value={me.address || '—'} multiline />
+                <Row label="Resident ID" value={me.person_id} />
               </View>
             ) : (
               <View style={styles.detailsWrap}>
                 <Row label="Name" value={niceName(me)} />
-                <Row label="Address" value={me.address || '—'} multiline />
+                <Row label="Mobile" value={me.mobile_number || '—'} />
               </View>
             )
           ) : (
@@ -368,18 +339,30 @@ export default function RequestDoc() {
               <ThemedText weight="600">Find the person</ThemedText>
               <Spacer height={6} />
 
-              <ThemedSearchSelect
-                placeholder="Search by name or ID"
-                onSearch={async (q: string) => {
-                  const res = await searchPeople({ key: q })
-                  return (res || []).map((r: any) => ({
-                    label: [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' '),
-                    value: r.person_id,
-                  }))
+              {/* 🔎 Search like update-resident.tsx */}
+              <ThemedSearchSelect<PersonSearchRequest>
+                items={searchResults}
+                getLabel={(p) => p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name}
+                getSubLabel={(p) => p.address}
+                inputValue={searchText}
+                onInputValueChange={(t) => { setSearchText(t); search(t) }}
+                placeholder="Search by name or resident ID…"
+                emptyText="No matches"
+                onSelect={(p) => {
+                  setOtherPerson({
+                    id: Number(p.person_id),
+                    display: p.full_name,
+                  })
                 }}
-                onSelect={(opt: { label: string; value: number }) =>
-                  setOtherPerson({ id: opt.value, display: opt.label })
-                }
+                fillOnSelect={false}
+                filter={(p, q) => {
+                  const query = q.toLowerCase()
+                  return (
+                    p.full_name.toLowerCase().includes(query) ||
+                    (p.person_code || '').toLowerCase().includes(query) ||
+                    (p.address || '').toLowerCase().includes(query)
+                  )
+                }}
               />
               {!otherPerson.id && inlineError ? (
                 <ThemedText small style={styles.errorText}>Please choose a person.</ThemedText>
@@ -388,7 +371,7 @@ export default function RequestDoc() {
               {otherPerson.id ? (
                 <>
                   <Spacer height={8} />
-                  <Row label="Selected person" value={otherPerson.display || '—'} />
+                  <Row label="Selected person" value={`${otherPerson.display} (ID: ${otherPerson.id})`} />
                 </>
               ) : null}
 
@@ -444,6 +427,32 @@ export default function RequestDoc() {
       </View>
     </ThemedView>
   )
+}
+
+/** Map role-store resident details to PersonMinimal (defensive on field names) */
+function mapToPersonMinimal(details: any): PersonMinimal {
+  const fullAddress =
+    [
+      details?.haddress ?? details?.street_name ?? details?.street,
+      details?.purok_sitio_name ?? details?.purok_sitio,
+      details?.barangay_name ?? details?.barangay,
+      details?.city_name ?? details?.city,
+    ]
+      .filter(Boolean)
+      .join(', ') || undefined
+
+  return {
+    person_id: Number(details?.person_id ?? details?.details?.person_id ?? 0),
+    first_name: details?.first_name ?? details?.details?.first_name ?? '',
+    middle_name: details?.middle_name ?? details?.details?.middle_name ?? null,
+    last_name: details?.last_name ?? details?.details?.last_name ?? '',
+    suffix: details?.suffix ?? details?.details?.suffix ?? null,
+    sex: details?.sex ?? details?.details?.sex ?? null,
+    birth_date: details?.birthdate ?? details?.details?.birthdate ?? null,
+    mobile_number: details?.mobile_num ?? details?.mobile_number ?? details?.details?.mobile_num ?? null,
+    email: details?.email ?? details?.details?.email ?? null,
+    address: fullAddress,
+  }
 }
 
 const Row = ({

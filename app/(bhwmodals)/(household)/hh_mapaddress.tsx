@@ -12,7 +12,7 @@ const MapAddress = () => {
 
   return (
     <ThemedView safe>
-      <ThemedAppBar title='Map sa hh_mapaddress.tsx' showNotif={false} showProfile={false} />
+      <ThemedAppBar title='Map' showNotif={false} showProfile={false} />
       {/* ThemedMapAddress should navigate ONLY when user confirms selection */}
       <ThemedMapAddress route={routeTo} />
     </ThemedView>

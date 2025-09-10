@@ -644,7 +644,6 @@ const UpdateResident = () => {
                     />
                     <Spacer height={5} />
                     <View style={styles.headerActions}>
-<<<<<<< HEAD
                         {/* Clear button */}
                         <Pressable
                             style={[styles.actionBtn, styles.clearBtn, !selectedPersonId && styles.disabledBtn]}
@@ -677,15 +676,6 @@ const UpdateResident = () => {
                         </Pressable>
                     </View>
 
-=======
-                        <ThemedButton onPress={clearSelectedResident} variant="secondary">
-                            <ThemedText btn>Clear</ThemedText>
-                        </ThemedButton>
-                        <ThemedButton onPress={() => setIsEditing(v => !v)} disabled={!selectedPersonId}>
-                            <ThemedText btn>{isEditing ? 'Stop Editing' : 'Edit Fields'}</ThemedText>
-                        </ThemedButton>
-                    </View>
->>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
                 </ThemedCard>
 
                 <Spacer />
@@ -1131,7 +1121,6 @@ const styles = StyleSheet.create({
     },
     headerActions: {
         flexDirection: 'row',
-<<<<<<< HEAD
         gap: 10,
         marginTop: 6,
     },
@@ -1164,11 +1153,6 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
 
-=======
-        gap: 8,
-        alignItems: 'center',
-    },
->>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
     modalBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.35)',

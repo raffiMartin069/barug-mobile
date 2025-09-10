@@ -53,7 +53,7 @@ const Receipt = () => {
 
                     <View style={styles.row}>
                         <ThemedText style={styles.rowLabel}>Date Requested</ThemedText>
-                        <ThemedText style={styles.rowValue}>June 15, 2023 • 10:00 AM</ThemedText>
+                        <ThemedText style={styles.rowValue}>September 11, 2025</ThemedText>
                     </View>
 
                     <View style={styles.row}>
@@ -72,8 +72,8 @@ const Receipt = () => {
                     </View>
 
                     <View style={styles.row}>
-                        <ThemedText style={styles.rowLabel}>Pickup Date</ThemedText>
-                        <ThemedText style={styles.rowValue}>June 18, 2023</ThemedText>
+                        <ThemedText style={styles.rowLabel}>Claimable After</ThemedText>
+                        <ThemedText style={styles.rowValue}>2-5 Business Days</ThemedText>
                     </View>
 
                     <Spacer height={10}/>
