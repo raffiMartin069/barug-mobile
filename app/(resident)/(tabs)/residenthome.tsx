@@ -153,7 +153,30 @@ const ResidentHome = () => {
                 <ThemedText style={styles.badgeText}>Approved</ThemedText>
               </View>
             </View>
+<<<<<<< HEAD
             
+=======
+
+            <View style={styles.activityItem}>
+              <ThemedIcon
+                name={'newspaper'}
+                iconColor={'#6b4c3b'}
+                bgColor={'#f2e5d7'}
+                shape='square'
+                containerSize={50}
+                size={20}
+              />
+              <View style={styles.activityDetails}>
+                <ThemedText style={styles.activityTitle}>Document Request</ThemedText>
+                <ThemedText style={styles.activitySubtext}>Requested on: June 10, 2023</ThemedText>
+                <ThemedText style={styles.activitySubtext}>Reference #: BRG-2023-0042</ThemedText>
+              </View>
+              <View style={[styles.badge, { backgroundColor: '#c8e6c9' }]}>
+                <ThemedText style={styles.badgeText}>Approved</ThemedText>
+              </View>
+            </View>
+
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
             <Spacer height={15} />
             <ThemedDivider />
             <Spacer height={15} />
@@ -176,6 +199,28 @@ const ResidentHome = () => {
                 <ThemedText style={styles.badgeText}>Processing</ThemedText>
               </View>
             </View>
+<<<<<<< HEAD
+=======
+
+            <View style={styles.activityItem}>
+              <ThemedIcon
+                name={'receipt'}
+                iconColor={'#4a5c6a'}
+                bgColor={'#dfe3e6'}
+                shape='square'
+                containerSize={50}
+                size={20}
+              />
+              <View style={styles.activityDetails}>
+                <ThemedText style={styles.activityTitle}>Blotter Report</ThemedText>
+                <ThemedText style={styles.activitySubtext}>Filed on: June 15, 2023</ThemedText>
+                <ThemedText style={styles.activitySubtext}>Reference #: BLT-2023-0018</ThemedText>
+              </View>
+              <View style={[styles.badge, { backgroundColor: '#ffe082' }]}>
+                <ThemedText style={styles.badgeText}>Processing</ThemedText>
+              </View>
+            </View>
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 
             <Spacer height={15} />
             <ThemedDivider />
@@ -200,6 +245,32 @@ const ResidentHome = () => {
               </View>
             </View>
           </ThemedCard>
+<<<<<<< HEAD
+=======
+
+          <ThemedCard>
+            <Spacer height={20} />
+            <View style={styles.activityItem}>
+              <ThemedIcon
+                name={'folder-open'}
+                iconColor={'#4e6151'}
+                bgColor={'#dce5dc'}
+                shape='square'
+                containerSize={50}
+                size={20}
+              />
+              <View style={styles.activityDetails}>
+                <ThemedText style={styles.activityTitle}>Barangay Case</ThemedText>
+                <ThemedText style={styles.activitySubtext}>Hearing Date: June 25, 2023</ThemedText>
+                <ThemedText style={styles.activitySubtext}>Case #: BC-2023-0007</ThemedText>
+              </View>
+              <View style={[styles.badge, { backgroundColor: '#b3e5fc' }]}>
+                <ThemedText style={styles.badgeText}>Scheduled</ThemedText>
+              </View>
+            </View>
+          </ThemedCard>
+
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
           <Spacer height={20} />
 
           <ThemedCard>

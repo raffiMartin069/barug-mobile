@@ -1,4 +1,8 @@
 // app/(bhwmodals)/(person)/update-resident-relations.tsx
+<<<<<<< HEAD
+=======
+// app/(bhwmodals)/(person)/update-resident-relations.tsx
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 import NiceModal, { type ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -11,9 +15,15 @@ import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { fetchResidentPlus, fetchResidentPlusById, updatePersonRelations } from '@/services/profile'
+<<<<<<< HEAD
 import { useAccountRole } from '@/store/useAccountRole'
 import { PersonSearchRequest } from '@/types/householdHead'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+=======
+import { useAccountRole } from '@/store/useAccountRole'; // ✅ NEW
+import { PersonSearchRequest } from '@/types/householdHead'
+import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ NEW
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Modal, Pressable, StyleSheet, View } from 'react-native'
@@ -61,10 +71,15 @@ const readParent = (d: any, role: 'mother' | 'father'): MiniPerson | null => {
     d?.[`${role}_id`] ??
     obj?.person_id ??
     obj?.[`${role}_id`]
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const name =
     d?.[`${role}_name`] ??
     obj?.full_name ??
     obj?.name
+<<<<<<< HEAD
   return coerceMini(id, name)
 }
 
@@ -77,6 +92,10 @@ const readSingleGuardian = (d: any): MiniPerson | null => {
   if (!arr?.length) return null
   const first = arr[0]
   return coerceMini(first?.person_id ?? first?.guardian_id ?? first?.id, first?.full_name ?? first?.guardian_name ?? first?.name)
+=======
+
+  return coerceMini(id, name)
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 }
 
 const readList = (arrLike: any, idKeys: string[], nameKeys: string[]): MiniPerson[] => {
@@ -97,7 +116,17 @@ const readList = (arrLike: any, idKeys: string[], nameKeys: string[]): MiniPerso
 
 /* ===== Confirm dialog with working cancel ===== */
 function ConfirmDialog({
+<<<<<<< HEAD
   visible, title, message, confirmText = 'Yes', cancelText = 'Cancel', onConfirm, onCancel,
+=======
+  visible,
+  title,
+  message,
+  confirmText = 'Yes',
+  cancelText = 'Cancel',
+  onConfirm,
+  onCancel,
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 }: {
   visible: boolean
   title: string
@@ -112,7 +141,16 @@ function ConfirmDialog({
       <View style={styles.modalBackdrop}>
         <View style={styles.modalCard}>
           <ThemedText title>{title}</ThemedText>
+<<<<<<< HEAD
           {message ? (<><Spacer height={8} /><ThemedText style={{ color: COLOR.text }}>{message}</ThemedText></>) : null}
+=======
+          {message ? (
+            <>
+              <Spacer height={8} />
+              <ThemedText style={{ color: COLOR.text }}>{message}</ThemedText>
+            </>
+          ) : null}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
           <Spacer height={14} />
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
             <ThemedButton onPress={onCancel} style={{ backgroundColor: '#F3F4F6' }}>
@@ -142,6 +180,7 @@ const Badge = ({ kind, text }: { kind: 'add' | 'remove' | 'label', text: string 
     </View>
   )
 }
+<<<<<<< HEAD
 const Arrow = () => (<ThemedText style={{ color: COLOR.arrow, marginHorizontal: 6 }}>→</ThemedText>)
 const NameChip = ({ name }: { name: string }) => (
   <View style={styles.nameChip}><ThemedText style={{ color: COLOR.text, fontSize: 13 }}>{name}</ThemedText></View>
@@ -149,10 +188,36 @@ const NameChip = ({ name }: { name: string }) => (
 
 const DeltaItem = ({ title, from, to, add = [], rem = [] }: {
   title: string; from?: string | null; to?: string | null; add?: string[]; rem?: string[];
+=======
+
+const Arrow = () => (
+  <ThemedText style={{ color: COLOR.arrow, marginHorizontal: 6 }}>→</ThemedText>
+)
+
+const NameChip = ({ name }: { name: string }) => (
+  <View style={styles.nameChip}>
+    <ThemedText style={{ color: COLOR.text, fontSize: 13 }}>{name}</ThemedText>
+  </View>
+)
+
+const DeltaItem = ({
+  title,
+  from,
+  to,
+  add = [],
+  rem = [],
+}: {
+  title: string
+  from?: string | null
+  to?: string | null
+  add?: string[]
+  rem?: string[]
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 }) => {
   const hasFromTo = from !== undefined || to !== undefined
   const hasLists = (add?.length ?? 0) > 0 || (rem?.length ?? 0) > 0
   if (!hasFromTo && !hasLists) return null
+<<<<<<< HEAD
   return (
     <View style={styles.deltaItem}>
       <View style={styles.deltaHeaderRow}><ThemedText subtitle>{title}</ThemedText></View>
@@ -170,6 +235,40 @@ const DeltaItem = ({ title, from, to, add = [], rem = [] }: {
       {rem?.length ? (
         <View style={styles.deltaLine}><Badge kind="remove" text="− Remove" />
           <View style={styles.namesWrap}>{rem.map((n, i) => <NameChip key={`rem-${i}`} name={n} />)}</View>
+=======
+
+  return (
+    <View style={styles.deltaItem}>
+      <View style={styles.deltaHeaderRow}>
+        <ThemedText subtitle>{title}</ThemedText>
+      </View>
+
+      {hasFromTo ? (
+        <View style={styles.fromToRow}>
+          <Badge kind="label" text="From" />
+          <NameChip name={from || '—'} />
+          <Arrow />
+          <Badge kind="label" text="To" />
+          <NameChip name={to || '— (clear)'} />
+        </View>
+      ) : null}
+
+      {add && add.length ? (
+        <View style={styles.deltaLine}>
+          <Badge kind="add" text="+ Add" />
+          <View style={styles.namesWrap}>
+            {add.map((n, i) => <NameChip key={`add-${i}`} name={n} />)}
+          </View>
+        </View>
+      ) : null}
+
+      {rem && rem.length ? (
+        <View style={styles.deltaLine}>
+          <Badge kind="remove" text="− Remove" />
+          <View style={styles.namesWrap}>
+            {rem.map((n, i) => <NameChip key={`rem-${i}`} name={n} />)}
+          </View>
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
         </View>
       ) : null}
     </View>
@@ -178,8 +277,14 @@ const DeltaItem = ({ title, from, to, add = [], rem = [] }: {
 
 /* ===== Main component ===== */
 const RelationsEditor = () => {
+<<<<<<< HEAD
   const roleStore = useAccountRole()
   const [myPersonId, setMyPersonId] = useState<number | null>(null)
+=======
+  // inside RelationsEditor component
+  const roleStore = useAccountRole()               // ✅ NEW
+  const [myPersonId, setMyPersonId] = useState<number | null>(null) // ✅ NEW
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const router = useRouter()
   const { person_id } = useLocalSearchParams<{ person_id: string }>()
   const targetId = Number(person_id)
@@ -189,13 +294,21 @@ const RelationsEditor = () => {
   // original snapshot
   const [origMother, setOrigMother] = useState<MiniPerson | null>(null)
   const [origFather, setOrigFather] = useState<MiniPerson | null>(null)
+<<<<<<< HEAD
   const [origGuardian, setOrigGuardian] = useState<MiniPerson | null>(null) // 🔴 single
+=======
+  const [origGuardians, setOrigGuardians] = useState<MiniPerson[]>([])
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const [origChildren, setOrigChildren] = useState<MiniPerson[]>([])
 
   // working state
   const [mother, setMother] = useState<MiniPerson | null>(null)
   const [father, setFather] = useState<MiniPerson | null>(null)
+<<<<<<< HEAD
   const [guardian, setGuardian] = useState<MiniPerson | null>(null) // 🔴 single
+=======
+  const [guardians, setGuardians] = useState<MiniPerson[]>([])
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const [children, setChildren] = useState<MiniPerson[]>([])
   const [reason, setReason] = useState('')
 
@@ -203,19 +316,31 @@ const RelationsEditor = () => {
   const { results: resPG, search: searchPG } = usePersonSearchByKey()
   const { results: resChild, search: searchChild } = usePersonSearchByKey()
 
+<<<<<<< HEAD
   // separate inputs
+=======
+  // separate inputs so fields don’t share text
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const [inputMother, setInputMother] = useState('')
   const [inputFather, setInputFather] = useState('')
   const [inputGuardian, setInputGuardian] = useState('')
   const [inputChild, setInputChild] = useState('')
 
+<<<<<<< HEAD
   // info & confirm
+=======
+  // info modal
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const [info, setInfo] = useState<{ visible: boolean; title: string; message?: string; variant?: ModalVariant }>({
     visible: false, title: '', message: '', variant: 'info'
   })
   const openInfo = (opts: { title: string; message?: string; variant?: ModalVariant }) => setInfo({ visible: true, ...opts })
   const closeInfo = () => setInfo(m => ({ ...m, visible: false }))
 
+<<<<<<< HEAD
+=======
+  // confirm dialog
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const [confirm, setConfirm] = useState<{ visible: boolean; title: string; message?: string; onYes?: () => void }>({
     visible: false, title: ''
   })
@@ -223,6 +348,7 @@ const RelationsEditor = () => {
     setConfirm({ visible: true, title, message, onYes })
 
   // load editor/staff
+<<<<<<< HEAD
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -236,12 +362,29 @@ const RelationsEditor = () => {
         setMyPersonId(null)
       }
     })()
+=======
+  // load editor/staff
+  useEffect(() => {
+    let live = true
+      ; (async () => {
+        try {
+          const me = await fetchResidentPlus()
+          if (!live) return
+          setStaffId(me?.staff_id ?? null)
+          setMyPersonId(me?.details?.person_id ?? null)    // ✅ NEW
+        } catch {
+          setStaffId(null)
+          setMyPersonId(null)                               // ✅ NEW
+        }
+      })()
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
     return () => { live = false }
   }, [])
 
   // load current relations
   useEffect(() => {
     let live = true
+<<<<<<< HEAD
     ;(async () => {
       if (!targetId) return
       const d = await fetchResidentPlusById(targetId)
@@ -264,6 +407,34 @@ const RelationsEditor = () => {
       setOrigGuardian(g); setGuardian(g)
       setOrigChildren(c); setChildren(c)
     })()
+=======
+      ; (async () => {
+        if (!targetId) return
+        const d = await fetchResidentPlusById(targetId)
+        if (!live) return
+
+        const m = readParent(d, 'mother')
+        const f = readParent(d, 'father')
+
+        const guardiansRaw = d?.guardians ?? d?.guardian_list ?? d?.guardian ?? []
+        let g = readList(guardiansRaw, ['person_id', 'guardian_id', 'id'], ['full_name', 'guardian_name', 'name'])
+        const flatGuardian = coerceMini(d?.guardian_id, d?.guardian_name)
+        if (flatGuardian) g = uniqById([...g, flatGuardian])
+
+        const childrenRaw = d?.children ?? d?.child_list ?? []
+        let c = readList(childrenRaw, ['person_id', 'child_id', 'id'], ['full_name', 'child_name', 'name'])
+        if (!c.length && Array.isArray(d?.children_ids)) {
+          const ids = d.children_ids as any[]
+          const names = Array.isArray(d?.children_names) ? (d.children_names as any[]) : []
+          c = uniqById(ids.map((id: any, idx: number) => coerceMini(id, names[idx]!)).filter(Boolean) as MiniPerson[])
+        }
+
+        setOrigMother(m); setMother(m)
+        setOrigFather(f); setFather(f)
+        setOrigGuardians(g); setGuardians(g)
+        setOrigChildren(c); setChildren(c)
+      })()
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
     return () => { live = false }
   }, [targetId])
 
@@ -280,11 +451,22 @@ const RelationsEditor = () => {
     return { from: origFather?.full_name ?? null, to: father?.full_name ?? null }
   }, [origFather, father])
 
+<<<<<<< HEAD
   const guardianDelta = useMemo(() => {
     if (!origGuardian && !guardian) return null
     if (origGuardian?.person_id === guardian?.person_id) return null
     return { from: origGuardian?.full_name ?? null, to: guardian?.full_name ?? null }
   }, [origGuardian, guardian])
+=======
+  const guardiansDelta = useMemo(() => {
+    const orig = toSet(origGuardians)
+    const now = toSet(guardians)
+    const add = guardians.filter(g => !orig.has(g.person_id)).map(g => g.full_name)
+    const rem = origGuardians.filter(g => !now.has(g.person_id)).map(g => g.full_name)
+    if (!add.length && !rem.length) return null
+    return { add, rem }
+  }, [origGuardians, guardians])
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 
   const childrenDelta = useMemo(() => {
     const orig = toSet(origChildren)
@@ -295,6 +477,7 @@ const RelationsEditor = () => {
     return { add, rem }
   }, [origChildren, children])
 
+<<<<<<< HEAD
   const hasAnyDelta = !!(motherDelta || fatherDelta || guardianDelta || childrenDelta)
 
   /* ===== Actions ===== */
@@ -320,6 +503,22 @@ const RelationsEditor = () => {
 
   const addChild = (p: MiniPerson) => {
     if (p.person_id === mother?.person_id || p.person_id === father?.person_id || p.person_id === guardian?.person_id) return
+=======
+  const hasAnyDelta = !!(motherDelta || fatherDelta || guardiansDelta || childrenDelta)
+
+  /* ===== Actions ===== */
+  const addGuardian = (p: MiniPerson) => {
+    if (p.person_id === mother?.person_id || p.person_id === father?.person_id) return
+    if (guardians.some(g => g.person_id === p.person_id)) return
+    setGuardians(prev => uniqById([...prev, p]))
+  }
+  const removeGuardian = (id: number) =>
+    ask('Remove guardian?', 'Do you really want to remove this guardian?', () =>
+      setGuardians(prev => prev.filter(g => g.person_id !== id))
+    )
+
+  const addChild = (p: MiniPerson) => {
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
     if (children.some(c => c.person_id === p.person_id)) return
     setChildren(prev => uniqById([...prev, p]))
   }
@@ -328,6 +527,25 @@ const RelationsEditor = () => {
       setChildren(prev => prev.filter(c => c.person_id !== id))
     )
 
+<<<<<<< HEAD
+=======
+  const pickAsMother = (p: MiniPerson) => {
+    if (p.person_id === father?.person_id) return
+    if (children.some(c => c.person_id === p.person_id)) return
+    setMother(p)
+  }
+  const pickAsFather = (p: MiniPerson) => {
+    if (p.person_id === mother?.person_id) return
+    if (children.some(c => c.person_id === p.person_id)) return
+    setFather(p)
+  }
+
+  const clearMother = () =>
+    ask('Clear mother?', 'Do you really want to clear the current mother link?', () => setMother(null))
+  const clearFather = () =>
+    ask('Clear father?', 'Do you really want to clear the current father link?', () => setFather(null))
+
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
   const handleSave = async () => {
     if (!targetId) {
       openInfo({ title: 'No resident', message: 'Missing target resident.', variant: 'warn' })
@@ -355,6 +573,7 @@ const RelationsEditor = () => {
       // 0 means CLEAR link if there used to be one; null means NO-OP
       p_mother_id: mother?.person_id ?? (origMother ? 0 : null),
       p_father_id: father?.person_id ?? (origFather ? 0 : null),
+<<<<<<< HEAD
       p_guardian_id: guardian?.person_id ?? (origGuardian ? 0 : null), // ✅ SEND SINGLE GUARDIAN
       p_children_add: children_add.length ? children_add : null,
       p_children_remove: children_remove.length ? children_remove : null,
@@ -372,13 +591,51 @@ const RelationsEditor = () => {
       setOrigChildren(children)
       setReason('')
 
+=======
+      // Backend currently accepts only a single guardian id; UI supports many.
+      // Leaving this null => no change on server-side guardian linkage.
+      p_guardian_id: null,
+      p_children_add: children_add.length ? children_add : null,
+      p_children_remove: children_remove.length ? children_remove : null,
+    }
+
+    try {
+
+      // debug logs (optional but handy)
+      console.log('[Relations] targetId:', targetId, 'staffId:', staffId)
+      console.log('[Relations] deltas:', {
+        motherDelta,
+        fatherDelta,
+        guardiansDelta,
+        childrenDelta,
+      })
+      console.log('[Relations] payload:', payload)
+      console.log('[Relations] payload (stringified):', JSON.stringify(payload, null, 2))
+
+
+      await updatePersonRelations(payload)
+      openInfo({ title: 'Saved', message: 'Relations updated successfully.', variant: 'success' })
+      setOrigMother(mother)
+      setOrigFather(father)
+      setOrigGuardians(guardians)
+      setOrigChildren(children)
+      setReason('')
+
+      // ✅ NEW — if user just edited their own relations, refresh role-store cache
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
       if (myPersonId && targetId === myPersonId) {
         await roleStore.ensureLoaded('resident', { force: true })
         try {
           const raw = await AsyncStorage.getItem('role-store-v1')
           if (raw) console.log('[Relations] role-store-v1 (after refresh):', JSON.parse(raw))
+<<<<<<< HEAD
         } catch {}
       }
+=======
+        } catch { }
+      }
+
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
     } catch (err: any) {
       console.error('[Relations] update failed', err)
       openInfo({ title: 'Update failed', message: err?.message ?? 'Unexpected error', variant: 'error' })
@@ -439,7 +696,14 @@ const RelationsEditor = () => {
             onInputValueChange={(t) => { setInputMother(t); searchPG(t) }}
             placeholder="Search to set as Mother…"
             emptyText="No matches"
+<<<<<<< HEAD
             onSelect={(p) => { pickAsMother({ person_id: Number(p.person_id), full_name: p.full_name }); setInputMother('') }}
+=======
+            onSelect={(p) => {
+              setMother({ person_id: Number(p.person_id), full_name: p.full_name })
+              setInputMother('')
+            }}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
             fillOnSelect={false}
           />
 
@@ -459,23 +723,44 @@ const RelationsEditor = () => {
             onInputValueChange={(t) => { setInputFather(t); searchPG(t) }}
             placeholder="Search to set as Father…"
             emptyText="No matches"
+<<<<<<< HEAD
             onSelect={(p) => { pickAsFather({ person_id: Number(p.person_id), full_name: p.full_name }); setInputFather('') }}
+=======
+            onSelect={(p) => {
+              setFather({ person_id: Number(p.person_id), full_name: p.full_name })
+              setInputFather('')
+            }}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
             fillOnSelect={false}
           />
         </ThemedCard>
 
         <Spacer />
 
+<<<<<<< HEAD
         {/* Guardian (single) */}
         <ThemedCard style={styles.card}>
           <View style={styles.headerRow}>
             <ThemedText title>Guardian</ThemedText>
             <ThemedText style={{ opacity: 0.6 }}>Optional, single</ThemedText>
+=======
+        {/* Guardians */}
+        <ThemedCard style={styles.card}>
+          <View style={styles.headerRow}>
+            <ThemedText title>Guardians</ThemedText>
+            <ThemedText style={{ opacity: 0.6 }}>Zero or more</ThemedText>
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
           </View>
 
           <Spacer height={8} />
           <View style={styles.chipsWrap}>
+<<<<<<< HEAD
             {guardian ? <Chip text={guardian.full_name} onRemove={clearGuardian} /> : <ThemedText style={{ opacity: 0.6 }}>No guardian linked</ThemedText>}
+=======
+            {guardians.length ? guardians.map(g => (
+              <Chip key={g.person_id} text={g.full_name} onRemove={() => removeGuardian(g.person_id)} />
+            )) : <ThemedText style={{ opacity: 0.6 }}>No guardians linked</ThemedText>}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
           </View>
 
           <Spacer height={10} />
@@ -485,10 +770,17 @@ const RelationsEditor = () => {
             getSubLabel={(p) => p.address}
             inputValue={inputGuardian}
             onInputValueChange={(t) => { setInputGuardian(t); searchPG(t) }}
+<<<<<<< HEAD
             placeholder="Search to set guardian…"
             emptyText="No matches"
             onSelect={(p) => {
               pickAsGuardian({ person_id: Number(p.person_id), full_name: p.full_name })
+=======
+            placeholder="Search to add guardian…"
+            emptyText="No matches"
+            onSelect={(p) => {
+              addGuardian({ person_id: Number(p.person_id), full_name: p.full_name })
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
               setInputGuardian('')
             }}
             fillOnSelect={false}
@@ -516,22 +808,57 @@ const RelationsEditor = () => {
             onInputValueChange={(t) => { setInputChild(t); searchChild(t) }}
             placeholder="Search to add child…"
             emptyText="No matches"
+<<<<<<< HEAD
             onSelect={(p) => { addChild({ person_id: Number(p.person_id), full_name: p.full_name }); setInputChild('') }}
+=======
+            onSelect={(p) => {
+              addChild({ person_id: Number(p.person_id), full_name: p.full_name })
+              setInputChild('')
+            }}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
             fillOnSelect={false}
           />
         </ThemedCard>
 
+<<<<<<< HEAD
         {/* Pending Changes */}
+=======
+        {/* Pending Changes (all) */}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
         {hasAnyDelta ? (
           <>
             <Spacer />
             <ThemedCard style={styles.pendingCard}>
               <ThemedText title>Pending Changes</ThemedText>
               <Spacer height={8} />
+<<<<<<< HEAD
               <DeltaItem title="Mother"   from={motherDelta?.from ?? undefined}   to={motherDelta?.to ?? undefined} />
               <DeltaItem title="Father"   from={fatherDelta?.from ?? undefined}   to={fatherDelta?.to ?? undefined} />
               <DeltaItem title="Guardian" from={guardianDelta?.from ?? undefined} to={guardianDelta?.to ?? undefined} />
               <DeltaItem title="Children" add={childrenDelta?.add ?? []} rem={childrenDelta?.rem ?? []} />
+=======
+
+              <DeltaItem
+                title="Mother"
+                from={motherDelta?.from ?? undefined}
+                to={motherDelta?.to ?? undefined}
+              />
+              <DeltaItem
+                title="Father"
+                from={fatherDelta?.from ?? undefined}
+                to={fatherDelta?.to ?? undefined}
+              />
+              <DeltaItem
+                title="Guardians"
+                add={guardiansDelta?.add ?? []}
+                rem={guardiansDelta?.rem ?? []}
+              />
+              <DeltaItem
+                title="Children"
+                add={childrenDelta?.add ?? []}
+                rem={childrenDelta?.rem ?? []}
+              />
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
             </ThemedCard>
           </>
         ) : null}
@@ -560,14 +887,25 @@ const RelationsEditor = () => {
         onClose={closeInfo}
       />
 
+<<<<<<< HEAD
       {/* Confirm modal */}
+=======
+      {/* Confirm modal (working Cancel) */}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
       <ConfirmDialog
         visible={confirm.visible}
         title={confirm.title}
         message={confirm.message}
         confirmText="Yes, continue"
         cancelText="Cancel"
+<<<<<<< HEAD
         onConfirm={() => { confirm.onYes?.(); setConfirm({ visible: false, title: '' }) }}
+=======
+        onConfirm={() => {
+          confirm.onYes?.()
+          setConfirm({ visible: false, title: '' })
+        }}
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
         onCancel={() => setConfirm({ visible: false, title: '' })}
       />
     </ThemedView>

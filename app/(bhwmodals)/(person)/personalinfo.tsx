@@ -12,11 +12,19 @@ import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
 import {
+<<<<<<< HEAD
   civilStatusOptions,
   genderOptions,
   nationalityOptions,
   religionOptions,
   suffixOptions,
+=======
+    civilStatusOptions,
+    genderOptions,
+    nationalityOptions,
+    religionOptions,
+    suffixOptions,
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 } from '@/constants/formoptions';
 import { useResidentFormStore } from '@/store/forms';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -182,8 +190,13 @@ const PersonalInfo = () => {
 
   return (
     <ThemedView safe>
+<<<<<<< HEAD
       <ThemedAppBar title="Personal Information" showNotif={false} showProfile={false} />
       <ThemedProgressBar step={1} totalStep={4} />
+=======
+      <ThemedAppBar title="Personal Information test" showNotif={false} showProfile={false} />
+      <ThemedProgressBar step={1} totalStep={2} />
+>>>>>>> 0e3ef0613104564fef39e37b0145dc342c048b30
 
       <ThemedKeyboardAwareScrollView>
         <View>
