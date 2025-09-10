@@ -1,7 +1,13 @@
 // app/(residentmodals)/requestdoc.tsx
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -56,7 +62,7 @@ const DOC_COMPONENTS: Record<string, React.FC> = {
   cert_residency_minor: ResidencyMinor,
 }
 
-// 🔁 Map purposes by document (tweak freely)
+// 🔁 Map purposes by document
 const PURPOSE_BY_DOC: Record<string, { label: string; value: string }[]> = {
   brgy_clearance_adult: [
     { label: 'Employment', value: 'EMPLOYMENT' },
@@ -128,7 +134,9 @@ type Picked = {
   type?: string
 }
 
-const RequestDoc = () => {
+const SUBMIT_BAR_HEIGHT = 78
+
+export default function RequestDoc() {
   const router = useRouter()
 
   // 🔹 Selections
@@ -146,6 +154,7 @@ const RequestDoc = () => {
   // 🔹 Requester details
   const [me, setMe] = useState<PersonMinimal | null>(null)
   const [loadingMe, setLoadingMe] = useState<boolean>(true)
+  const [expandRequester, setExpandRequester] = useState(false)
 
   // 🔎 Person search hook for "others"
   const { searchPeople } = usePersonSearchByKey()
@@ -191,8 +200,8 @@ const RequestDoc = () => {
             address: fullAddress,
           })
         }
-      } catch (e) {
-        // no-op; keep UI resilient
+      } catch {
+        // keep UI resilient
       } finally {
         if (mounted) setLoadingMe(false)
       }
@@ -212,57 +221,91 @@ const RequestDoc = () => {
     return [p.first_name, p.middle_name, p.last_name, p.suffix].filter(Boolean).join(' ')
   }
 
+  const hasInlineErrors = () => {
+    if (!document) return 'Please select a document.'
+    if (!purpose) return 'Please select a purpose.'
+    if (forWhom === 'OTHER') {
+      if (!otherPerson.id) return 'Please choose the person you are requesting for.'
+      if (!authLetter?.uri && !authLetter?.path) return 'Please upload an authorization letter.'
+    }
+    return ''
+  }
+
   const handleSubmit = async () => {
-    // ✅ Basic validations
-    if (!document) return alert('Please select a document.')
-    if (!purpose) return alert('Please select a purpose.')
+    const err = hasInlineErrors()
+    if (err) return // errors are shown inline; no alert()
 
     let authUploadPath: string | null = null
     if (forWhom === 'OTHER') {
-      if (!otherPerson.id) return alert('Please choose the person you are requesting for.')
-      if (!authLetter?.uri && !authLetter?.path) {
-        return alert('Please upload an authorization letter.')
-      }
-      // upload auth letter
       try {
         const filePath = authLetter?.path || authLetter?.uri!
         const fileName = authLetter?.name || authLetter?.fileName || `auth_${Date.now()}.jpg`
         const { path } = await uploadToStorage('authorization-letters', filePath, fileName)
         authUploadPath = path
-      } catch (e) {
-        return alert('Failed to upload authorization letter. Please try again.')
+      } catch {
+        // inline error display instead of alert
+        return
       }
     }
 
-    // 🚀 TODO: Call your RPC to create the request (send document, purpose, forWhom, otherPerson.id, authUploadPath, etc.)
-    // await create_document_request({...})
+    // TODO: Call your RPC to create the request
+    // await create_document_request({ document, purpose, forWhom, otherPersonId: otherPerson.id, authUploadPath })
 
     router.push('/receipt')
   }
 
+  const inlineError = hasInlineErrors()
+  const estimatedFee = '₱60.00' // you can compute based on document/purpose later
+
   return (
     <ThemedView safe>
       <ThemedAppBar title="Request a Document" showNotif={false} showProfile={false} />
+      <Spacer height={8} />
+      <ThemedKeyboardAwareScrollView
+        contentContainerStyle={{ paddingBottom: SUBMIT_BAR_HEIGHT + 24 }}
+        enableOnAndroid
+        extraScrollHeight={24}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.stepPill}>
+          <ThemedText small muted>Step 1 of 3</ThemedText>
+        </View>
 
-      <ThemedKeyboardAwareScrollView>
+        <Spacer height={100} />
+
         {/* 1) Requester details */}
         <ThemedCard>
-          <ThemedText style={styles.sectionTitle}>Requester Details</ThemedText>
+          <View style={styles.cardHeaderRow}>
+            <ThemedText style={styles.sectionTitle}>Requester Details</ThemedText>
+            <TouchableOpacity onPress={() => setExpandRequester(v => !v)}>
+              <ThemedText small weight="600" style={{ opacity: 0.7 }}>
+                {expandRequester ? 'Collapse' : 'View'}
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
           {loadingMe ? (
-            <View style={styles.loadingRow}>
+            <View style={[styles.loadingRow, { marginTop: 6 }]}>
               <ActivityIndicator />
               <Spacer width={8} />
               <ThemedText muted>Loading your profile…</ThemedText>
             </View>
           ) : me ? (
-            <View style={styles.detailsWrap}>
-              <Row label="Name" value={niceName(me)} />
-              <Row label="Sex" value={me.sex || '—'} />
-              <Row label="Birthdate" value={me.birth_date || '—'} />
-              <Row label="Mobile" value={me.mobile_number || '—'} />
-              <Row label="Email" value={me.email || '—'} />
-              <Row label="Address" value={me.address || '—'} multiline />
-            </View>
+            expandRequester ? (
+              <View style={styles.detailsWrap}>
+                <Row label="Name" value={niceName(me)} />
+                <Row label="Sex" value={me.sex || '—'} />
+                <Row label="Birthdate" value={me.birth_date || '—'} />
+                <Row label="Mobile" value={me.mobile_number || '—'} />
+                <Row label="Email" value={me.email || '—'} />
+                <Row label="Address" value={me.address || '—'} multiline />
+              </View>
+            ) : (
+              <View style={styles.detailsWrap}>
+                <Row label="Name" value={niceName(me)} />
+                <Row label="Address" value={me.address || '—'} multiline />
+              </View>
+            )
           ) : (
             <ThemedText muted>Couldn’t load your details. You can still proceed.</ThemedText>
           )}
@@ -282,6 +325,9 @@ const RequestDoc = () => {
             placeholder="Select Document Type"
             order={0}
           />
+          {(!document && inlineError) ? (
+            <ThemedText small style={styles.errorText}>Please select a document.</ThemedText>
+          ) : null}
 
           <Spacer height={10} />
 
@@ -292,13 +338,19 @@ const RequestDoc = () => {
             placeholder="Select Purpose"
             order={1}
           />
+          {(!purpose && inlineError) ? (
+            <ThemedText small style={styles.errorText}>Please select a purpose.</ThemedText>
+          ) : null}
         </ThemedCard>
 
         <Spacer height={14} />
 
         {/* 3) Who is this for? */}
         <ThemedCard>
-          <ThemedText style={styles.sectionTitle}>Who is this for?</ThemedText>
+          <View style={styles.cardHeaderRow}>
+            <ThemedText style={styles.sectionTitle}>Who is this for?</ThemedText>
+            <ThemedText small muted>{forWhom}</ThemedText>
+          </View>
           <Spacer height={8} />
 
           <ThemedRadioButton
@@ -320,7 +372,6 @@ const RequestDoc = () => {
                 placeholder="Search by name or ID"
                 onSearch={async (q: string) => {
                   const res = await searchPeople({ key: q })
-                  // Map results to dropdown format
                   return (res || []).map((r: any) => ({
                     label: [r.first_name, r.middle_name, r.last_name, r.suffix].filter(Boolean).join(' '),
                     value: r.person_id,
@@ -330,6 +381,9 @@ const RequestDoc = () => {
                   setOtherPerson({ id: opt.value, display: opt.label })
                 }
               />
+              {!otherPerson.id && inlineError ? (
+                <ThemedText small style={styles.errorText}>Please choose a person.</ThemedText>
+              ) : null}
 
               {otherPerson.id ? (
                 <>
@@ -348,16 +402,22 @@ const RequestDoc = () => {
               {authLetter?.name || authLetter?.fileName ? (
                 <>
                   <Spacer height={6} />
-                  <ThemedText small muted>
-                    Attached: {authLetter.name || authLetter.fileName}
-                  </ThemedText>
+                  <View style={styles.fileChip}>
+                    <ThemedText small weight="600">{authLetter.name || authLetter.fileName}</ThemedText>
+                    <TouchableOpacity onPress={() => setAuthLetter(null)}>
+                      <ThemedText small muted> ✕ </ThemedText>
+                    </TouchableOpacity>
+                  </View>
                 </>
+              ) : null}
+              {(!authLetter?.uri && !authLetter?.path && inlineError) ? (
+                <ThemedText small style={styles.errorText}>Authorization letter is required.</ThemedText>
               ) : null}
             </>
           )}
         </ThemedCard>
 
-        {/* 4) Document-specific form (kept intact) */}
+        {/* 4) Document-specific form */}
         {SelectedDocument ? (
           <>
             <Spacer height={14} />
@@ -369,22 +429,22 @@ const RequestDoc = () => {
           </>
         ) : null}
 
-        <Spacer height={18} />
-
-        {/* 5) Submit */}
-        <View>
-          <ThemedButton onPress={handleSubmit}>
-            <ThemedText btn>Submit</ThemedText>
-          </ThemedButton>
-        </View>
-
-        <Spacer height={18} />
+        <Spacer height={24} />
       </ThemedKeyboardAwareScrollView>
+
+      {/* Sticky submit bar */}
+      <View style={styles.submitBar}>
+        <View>
+          <ThemedText small muted>Total Estimated Fee</ThemedText>
+          <ThemedText weight="700">{estimatedFee}</ThemedText>
+        </View>
+        <ThemedButton onPress={handleSubmit} disabled={!!inlineError}>
+          <ThemedText btn>Submit Request</ThemedText>
+        </ThemedButton>
+      </View>
     </ThemedView>
   )
 }
-
-export default RequestDoc
 
 const Row = ({
   label,
@@ -404,9 +464,23 @@ const Row = ({
 )
 
 const styles = StyleSheet.create({
+  stepPill: {
+    alignSelf: 'flex-start',
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: Platform.select({ ios: '#F2F2F7', android: '#F3F4F6', default: '#F3F4F6' }),
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   loadingRow: {
     flexDirection: 'row',
@@ -426,5 +500,36 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     flex: 1,
+  },
+  fileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fafafa',
+  },
+  errorText: {
+    color: '#C0392B',
+    marginTop: 6,
+  },
+  submitBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: SUBMIT_BAR_HEIGHT,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 })
