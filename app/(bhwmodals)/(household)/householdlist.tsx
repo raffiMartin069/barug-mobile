@@ -1,175 +1,159 @@
-import Spacer from '@/components/Spacer'
-import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedBottomSheet from '@/components/ThemedBottomSheet'
-import ThemedButton from '@/components/ThemedButton'
-import ThemedCard from '@/components/ThemedCard'
-import ThemedChip from '@/components/ThemedChip'
-import ThemedIcon from '@/components/ThemedIcon'
-import ThemedText from '@/components/ThemedText'
-import ThemedView from '@/components/ThemedView'
-import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
-import React, { useRef, useState } from 'react'
-import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import Spacer from "@/components/Spacer";
+import ThemedAppBar from "@/components/ThemedAppBar";
+import ThemedBottomSheet from "@/components/ThemedBottomSheet";
+import ThemedButton from "@/components/ThemedButton";
+import ThemedCard from "@/components/ThemedCard";
+import ThemedChip from "@/components/ThemedChip";
+import ThemedIcon from "@/components/ThemedIcon";
+import ThemedText from "@/components/ThemedText";
+import ThemedView from "@/components/ThemedView";
+import { FamilyRepository } from "@/repository/familyRepository";
+import { HouseholdRepository } from "@/repository/householdRepository";
+import { HouseholdListService } from "@/services/householdList";
+import { useHouseMateStore } from "@/store/houseMateStore";
+import { MgaKaHouseMates } from "@/types/houseMates";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  Dimensions,
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 
-const SCREEN_WIDTH = Dimensions.get('window').width
+const SCREEN_WIDTH = Dimensions.get("window").width;
 
 type Member = {
-  id: string
-  name: string
-  relation: string
-  age: number
-  sex: 'Male' | 'Female'
-}
+  id: string;
+  name: string;
+  relation: string;
+  age: number;
+  sex: "Male" | "Female";
+};
 
 type Family = {
-  familyNum: string
-  headName: string
-  type: string
-  nhts: string | boolean
-  indigent: string | boolean
-  monthlyIncome: string
-  sourceIncome: string
-  members: Member[]
-}
+  familyNum: string;
+  headName: string;
+  type: string;
+  nhts: string | boolean;
+  indigent: string | boolean;
+  monthlyIncome: string;
+  sourceIncome: string;
+  members: Member[];
+};
 
 type Household = {
-  id: string
-  householdNum: string
-  householdHead: string
-  address: string
-  houseType: string
-  houseOwnership: string
-  families: Family[]
-}
+  id: string;
+  householdNum: string;
+  householdHead: string;
+  address: string;
+  houseType: string;
+  houseOwnership: string;
+  families: Family[];
+};
 
 const HouseholdList = () => {
-  const router = useRouter()
+  const router = useRouter();
 
-  const households: Household[] = [
-  {
-    id: 'HH-2024-001',
-    householdNum: 'HH-2024-001',
-    householdHead: 'Raphael H. Bellosillo',
-    address: 'Purok 3, Sitio San Roque',
-    houseType: 'Concrete',
-    houseOwnership: 'Owned',
-    families: [
-      {
-        familyNum: 'FAM-001',
-        headName: 'Raphael H. Bellosillo',
-        type: 'NUCLEAR',
-        nhts: 'YES',
-        indigent: 'NO',
-        monthlyIncome: '₱15,000 - ₱20,000',
-        sourceIncome: 'Employment',
-        members: [
-          { id: 'P-1', name: 'Raphael H. Bellosillo', relation: 'HEAD', age: 45, sex: 'Male' },
-          { id: 'P-2', name: 'Ana Bellosillo', relation: 'SPOUSE', age: 43, sex: 'Female' },
-          { id: 'P-3', name: 'Miko Bellosillo', relation: 'CHILD', age: 16, sex: 'Male' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'HH-2024-002',
-    householdNum: 'HH-2024-002',
-    householdHead: 'Maria Santos',
-    address: 'Purok 5, Sitio Mabini',
-    houseType: 'Wooden',
-    houseOwnership: 'Renting',
-    families: [
-      {
-        familyNum: 'FAM-002',
-        headName: 'Maria Santos',
-        type: 'EXTENDED',
-        nhts: 'NO',
-        indigent: 'YES',
-        monthlyIncome: '₱5,000 - ₱8,000',
-        sourceIncome: 'Small Business',
-        members: [
-          { id: 'P-4', name: 'Maria Santos', relation: 'HEAD', age: 50, sex: 'Female' },
-          { id: 'P-5', name: 'Jose Santos', relation: 'CHILD', age: 22, sex: 'Male' },
-          { id: 'P-6', name: 'Liza Santos', relation: 'CHILD', age: 19, sex: 'Female' },
-          { id: 'P-7', name: 'Juan Dela Cruz', relation: 'GRANDCHILD', age: 5, sex: 'Male' },
-        ],
-      },
-      {
-        familyNum: 'FAM-003',
-        headName: 'Pedro Cruz',
-        type: 'NUCLEAR',
-        nhts: 'NO',
-        indigent: 'NO',
-        monthlyIncome: '₱10,000 - ₱12,000',
-        sourceIncome: 'Construction Work',
-        members: [], // no members yet
-      },
-    ],
-  },
-  {
-    id: 'HH-2024-111',
-    householdNum: 'HH-2024-001',
-    householdHead: 'Raphael H. Bellosillo',
-    address: 'Purok 3, Sitio San Roque',
-    houseType: 'Concrete',
-    houseOwnership: 'Owned',
-    families: [
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
+  const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
+  const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
 
-    ],
-  },
-  {
-    id: 'HH-2024-112',
-    householdNum: 'HH-2024-001',
-    householdHead: 'Raphael H. Bellosillo',
-    address: 'Purok 3, Sitio San Roque',
-    houseType: 'Concrete',
-    houseOwnership: 'Owned',
-    families: [
+  useEffect(() => {
+    const householdRepository = new HouseholdRepository();
+    const familyRepository = new FamilyRepository();
+    const service = new HouseholdListService(
+      familyRepository,
+      householdRepository
+    );
+    const fetchHouseholds = async () => {
+      const rawData = await service.execute();
+      if (!rawData) return;
 
-    ],
-  },
-]
+      const transformed: Household[] = rawData.map((item: any) => {
+        const parsed = JSON.parse(item.members);
 
+        return {
+          id: String(item.household_id),
+          householdNum: item.household_num,
+          householdHead: item.household_head_name,
+          address: item.address,
+          houseType: parsed.household.house_type,
+          houseOwnership: parsed.household.house_ownership,
+          families: parsed.families.map((fam: any) => ({
+            familyNum: fam.family_num,
+            headName: fam.family_head_name,
+            type: fam.household_type,
+            nhts: fam.nhts_status,
+            indigent: fam.indigent_status,
+            monthlyIncome: fam.monthly_income,
+            sourceIncome: fam.source_of_income,
+            members: fam.members.map((m: any, idx: number) => ({
+              id: `${m.person_id}-${idx}`,
+              name: m.full_name,
+              relation: "",
+              age: 0,
+              sex: "Male",
+            })),
+          })),
+        };
+      });
+
+      setHouseholds(transformed);
+    };
+    fetchHouseholds();
+  });
 
   // ---------- bottom sheet + member states ----------
-  const [open, setOpen] = useState(false)
-  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null)
+  const [open, setOpen] = useState(false);
+  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
+    null
+  );
 
-  const [familyIndex, setFamilyIndex] = useState(0)
-  const familiesScrollRef = useRef<ScrollView>(null)
+  const [familyIndex, setFamilyIndex] = useState(0);
+  const familiesScrollRef = useRef<ScrollView>(null);
 
   const openSheet = (item: Household) => {
-    setSelectedHousehold(item)
-    setOpen(true)
-    setFamilyIndex(0)
+    setSelectedHousehold(item);
+    setOpen(true);
+    setFamilyIndex(0);
     setTimeout(() => {
-      familiesScrollRef.current?.scrollTo({ x: 0, animated: false })
-    }, 0)
-  }
+      familiesScrollRef.current?.scrollTo({ x: 0, animated: false });
+    }, 0);
+  };
 
-  const closeSheet = () => setOpen(false)
+  const closeSheet = () => setOpen(false);
 
   const onFamiliesScroll = (e: any) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH)
-    setFamilyIndex(idx)
-  }
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setFamilyIndex(idx);
+  };
 
   const onPressMember = (fam: Family, mem: Member) => {
-    closeSheet()
+    closeSheet();
+    setMemberId(Number(mem.id.split("-")[0]));
+    setFamilyId(Number(fam.familyNum.split("-")[1]));
+    setHouseholdId(Number(fam.familyNum.split("-")[0]));
+    // refactored:
+    // navigation works with /memberprofile but it does not mount the component which causes console.logs or useEffect not to execute.
     router.push({
-      pathname: '/memberprofile',
-      params: { id: mem.id },
-    })
-  }
+      pathname: "/(bhwmodals)/(family)/memberprofile",
+    });
+  };
 
   return (
-    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
-      <ThemedAppBar 
-        title='List of Household'
-      />
+    <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
+      <ThemedAppBar title="List of Household" />
 
       <KeyboardAvoidingView>
-        <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 50 }}
+          showsVerticalScrollIndicator={false}
+        >
           <Spacer height={20} />
 
           {households.map((hh) => (
@@ -179,16 +163,19 @@ const HouseholdList = () => {
                   <View style={styles.rowContainer}>
                     <View style={styles.rowSubContainer}>
                       <ThemedIcon
-                        name={'home'}
-                        bgColor={'#310101'}
+                        name={"home"}
+                        bgColor={"#310101"}
                         containerSize={40}
                         size={18}
                       />
                       <View style={{ marginLeft: 10 }}>
-                        <ThemedText style={{ fontWeight: '700' }} subtitle={true}>
+                        <ThemedText
+                          style={{ fontWeight: "700" }}
+                          subtitle={true}
+                        >
                           {hh.householdNum}
                         </ThemedText>
-                        <ThemedText style={{ color: '#475569' }}>
+                        <ThemedText style={{ color: "#475569" }}>
                           Household Head: {hh.householdHead}
                         </ThemedText>
                       </View>
@@ -196,14 +183,25 @@ const HouseholdList = () => {
                     <Ionicons name="chevron-forward" size={18} />
                   </View>
 
-                  <View style={[styles.rowSubContainer, { paddingBottom: 5, paddingTop: 5 }]}>
-                    <Ionicons name="location-outline" size={16} color="#475569" />
-                    <ThemedText style={{ marginLeft: 10, color: '#475569' }}>{hh.address}</ThemedText>
+                  <View
+                    style={[
+                      styles.rowSubContainer,
+                      { paddingBottom: 5, paddingTop: 5 },
+                    ]}
+                  >
+                    <Ionicons
+                      name="location-outline"
+                      size={16}
+                      color="#475569"
+                    />
+                    <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
+                      {hh.address}
+                    </ThemedText>
                   </View>
 
                   <View style={styles.rowSubContainer}>
                     <Ionicons name="people-outline" size={16} color="#475569" />
-                    <ThemedText style={{ marginLeft: 10, color: '#475569' }}>
+                    <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
                       {hh.families.length} Families
                     </ThemedText>
                   </View>
@@ -220,7 +218,6 @@ const HouseholdList = () => {
             </View>
           ))}
         </ScrollView>
-
       </KeyboardAvoidingView>
 
       {/* ---------- Bottom Sheet --------- */}
@@ -229,7 +226,9 @@ const HouseholdList = () => {
           <View style={{ flex: 1 }}>
             <View style={{ marginBottom: 8 }}>
               <ThemedText subtitle>{selectedHousehold.householdNum}</ThemedText>
-              <ThemedText style={{ color: '#475569' }}>{selectedHousehold.householdHead}</ThemedText>
+              <ThemedText style={{ color: "#475569" }}>
+                {selectedHousehold.householdHead}
+              </ThemedText>
             </View>
 
             <ScrollView
@@ -239,43 +238,35 @@ const HouseholdList = () => {
             >
               {/* Household Info */}
               <View style={{ marginTop: 6 }}>
-                <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>Household Information</ThemedText>
+                <ThemedText style={{ fontWeight: "700", marginBottom: 6 }}>
+                  Household Information
+                </ThemedText>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    Household Head
+                  <ThemedText>Household Head</ThemedText>
+                  <ThemedText style={styles.kvVal}>
+                    {selectedHousehold.householdHead}
                   </ThemedText>
+                </View>
+                <View style={styles.kvRow}>
+                  <ThemedText>Household No.</ThemedText>
+                  <ThemedText style={styles.kvVal}>
+                    {selectedHousehold.householdNum}
+                  </ThemedText>
+                </View>
+                <View style={styles.kvRow}>
+                  <ThemedText>House Type</ThemedText>
                   <ThemedText style={styles.kvVal}>
                     {selectedHousehold.houseType}
                   </ThemedText>
                 </View>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    Household No.
-                  </ThemedText>
+                  <ThemedText>House Ownership</ThemedText>
                   <ThemedText style={styles.kvVal}>
                     {selectedHousehold.houseOwnership}
                   </ThemedText>
                 </View>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    House Type
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.address}
-                  </ThemedText>
-                </View>
-                <View style={styles.kvRow}>
-                  <ThemedText>
-                    House Ownership
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.address}
-                  </ThemedText>
-                </View>
-                <View style={styles.kvRow}>
-                  <ThemedText>
-                    Home Address
-                  </ThemedText>
+                  <ThemedText>Home Address</ThemedText>
                   <ThemedText style={styles.kvVal}>
                     {selectedHousehold.address}
                   </ThemedText>
@@ -290,8 +281,8 @@ const HouseholdList = () => {
                   </ThemedText>
 
                   <ThemedChip
-                    label={'Add Family Unit'}
-                    onPress={() => router.push('/createfamily')}
+                    label={"Add Family Unit"}
+                    onPress={() => router.push("/createfamily")}
                     filled={false}
                   />
                 </View>
@@ -305,25 +296,59 @@ const HouseholdList = () => {
                   scrollEventThrottle={16}
                 >
                   {selectedHousehold.families.map((fam) => (
-                    <View key={fam.familyNum} style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}>
+                    <View
+                      key={fam.familyNum}
+                      style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}
+                    >
                       <View style={styles.familyCover}>
-                        <Ionicons name="home-outline" size={20} color="#475569" />
+                        <Ionicons
+                          name="home-outline"
+                          size={20}
+                          color="#475569"
+                        />
                         <View style={{ marginLeft: 10 }}>
-                          <ThemedText style={{ fontWeight: '700' }}>{fam.familyNum}</ThemedText>
-                          <ThemedText style={{ color: '#64748b', marginTop: 2 }}>
-                            Family Head: <ThemedText style={{ fontWeight: '700' }}>{fam.headName}</ThemedText>
+                          <ThemedText style={{ fontWeight: "700" }}>
+                            {fam.familyNum}
+                          </ThemedText>
+                          <ThemedText
+                            style={{ color: "#64748b", marginTop: 2 }}
+                          >
+                            Family Head:{" "}
+                            <ThemedText style={{ fontWeight: "700" }}>
+                              {fam.headName}
+                            </ThemedText>
                           </ThemedText>
                           <View style={styles.badgesRow}>
-                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Type: {fam.type}</ThemedText></View>
-                            <View style={styles.badge}><ThemedText style={styles.badgeText}>NHTS: {String(fam.nhts)}</ThemedText></View>
-                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Indigent: {String(fam.indigent)}</ThemedText></View>
-                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Monthly Income: {fam.monthlyIncome}</ThemedText></View>
-                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Source of Income: {fam.sourceIncome}</ThemedText></View>
+                            <View style={styles.badge}>
+                              <ThemedText style={styles.badgeText}>
+                                Type: {fam.type}
+                              </ThemedText>
+                            </View>
+                            <View style={styles.badge}>
+                              <ThemedText style={styles.badgeText}>
+                                NHTS: {String(fam.nhts)}
+                              </ThemedText>
+                            </View>
+                            <View style={styles.badge}>
+                              <ThemedText style={styles.badgeText}>
+                                Indigent: {String(fam.indigent)}
+                              </ThemedText>
+                            </View>
+                            <View style={styles.badge}>
+                              <ThemedText style={styles.badgeText}>
+                                Monthly Income: {fam.monthlyIncome}
+                              </ThemedText>
+                            </View>
+                            <View style={styles.badge}>
+                              <ThemedText style={styles.badgeText}>
+                                Source of Income: {fam.sourceIncome}
+                              </ThemedText>
+                            </View>
                           </View>
                         </View>
                       </View>
 
-                      <Spacer height={10}/>
+                      <Spacer height={10} />
 
                       <View style={styles.sectionHeaderRow}>
                         <ThemedText style={styles.sectionTitle}>
@@ -331,8 +356,8 @@ const HouseholdList = () => {
                         </ThemedText>
 
                         <ThemedChip
-                          label={'Add Member'}
-                          onPress={() => router.push('/addmember')}
+                          label={"Add Member"}
+                          onPress={() => router.push("/addmember")}
                           filled={false}
                         />
                       </View>
@@ -343,12 +368,16 @@ const HouseholdList = () => {
                             <ThemedChip
                               key={m.id}
                               label={m.name}
-                              onPress={() => onPressMember(fam, m)}                          
+                              onPress={() => onPressMember(fam, m)}
                             />
                           ))}
                         </View>
                       ) : (
-                        <ThemedText style={{ color: '#64748b', fontStyle: 'italic' }}>There is no family member in this family.</ThemedText>
+                        <ThemedText
+                          style={{ color: "#64748b", fontStyle: "italic" }}
+                        >
+                          There is no family member in this family.
+                        </ThemedText>
                       )}
                     </View>
                   ))}
@@ -359,48 +388,58 @@ const HouseholdList = () => {
         )}
       </ThemedBottomSheet>
     </ThemedView>
-  )
-}
+  );
+};
 
-export default HouseholdList
+export default HouseholdList;
 
 const styles = StyleSheet.create({
   rowContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginVertical: 5,
   },
   rowSubContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
-  kvRow: {
-    
+  kvRow: {},
+  kvKey: { color: "#64748b", minWidth: 120 },
+  kvVal: {
+    fontWeight: "600",
+    color: "#0f172a",
+    flexShrink: 1,
+    textAlign: "right",
   },
-  kvKey: { color: '#64748b', minWidth: 120 },
-  kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
 
   familyCover: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     borderWidth: 1,
-    borderColor: '#E9EDEF',
+    borderColor: "#E9EDEF",
     borderRadius: 12,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
-  memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
-  badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
-  badgeText:   { fontSize: 12, color: '#334155' },
+  memberGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
+  badgesRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  badgeText: { fontSize: 12, color: "#334155" },
   sectionHeaderRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  marginBottom: 6,
-},
-  sectionTitle: { fontWeight: '700', flexShrink: 1, },
-})
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 6,
+  },
+  sectionTitle: { fontWeight: "700", flexShrink: 1 },
+});
