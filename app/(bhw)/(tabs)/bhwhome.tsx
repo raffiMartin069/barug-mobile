@@ -11,7 +11,7 @@ import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native
 const BhwHome = () => {
   return (
     <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe>
-      <ThemedAppBar/>
+      <ThemedAppBar showBack={false}/>
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
