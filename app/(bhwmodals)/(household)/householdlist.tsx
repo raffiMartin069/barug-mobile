@@ -4,6 +4,7 @@ import ThemedBottomSheet from '@/components/ThemedBottomSheet'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedChip from '@/components/ThemedChip'
+import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
@@ -43,93 +44,97 @@ type Household = {
   families: Family[]
 }
 
+const REMOVAL_REASONS = [
+  'MOVED OUT',
+  'DECEASED',
+  'DATA CORRECTION',
+  'DUPLICATE ENTRY',
+  'OTHER'
+] as const
+type RemovalReason = typeof REMOVAL_REASONS[number]
+
 const HouseholdList = () => {
   const router = useRouter()
 
-  const households: Household[] = [
-  {
-    id: 'HH-2024-001',
-    householdNum: 'HH-2024-001',
-    householdHead: 'Raphael H. Bellosillo',
-    address: 'Purok 3, Sitio San Roque',
-    houseType: 'Concrete',
-    houseOwnership: 'Owned',
-    families: [
-      {
-        familyNum: 'FAM-001',
-        headName: 'Raphael H. Bellosillo',
-        type: 'NUCLEAR',
-        nhts: 'YES',
-        indigent: 'NO',
-        monthlyIncome: '₱15,000 - ₱20,000',
-        sourceIncome: 'Employment',
-        members: [
-          { id: 'P-1', name: 'Raphael H. Bellosillo', relation: 'HEAD', age: 45, sex: 'Male' },
-          { id: 'P-2', name: 'Ana Bellosillo', relation: 'SPOUSE', age: 43, sex: 'Female' },
-          { id: 'P-3', name: 'Miko Bellosillo', relation: 'CHILD', age: 16, sex: 'Male' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'HH-2024-002',
-    householdNum: 'HH-2024-002',
-    householdHead: 'Maria Santos',
-    address: 'Purok 5, Sitio Mabini',
-    houseType: 'Wooden',
-    houseOwnership: 'Renting',
-    families: [
-      {
-        familyNum: 'FAM-002',
-        headName: 'Maria Santos',
-        type: 'EXTENDED',
-        nhts: 'NO',
-        indigent: 'YES',
-        monthlyIncome: '₱5,000 - ₱8,000',
-        sourceIncome: 'Small Business',
-        members: [
-          { id: 'P-4', name: 'Maria Santos', relation: 'HEAD', age: 50, sex: 'Female' },
-          { id: 'P-5', name: 'Jose Santos', relation: 'CHILD', age: 22, sex: 'Male' },
-          { id: 'P-6', name: 'Liza Santos', relation: 'CHILD', age: 19, sex: 'Female' },
-          { id: 'P-7', name: 'Juan Dela Cruz', relation: 'GRANDCHILD', age: 5, sex: 'Male' },
-        ],
-      },
-      {
-        familyNum: 'FAM-003',
-        headName: 'Pedro Cruz',
-        type: 'NUCLEAR',
-        nhts: 'NO',
-        indigent: 'NO',
-        monthlyIncome: '₱10,000 - ₱12,000',
-        sourceIncome: 'Construction Work',
-        members: [], // no members yet
-      },
-    ],
-  },
-  {
-    id: 'HH-2024-111',
-    householdNum: 'HH-2024-001',
-    householdHead: 'Raphael H. Bellosillo',
-    address: 'Purok 3, Sitio San Roque',
-    houseType: 'Concrete',
-    houseOwnership: 'Owned',
-    families: [
-
-    ],
-  },
-  {
-    id: 'HH-2024-112',
-    householdNum: 'HH-2024-001',
-    householdHead: 'Raphael H. Bellosillo',
-    address: 'Purok 3, Sitio San Roque',
-    houseType: 'Concrete',
-    houseOwnership: 'Owned',
-    families: [
-
-    ],
-  },
-]
-
+  const [households, setHouseholds] = useState<Household[]>([
+    {
+      id: 'HH-2024-001',
+      householdNum: 'HH-2024-001',
+      householdHead: 'Raphael H. Bellosillo',
+      address: 'Purok 3, Sitio San Roque',
+      houseType: 'Concrete',
+      houseOwnership: 'Owned',
+      families: [
+        {
+          familyNum: 'FAM-001',
+          headName: 'Raphael H. Bellosillo',
+          type: 'NUCLEAR',
+          nhts: 'YES',
+          indigent: 'NO',
+          monthlyIncome: '₱15,000 - ₱20,000',
+          sourceIncome: 'Employment',
+          members: [
+            { id: 'P-1', name: 'Raphael H. Bellosillo', relation: 'HEAD', age: 45, sex: 'Male' },
+            { id: 'P-2', name: 'Ana Bellosillo', relation: 'SPOUSE', age: 43, sex: 'Female' },
+            { id: 'P-3', name: 'Miko Bellosillo', relation: 'CHILD', age: 16, sex: 'Male' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'HH-2024-002',
+      householdNum: 'HH-2024-002',
+      householdHead: 'Maria Santos',
+      address: 'Purok 5, Sitio Mabini',
+      houseType: 'Wooden',
+      houseOwnership: 'Renting',
+      families: [
+        {
+          familyNum: 'FAM-002',
+          headName: 'Maria Santos',
+          type: 'EXTENDED',
+          nhts: 'NO',
+          indigent: 'YES',
+          monthlyIncome: '₱5,000 - ₱8,000',
+          sourceIncome: 'Small Business',
+          members: [
+            { id: 'P-4', name: 'Maria Santos', relation: 'HEAD', age: 50, sex: 'Female' },
+            { id: 'P-5', name: 'Jose Santos', relation: 'CHILD', age: 22, sex: 'Male' },
+            { id: 'P-6', name: 'Liza Santos', relation: 'CHILD', age: 19, sex: 'Female' },
+            { id: 'P-7', name: 'Juan Dela Cruz', relation: 'GRANDCHILD', age: 5, sex: 'Male' },
+          ],
+        },
+        {
+          familyNum: 'FAM-003',
+          headName: 'Pedro Cruz',
+          type: 'NUCLEAR',
+          nhts: 'NO',
+          indigent: 'NO',
+          monthlyIncome: '₱10,000 - ₱12,000',
+          sourceIncome: 'Construction Work',
+          members: [], // no members yet
+        },
+      ],
+    },
+    {
+      id: 'HH-2024-111',
+      householdNum: 'HH-2024-001',
+      householdHead: 'Raphael H. Bellosillo',
+      address: 'Purok 3, Sitio San Roque',
+      houseType: 'Concrete',
+      houseOwnership: 'Owned',
+      families: [],
+    },
+    {
+      id: 'HH-2024-112',
+      householdNum: 'HH-2024-001',
+      householdHead: 'Raphael H. Bellosillo',
+      address: 'Purok 3, Sitio San Roque',
+      houseType: 'Concrete',
+      houseOwnership: 'Owned',
+      families: [],
+    },
+  ])
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false)
@@ -162,11 +167,28 @@ const HouseholdList = () => {
     })
   }
 
+  // ---------- remove modal states ----------
+  const [removeOpen, setRemoveOpen] = useState(false)
+  const [reasonOpen, setReasonOpen] = useState(false) // toggles dropdown options
+  const [selectedReason, setSelectedReason] = useState<RemovalReason | null>(null)
+  const [otherReason, setOtherReason] = useState('')
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    householdId: string
+    familyNum: string
+    member: Member
+  } | null>(null)
+
+  const openRemoveModal = (householdId: string, familyNum: string, member: Member) => {
+    setPendingRemoval({ householdId, familyNum, member })
+    setSelectedReason(null)
+    setOtherReason('')
+    setReasonOpen(false)
+    setRemoveOpen(true)
+  }
+
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
-      <ThemedAppBar 
-        title='List of Household'
-      />
+      <ThemedAppBar title='List of Household' />
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
@@ -220,10 +242,9 @@ const HouseholdList = () => {
             </View>
           ))}
         </ScrollView>
-
       </KeyboardAvoidingView>
 
-      {/* ---------- Bottom Sheet --------- */}
+      {/* ---------- Household Bottom Sheet --------- */}
       <ThemedBottomSheet visible={open} onClose={closeSheet}>
         {selectedHousehold && (
           <View style={{ flex: 1 }}>
@@ -241,53 +262,31 @@ const HouseholdList = () => {
               <View style={{ marginTop: 6 }}>
                 <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>Household Information</ThemedText>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    Household Head
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.houseType}
-                  </ThemedText>
+                  <ThemedText>Household Head</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseType}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    Household No.
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.houseOwnership}
-                  </ThemedText>
+                  <ThemedText>Household No.</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseOwnership}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    House Type
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.address}
-                  </ThemedText>
+                  <ThemedText>House Type</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.address}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    House Ownership
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.address}
-                  </ThemedText>
+                  <ThemedText>House Ownership</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.address}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
-                  <ThemedText>
-                    Home Address
-                  </ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.address}
-                  </ThemedText>
+                  <ThemedText>Home Address</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.address}</ThemedText>
                 </View>
               </View>
 
               {/* Families */}
               <View style={{ marginTop: 16 }}>
                 <View style={styles.sectionHeaderRow}>
-                  <ThemedText style={styles.sectionTitle}>
-                    Families in this Household
-                  </ThemedText>
+                  <ThemedText style={styles.sectionTitle}>Families in this Household</ThemedText>
 
                   <ThemedChip
                     label={'Add Family Unit'}
@@ -323,12 +322,10 @@ const HouseholdList = () => {
                         </View>
                       </View>
 
-                      <Spacer height={10}/>
+                      <Spacer height={10} />
 
                       <View style={styles.sectionHeaderRow}>
-                        <ThemedText style={styles.sectionTitle}>
-                          Members
-                        </ThemedText>
+                        <ThemedText style={styles.sectionTitle}>Members</ThemedText>
 
                         <ThemedChip
                           label={'Add Member'}
@@ -343,12 +340,16 @@ const HouseholdList = () => {
                             <ThemedChip
                               key={m.id}
                               label={m.name}
-                              onPress={() => onPressMember(fam, m)}                          
+                              onPress={() => onPressMember(fam, m)}
+                              removable
+                              onRemove={() => openRemoveModal(selectedHousehold.id, fam.familyNum, m)}
                             />
                           ))}
                         </View>
                       ) : (
-                        <ThemedText style={{ color: '#64748b', fontStyle: 'italic' }}>There is no family member in this family.</ThemedText>
+                        <ThemedText style={{ color: '#64748b', fontStyle: 'italic' }}>
+                          There is no family member in this family.
+                        </ThemedText>
                       )}
                     </View>
                   ))}
@@ -358,6 +359,67 @@ const HouseholdList = () => {
           </View>
         )}
       </ThemedBottomSheet>
+
+      {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
+      <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
+        <View style={{ flex: 1 }}>
+          {/* Scrollable content above the fixed footer */}
+          <ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave room for footer
+            showsVerticalScrollIndicator={false}
+          >
+            <ThemedText subtitle>Remove Member</ThemedText>
+
+            {pendingRemoval && (
+              <View style={{ gap: 6, marginTop: 10 }}>
+                <ThemedText style={{ color: '#475569' }}>You are removing:</ThemedText>
+                <View style={[styles.familyCover, { paddingVertical: 10 }]}>
+                  <Ionicons name="person-outline" size={18} color="#475569" />
+                  <View style={{ marginLeft: 8 }}>
+                    <ThemedText style={{ fontWeight: '700' }}>{pendingRemoval.member.name}</ThemedText>
+                    <ThemedText style={{ color: '#64748b' }}>
+                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} yrs
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
+
+              {/* Use your ThemedDropdown — order=0 => highest zIndex so menu overlays footer */}
+              <ThemedDropdown
+                placeholder="Select a Reason"
+                items={[]}
+                value={selectedReason}
+                setValue={setSelectedReason}
+                order={0}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Fixed footer with actions */}
+          <View style={styles.sheetFooter}>
+            <ThemedButton
+              submit={false}
+              onPress={() => setRemoveOpen(false)}
+              style={{ flex: 1 }}
+            >
+              <ThemedText non_btn>Cancel</ThemedText>
+            </ThemedButton>
+
+            <View style={{ width: 10 }} />
+
+            <ThemedButton
+              style={{ flex: 1}}
+            >
+              <ThemedText btn>Confirm Remove</ThemedText>
+            </ThemedButton>
+          </View>
+        </View>
+      </ThemedBottomSheet>
+
     </ThemedView>
   )
 }
@@ -375,9 +437,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  kvRow: {
-    
-  },
+  kvRow: {},
   kvKey: { color: '#64748b', minWidth: 120 },
   kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
 
@@ -396,11 +456,57 @@ const styles = StyleSheet.create({
   badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   badgeText:   { fontSize: 12, color: '#334155' },
   sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 6,
+  },
+  sectionTitle: { fontWeight: '700', flexShrink: 1 },
+
+  // dropdown styles
+  selectBox: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  optionPanel: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 6
+  },
+  optionItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textField: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF'
+  },
+  sheetFooter: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  padding: 12,
+  backgroundColor: '#FFFFFF',
+  borderTopWidth: 1,
+  borderColor: '#E2E8F0',
   flexDirection: 'row',
   alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 12,
-  marginBottom: 6,
+  zIndex: 1, // lower than dropdown's zIndex so menu can overlay if needed
 },
-  sectionTitle: { fontWeight: '700', flexShrink: 1, },
+
 })
