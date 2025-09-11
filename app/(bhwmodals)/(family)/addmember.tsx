@@ -12,7 +12,7 @@ import { FamilyRepository } from "@/repository/familyRepository";
 import { useHouseMateStore } from "@/store/houseMateStore";
 import { FamilyMembershipType } from "@/types/familyMembership";
 import { MgaKaHouseMates } from "@/types/houseMates";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 type Resident = {

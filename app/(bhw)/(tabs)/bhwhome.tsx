@@ -17,10 +17,15 @@ const BhwHome = () => {
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
           <View style={[styles.container, {paddingHorizontal: 30, paddingVertical: 10,}]}>
-              <ThemedText title>Welcome, firstname!</ThemedText>
+              <ThemedText title>Welcome, KIMBERLY!</ThemedText>
               <ThemedImage
-                src={require('@/assets/images/default-image.jpg')}
-                size={60}
+                src={
+                 {
+                      uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png',
+                    }
+
+                }
+                size={50}
               />
           </View>
 
