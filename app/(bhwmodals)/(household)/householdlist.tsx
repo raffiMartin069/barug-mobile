@@ -13,6 +13,7 @@ import { HouseholdListService } from "@/services/householdList";
 import { useHouseMateStore } from "@/store/houseMateStore";
 import { MgaKaHouseMates } from "@/types/houseMates";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -63,7 +64,12 @@ const HouseholdList = () => {
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
 
+  const isFocused = useIsFocused();
+
   useEffect(() => {
+    console.log(isFocused ? "HouseholdList is focused" : "HouseholdList is not focused");
+    if (!isFocused) return;
+
     const householdRepository = new HouseholdRepository();
     const familyRepository = new FamilyRepository();
     const service = new HouseholdListService(
@@ -104,9 +110,15 @@ const HouseholdList = () => {
       });
 
       setHouseholds(transformed);
+
+      setSelectedHousehold(prev => {
+      if (!prev) return prev;
+      const found = transformed.find(h => h.id === prev.id);
+      return found ?? prev;
+    });
     };
     fetchHouseholds();
-  });
+  }, [isFocused]);
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false);
@@ -144,6 +156,13 @@ const HouseholdList = () => {
       pathname: "/(bhwmodals)/(family)/memberprofile",
     });
   };
+
+  const onPressAddMember = async (id: string) => {
+    setFamilyId(Number(id));
+    router.push({
+      pathname: "/(bhwmodals)/(family)/addmember",
+    });
+  }
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
@@ -354,10 +373,9 @@ const HouseholdList = () => {
                         <ThemedText style={styles.sectionTitle}>
                           Members
                         </ThemedText>
-
                         <ThemedChip
                           label={"Add Member"}
-                          onPress={() => router.push("/addmember")}
+                          onPress={() => onPressAddMember(fam.familyNum)}
                           filled={false}
                         />
                       </View>
