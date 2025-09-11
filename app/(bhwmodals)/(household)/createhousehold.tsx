@@ -94,6 +94,7 @@ const CreateHousehold = () => {
     const id = await saveHousehold(data);
     if(id) {
       setHeadSearchText('')
+      router.push('/(bhwmodals)/(family)/createfamily')
     }
   }
 
