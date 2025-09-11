@@ -220,7 +220,7 @@ const HouseholdList = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ---------- Bottom Sheet --------- */}
+      {/* ---------- Household Bottom Sheet --------- */}
       <ThemedBottomSheet visible={open} onClose={closeSheet}>
         {selectedHousehold && (
           <View style={{ flex: 1 }}>
@@ -276,9 +276,7 @@ const HouseholdList = () => {
               {/* Families */}
               <View style={{ marginTop: 16 }}>
                 <View style={styles.sectionHeaderRow}>
-                  <ThemedText style={styles.sectionTitle}>
-                    Families in this Household
-                  </ThemedText>
+                  <ThemedText style={styles.sectionTitle}>Families in this Household</ThemedText>
 
                   <ThemedChip
                     label={"Add Family Unit"}
@@ -349,11 +347,10 @@ const HouseholdList = () => {
                       </View>
 
                       <Spacer height={10} />
+                      <Spacer height={10} />
 
                       <View style={styles.sectionHeaderRow}>
-                        <ThemedText style={styles.sectionTitle}>
-                          Members
-                        </ThemedText>
+                        <ThemedText style={styles.sectionTitle}>Members</ThemedText>
 
                         <ThemedChip
                           label={"Add Member"}
@@ -387,6 +384,67 @@ const HouseholdList = () => {
           </View>
         )}
       </ThemedBottomSheet>
+
+      {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
+      <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
+        <View style={{ flex: 1 }}>
+          {/* Scrollable content above the fixed footer */}
+          <ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave room for footer
+            showsVerticalScrollIndicator={false}
+          >
+            <ThemedText subtitle>Remove Member</ThemedText>
+
+            {pendingRemoval && (
+              <View style={{ gap: 6, marginTop: 10 }}>
+                <ThemedText style={{ color: '#475569' }}>You are removing:</ThemedText>
+                <View style={[styles.familyCover, { paddingVertical: 10 }]}>
+                  <Ionicons name="person-outline" size={18} color="#475569" />
+                  <View style={{ marginLeft: 8 }}>
+                    <ThemedText style={{ fontWeight: '700' }}>{pendingRemoval.member.name}</ThemedText>
+                    <ThemedText style={{ color: '#64748b' }}>
+                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} yrs
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
+
+              {/* Use your ThemedDropdown — order=0 => highest zIndex so menu overlays footer */}
+              <ThemedDropdown
+                placeholder="Select a Reason"
+                items={[]}
+                value={selectedReason}
+                setValue={setSelectedReason}
+                order={0}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Fixed footer with actions */}
+          <View style={styles.sheetFooter}>
+            <ThemedButton
+              submit={false}
+              onPress={() => setRemoveOpen(false)}
+              style={{ flex: 1 }}
+            >
+              <ThemedText non_btn>Cancel</ThemedText>
+            </ThemedButton>
+
+            <View style={{ width: 10 }} />
+
+            <ThemedButton
+              style={{ flex: 1}}
+            >
+              <ThemedText btn>Confirm Remove</ThemedText>
+            </ThemedButton>
+          </View>
+        </View>
+      </ThemedBottomSheet>
+
     </ThemedView>
   );
 };
