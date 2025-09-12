@@ -1,6 +1,36 @@
 import { supabase } from "@/constants/supabase";
+import { MembershipException } from "@/exception/database/membershipExcption";
+import { MemberRemovalType } from "@/types/memberRemoval";
 
 export class HouseholdRepository {
+
+    async getMemberId(residentId: number) {
+        const { data, error } = await supabase
+            .from("house_member")
+            .select("house_member_id")
+            .eq("person_id", residentId)
+            .single();
+        if (error) {
+            console.error("Error fetching member ID:", error);
+            return null;
+        }
+        return data?.house_member_id || null;
+    }
+
+    async removeMember(req: MemberRemovalType) {
+        const func = "remove_house_member";
+        const { data, error } = await supabase.rpc(func, req);
+        if (error) {
+            console.error(`Error calling ${func}:`, error);
+
+            if (error.code === "P6045" && error.message.includes("House member not found.")) {
+                throw new MembershipException("House member not found.");
+            }
+
+            return null;
+        }
+        return data || null;
+    }
 
     async getActiveHousehold() {
         const func = "get_active_households";
