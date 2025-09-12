@@ -14,11 +14,9 @@ export class HouseholdListService {
     async execute() {
         const households = await this.householdRepository.getActiveHousehold();
         const fullHouseholdData = [];
-        console.log(households);
         if (!households) {
             return [];
         }
-
         for (const household of households) {
             const members = await this.familyRepository.getFamilyDetails(household.household_id);
             fullHouseholdData.push({
