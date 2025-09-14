@@ -116,7 +116,7 @@ const DocReqHistory = () => {
             <View style={styles.row}>
               <ThemedText style={styles.title}>Active Requests</ThemedText>
               <ThemedText link>
-                <Link href={'/allactive'}>View All</Link>
+                <Link href={'/(residentmodals)/(docreq)/allactive'}>View All</Link>
               </ThemedText>
             </View>
 

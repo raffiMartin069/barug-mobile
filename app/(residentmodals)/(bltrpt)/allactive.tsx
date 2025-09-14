@@ -1,3 +1,5 @@
+// app/(residentmodals)/(bltrpt)/allactive.tsx
+
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedCard from '@/components/ThemedCard'
@@ -10,43 +12,46 @@ import React, { useState } from 'react'
 import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const STATUS_UI: Record<
-  'completed' | 'declined',
+  'filed' | 'mediation' | 'scheduled',
   { label: string; bg: string; fg: string }
 > = {
-  completed: { label: 'Completed', bg: '#e5e7eb', fg: '#374151' },
-  declined:  { label: 'Declined',  bg: '#fecaca', fg: '#7f1d1d' },
+  filed:     { label: 'Filed',     bg: '#fde68a', fg: '#92400e' }, // amber
+  mediation: { label: 'Mediation', bg: '#e0e7ff', fg: '#1e3a8a' }, // indigo
+  scheduled: { label: 'Scheduled', bg: '#d1fae5', fg: '#065f46' }, // green
 }
 
-type RequestItem = {
+type BlotterItem = {
   id: string
-  title: string
-  requestNo: string
-  requestedAt: string
+  caseTitle: string
+  caseNo: string
+  filedAt: string
   status: keyof typeof STATUS_UI
 }
 
-// ✅ History-only dataset (completed/declined)
-const HISTORY_REQUESTS: RequestItem[] = [
-  { id: '3', title: 'Certificate of Residency', requestNo: 'REQ-RES-20250520-010', requestedAt: 'May 20, 2023', status: 'completed' },
-  { id: '4', title: 'Barangay Clearance',       requestNo: 'REQ-BCLR-20250511-004', requestedAt: 'May 11, 2023', status: 'declined' },
+// Active-only dataset (examples)
+const ACTIVE_BLOTTERS: BlotterItem[] = [
+  { id: 'B1', caseTitle: 'Noise Disturbance', caseNo: 'BLT-2025-0001', filedAt: 'September 10, 2025', status: 'filed' },
+  { id: 'B2', caseTitle: 'Property Boundary', caseNo: 'BLT-2025-0002', filedAt: 'September 11, 2025', status: 'mediation' },
+  { id: 'B3', caseTitle: 'Simple Mischief',   caseNo: 'BLT-2025-0003', filedAt: 'September 12, 2025', status: 'scheduled' },
 ]
 
 // — UI-only filters (no actual DB filtering yet) —
 const FILTERS = [
-  { key: 'all',       label: 'All' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'declined',  label: 'Declined' },
+  { key: 'all',        label: 'All' },
+  { key: 'filed',      label: 'Filed' },
+  { key: 'mediation',  label: 'Mediation' },
+  { key: 'scheduled',  label: 'Scheduled' },
 ] as const
 type FilterKey = typeof FILTERS[number]['key']
 
-const RequestHistory = () => {
-  // UI-only state (to be wired to DB later)
+const AllActive = () => {
+  // UI-only (to be wired to DB later)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
 
   return (
     <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
-      <ThemedAppBar title="Request History" />
+      <ThemedAppBar title="Active Blotter Reports" />
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
@@ -55,7 +60,7 @@ const RequestHistory = () => {
           {/* Search + Chips (visual only) */}
           <View style={{ paddingHorizontal: 40 }}>
             <ThemedTextInput
-              placeholder="Search request no. or title..."
+              placeholder="Search case no., title..."
               value={search}
               onChangeText={setSearch}
             />
@@ -87,32 +92,32 @@ const RequestHistory = () => {
 
           <ThemedCard>
             <View style={styles.headerRow}>
-              <ThemedText style={styles.title}>Request History</ThemedText>
+              <ThemedText style={styles.title}>Active Blotter Reports</ThemedText>
             </View>
 
             <Spacer height={10} />
             <ThemedDivider />
             <Spacer height={10} />
 
-            {HISTORY_REQUESTS.length === 0 && (
-              <ThemedText style={styles.empty}>No past requests yet.</ThemedText>
+            {ACTIVE_BLOTTERS.length === 0 && (
+              <ThemedText style={styles.empty}>No active blotter reports right now.</ThemedText>
             )}
 
             {/* NOTE: Not applying search/filter to the map yet */}
-            {HISTORY_REQUESTS.map((req) => {
-              const ui = STATUS_UI[req.status]
+            {ACTIVE_BLOTTERS.map((item) => {
+              const ui = STATUS_UI[item.status]
               return (
-                <View key={req.id} style={{ marginBottom: 10 }}>
+                <View key={item.id} style={{ marginBottom: 10 }}>
                   <ThemedItemCard
-                    title={req.title}
-                    meta1={`Request #: ${req.requestNo}`}
-                    meta2={`Requested: ${req.requestedAt}`}
+                    title={item.caseTitle}
+                    meta1={`Case #: ${item.caseNo}`}
+                    meta2={`Filed: ${item.filedAt}`}
                     showPill
                     pillLabel={ui.label}
                     pillBgColor={ui.bg}
                     pillTextColor={ui.fg}
                     pillSize="sm"
-                    route={{ pathname: '/requestdetails/[id]', params: { id: req.id } }}
+                    route={{ pathname: '/blotter/[id]', params: { id: item.id } }}
                   />
                 </View>
               )
@@ -124,7 +129,7 @@ const RequestHistory = () => {
   )
 }
 
-export default RequestHistory
+export default AllActive
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
