@@ -1,5 +1,3 @@
-// app/blotter-history.tsx
-
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedCard from '@/components/ThemedCard'
