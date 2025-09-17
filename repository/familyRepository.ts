@@ -10,10 +10,10 @@ export class FamilyRepository {
         if (error) {
             const code = String(error.code ?? "").trim();
             if (MembershipException.getErrorCodes().has(code)) {
-                console.warn(error)
+                console.warn(error);
                 throw new MembershipException(error.message);
             }
-            console.error(error)
+            console.error(error);
             throw new Error(error.message);
         }
         return JSON.stringify(data) || null;

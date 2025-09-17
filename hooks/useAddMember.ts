@@ -17,12 +17,11 @@ export const useAddMember = () => {
             }
             setLoading(false);
             return res;
-        } catch(error) {
-            if (error instanceof MembershipException) {
-                setError(error.message);
+        } catch(err) {
+            if (err instanceof MembershipException) {
+                setError(err.message);
                 return;
             }
-            console.error(error);
             setError("An unexpected error occurred. Please try again.");
             return;
         }
