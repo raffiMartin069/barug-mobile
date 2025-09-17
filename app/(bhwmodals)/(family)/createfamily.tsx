@@ -22,6 +22,7 @@ import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { useFamilyCreation } from '@/hooks/useFamilyCreation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
+import { useEmojiRemover } from '@/hooks/useEmojiRemover'
 
 const CreateFamily = () => {
 
@@ -38,6 +39,8 @@ const CreateFamily = () => {
     const [householdHeadText, setHouseholdHeadText] = useState('')
     const [ufcNum, setUfcNum] = useState<string>('')
     const [errors, setErrors] = useState<{ [key: string]: string }>({})
+    const [emoji, setEmoji] = useState<string>('')
+    const { isValid, err } = useEmojiRemover()
 
     const handleValidation = useMemo(() => {
         const newErrors: { [key: string]: string } = {}
@@ -50,17 +53,39 @@ const CreateFamily = () => {
         if (!incomesource) newErrors.incomesource = 'Source of income is required'
         if (!fammnthlyincome) newErrors.fammnthlyincome = 'Family monthly income is required'
         return Object.keys(newErrors).length === 0 ? null : newErrors
-    }, [householdHeadId, famnum, famhead, hhheadrel, hhtype, ufcNum, incomesource, fammnthlyincome])
+    }, [
+        householdHeadId, famnum, famhead,
+        hhheadrel, hhtype, ufcNum,
+        incomesource, fammnthlyincome])
 
     const { results: residentItems, search } = usePersonSearchByKey()
     const { createFamily, loading, error, success } = useFamilyCreation()
+
+    const integrityCheck = () => {
+        /**
+         * 1. Check for empty fields
+         * 2. Check for emojis in text fields
+         * 3. Set errors state if any validation fails
+         * 4. Return true if all validations pass, else false
+         */
+        const validationErrors = handleValidation
+        if (validationErrors) {
+            setErrors(validationErrors)
+            return;
+        }
+        setErrors({})
+        if (!isValid({ famnum, incomesource, ufcNum })) {
+            Alert.alert('Invalid Input', err || 'Emojis are not allowed');
+            return;
+        }
+    }
 
     const handleSubmit = async () => {
         const data: FamilyCreationRequest = {
             p_household_id: parseInt(householdHeadId),
             p_added_by_id: 1,
             p_family_num: famnum.trim(),
-            p_ufc_num: ufcNum,
+            p_ufc_num: ufcNum.trim(),
             p_source_of_income: incomesource.trim(),
             p_family_mnthly_icnome_id: parseInt(fammnthlyincome),
             p_nhts_status_id: nhts === 'yes' ? 1 : 2,
@@ -71,7 +96,7 @@ const CreateFamily = () => {
         }
         const result = await createFamily(data)
         if (!result) {
-            Alert.alert('Something went wrong.', error || 'Please try again later.')
+            Alert.alert('Warning', error || 'Please try again later.')
             return
         }
         setHouseholdHeadId('')
@@ -251,11 +276,7 @@ const CreateFamily = () => {
 
                 <View>
                     <ThemedButton onPress={() => {
-                        const validationErrors = handleValidation
-                        if (validationErrors) {
-                            setErrors(validationErrors)
-                            return
-                        }
+                        integrityCheck();
                         handleSubmit();
                     }} loading={loading} disabled={loading}>
                         <ThemedText btn>Continue</ThemedText>

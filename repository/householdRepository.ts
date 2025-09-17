@@ -1,5 +1,5 @@
 import { supabase } from "@/constants/supabase";
-import { MembershipException } from "@/exception/database/membershipExcption";
+import { MembershipException } from "@/exception/membershipExcption";
 import { MemberRemovalType } from "@/types/memberRemoval";
 
 export class HouseholdRepository {
@@ -49,8 +49,7 @@ export class HouseholdRepository {
         .eq('household_head_id', id)
         .single()
         if (error) {
-            console.error("Error fetching household ID:", error)
-            return null
+            throw new MembershipException("The selected Household Head does not have an existing household yet.");
         }
         return data?.household_id || null
     }

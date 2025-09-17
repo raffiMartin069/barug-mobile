@@ -1,5 +1,5 @@
 import { supabase } from "@/constants/supabase";
-import { MembershipException } from "@/exception/database/membershipExcption";
+import { MembershipException } from "@/exception/membershipExcption";
 import { HouseholdCreationRequest } from "@/types/request/householdCreationRequest";
 
 export class HouseholdCreation {
