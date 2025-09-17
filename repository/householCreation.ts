@@ -15,7 +15,8 @@ export class HouseholdCreation {
     async createHousehold(req: HouseholdCreationRequest) {
         const { data, error } = await supabase.rpc("insert_household", req);
         if (error) {
-            if (error.message === "This person is already an active head of another household." && error.code === "P5010") {
+            const code = String(error.code ?? "").trim();
+            if (MembershipException.getErrorCodes().has(code)) {
                 console.warn(error)
                 throw new MembershipException(error.message);
             }

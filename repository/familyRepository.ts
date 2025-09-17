@@ -1,4 +1,5 @@
 import { supabase } from "@/constants/supabase";
+import { MembershipException } from "@/exception/membershipExcption";
 import { FamilyMembershipType } from "@/types/familyMembership";
 
 export class FamilyRepository {
@@ -7,8 +8,13 @@ export class FamilyRepository {
         const func = "insert_house_member";
         const { data, error } = await supabase.rpc(func, famData);
         if (error) {
-            console.error(`Error calling ${func}:`, error);
-            return null;
+            const code = String(error.code ?? "").trim();
+            if (MembershipException.getErrorCodes().has(code)) {
+                console.warn(error)
+                throw new MembershipException(error.message);
+            }
+            console.error(error)
+            throw new Error(error.message);
         }
         return JSON.stringify(data) || null;
     }
