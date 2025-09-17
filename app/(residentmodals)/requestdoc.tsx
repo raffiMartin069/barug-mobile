@@ -269,6 +269,7 @@ export default function RequestDoc() {
         }],
       }
 
+      console.log(payload)
       const res = await createDocumentRequest(payload as any)
       const newId: number = typeof res === 'number' ? res : (res?.doc_request_id ?? res)
 
@@ -298,7 +299,7 @@ export default function RequestDoc() {
 
   return (
     <ThemedView safe>
-      <ThemedAppBar title="Request a Document" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Request a Document ads" showNotif={false} showProfile={false} />
       <View style={styles.stepper}>
         {['Choose document','Purpose & copies','Who is this for?','Attach letter (if needed)'].map((s, i) => (
           <View key={s} style={styles.stepItem}>
