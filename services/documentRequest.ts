@@ -1,4 +1,3 @@
-// services/documentRequest.ts
 import { supabase } from '@/constants/supabase'
 
 export type DocType = { document_type_id: number; document_type_name: string }
@@ -48,6 +47,8 @@ type CreateInput = {
     details?: any
   }>
 }
+
+/** Calls Postgres function public.create_document_request(...) and returns the new doc_request_id */
 export async function createDocumentRequest(input: CreateInput): Promise<number> {
   const { data, error } = await supabase.rpc('create_document_request', {
     p_requested_by: input.requested_by,
@@ -61,9 +62,22 @@ export async function createDocumentRequest(input: CreateInput): Promise<number>
   return Number(data)
 }
 
+/** Attach an authorization letter to a request (writes into request_document) */
+export async function attachAuthorizationLetter(opts: {
+  doc_request_id: number
+  file_path: string
+  reason?: string
+}): Promise<void> {
+  const { doc_request_id, file_path, reason } = opts
+  const { error } = await supabase.rpc('attach_authorization_letter', {
+    p_doc_request_id: doc_request_id,
+    p_file_path: file_path,
+    p_reason: reason ?? 'Letter of authorization (on-behalf).',
+  })
+  if (error) throw error
+}
+
 export const peso = (n: number | null | undefined) => `₱${Number(n || 0).toLocaleString()}`
-
-
 
 // --- Types for list UI ---
 export type DocRequestDetailRow = {
@@ -86,24 +100,21 @@ export type DocLineLite = {
 }
 
 export type DocRequestListItem = DocRequestDetailRow & {
-  doc_types: string[] // derived from lines
+  doc_types: string[]
 }
 
 type ListOptions = {
-  status?: string            // one of: FOR_TREASURER_REVIEW | PAID | FOR_PRINTING | RELEASED
+  status?: string
   search?: string
   limit?: number
   offset?: number
 }
 
-/**
- * Fetch the resident's requests from v_doc_request_detail, then enrich with doc types
- * from v_doc_request_detail_lines in a single IN() call.
- */
+/** Fetch the resident's requests and aggregate document types per request */
 export async function fetchMyDocRequests(personId: number, opts: ListOptions = {}): Promise<DocRequestListItem[]> {
   const { status, search, limit = 50, offset = 0 } = opts
 
-  // 1) headers
+  // headers
   let q = supabase
     .from('v_doc_request_detail')
     .select('*')
@@ -114,7 +125,6 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
   if (status) q = q.eq('status', status)
   if (search && search.trim()) {
     const s = `%${search.trim()}%`
-    // search on request_code + on_behalf_of
     q = q.or(`request_code.ilike.${s},on_behalf_of.ilike.${s}`)
   }
 
@@ -125,7 +135,7 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
 
   const ids = hdrs.map(h => h.doc_request_id)
 
-  // 2) detail lines → gather document types per request
+  // detail lines → gather document types per request
   const { data: lines, error: lineErr } = await supabase
     .from('v_doc_request_detail_lines')
     .select('doc_request_id, document_type_name, purpose_code')
@@ -139,7 +149,7 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
     if (ln.document_type_name) mapTypes.get(key)!.add(ln.document_type_name)
   }
 
-  // 3) merge
+  // merge
   const merged: DocRequestListItem[] = hdrs.map(h => ({
     ...h,
     doc_types: Array.from(mapTypes.get(h.doc_request_id) ?? []),
@@ -149,19 +159,6 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
 }
 
 // --- Detail view types ---
-// export type DocRequestDetailRow = {
-//   doc_request_id: number
-//   request_code: string
-//   created_at: string | Date
-//   status: string
-//   requested_by_id: number
-//   requested_by: string
-//   on_behalf_id: number | null
-//   on_behalf_of: string | null
-//   purpose_notes?: string | null
-//   amount_due: number
-// }
-
 export type DocRequestLineDetail = {
   doc_request_line_id: number
   doc_request_id: number
@@ -205,7 +202,6 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
   payments: DocRequestPaymentSummary | null
   timeline: TimelineEvent[]
 }> {
-  // Header (single)
   const { data: hdr, error: he } = await supabase
     .from('v_doc_request_detail')
     .select('*')
@@ -214,7 +210,6 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
   if (he) throw he
   if (!hdr) throw new Error('Request not found')
 
-  // Lines
   const { data: lines, error: le } = await supabase
     .from('v_doc_request_detail_lines')
     .select('*')
@@ -222,7 +217,6 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
     .order('doc_request_line_id', { ascending: true })
   if (le) throw le
 
-  // Payments (may be null)
   const { data: pay, error: pe } = await supabase
     .from('v_doc_request_payments')
     .select('*')
@@ -230,7 +224,6 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
     .maybeSingle()
   if (pe) throw pe
 
-  // Timeline: union of (a) header events, (b) events linked via details JSON
   const [t1, t2] = await Promise.all([
     supabase
       .from('v_document_timeline')
@@ -240,14 +233,12 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
     supabase
       .from('v_document_timeline')
       .select('*')
-      // PostgREST supports json path; supabase-js lets us use ->> syntax
       .eq('details->>doc_request_id', String(docRequestId)),
   ])
   if (t1.error) throw t1.error
   if (t2.error) throw t2.error
 
   const tl = [...(t1.data ?? []), ...(t2.data ?? [])] as TimelineEvent[]
-  // sort newest first
   tl.sort((a, b) => new Date(b.occurred_at as any).getTime() - new Date(a.occurred_at as any).getTime())
 
   return {
@@ -260,9 +251,6 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
 
 export async function getPaymentMethodMap(): Promise<Record<number, string>> {
   try {
-    // Prefer the function if you want to keep API consistent:
-    // const { data, error } = await supabase.rpc('get_payment_methods')
-    // If you exposed the table publicly, you can also:
     const { data, error } = await supabase.from('payment_method').select('payment_method_id, method_name')
     if (error) throw error
     const map: Record<number, string> = {}
@@ -272,5 +260,3 @@ export async function getPaymentMethodMap(): Promise<Record<number, string>> {
     return {}
   }
 }
-
-

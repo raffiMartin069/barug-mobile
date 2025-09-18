@@ -37,6 +37,7 @@ import {
   getPurposesByDocumentType,
   getBusinessesOwnedByPerson,
   createDocumentRequest,
+  attachAuthorizationLetter,      // <-- NEW: use service-level RPC
   peso,
   type DocType,
   type Purpose,
@@ -69,10 +70,7 @@ const BRAND = '#310101'
 const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE'
 
 // ---- helpers ----
-const dbg = (...a: any[]) => console.log('[REQDOC]', ...a)
 const compactUri = (u?: string) => (u ? (u.length > 48 ? u.slice(0, 45) + '...' : u) : u)
-const summarizePicked = (p?: Picked | null) =>
-  p ? ({ name: p.name, type: p.type, size: p.size, uri: compactUri(p.uri) }) : null
 
 type IconKey = 'success' | 'error' | 'info'
 const ICONS: Record<IconKey, any> = {
@@ -269,9 +267,16 @@ export default function RequestDoc() {
         }],
       }
 
-      console.log(payload)
-      const res = await createDocumentRequest(payload as any)
-      const newId: number = typeof res === 'number' ? res : (res?.doc_request_id ?? res)
+      const newId = await createDocumentRequest(payload as any)
+
+      // Attach authorization letter row (canonical source for Treasurer)
+      if (forWhom === 'OTHER' && authUploadPath) {
+        await attachAuthorizationLetter({
+          doc_request_id: newId,
+          file_path: authUploadPath,
+          // reason?: you may pass a custom reason; default is fine
+        })
+      }
 
       setSubmitting(false)
       showModal({
@@ -299,7 +304,7 @@ export default function RequestDoc() {
 
   return (
     <ThemedView safe>
-      <ThemedAppBar title="Request a Document ads" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="Request a Document" showNotif={false} showProfile={false} />
       <View style={styles.stepper}>
         {['Choose document','Purpose & copies','Who is this for?','Attach letter (if needed)'].map((s, i) => (
           <View key={s} style={styles.stepItem}>
@@ -479,9 +484,6 @@ export default function RequestDoc() {
                 placeholder="Upload a signed authorization letter (JPG/PNG/PDF)"
               />
               {(!authLetter?.uri && inlineError) && <ThemedText small style={styles.errorText}>Authorization letter is required.</ThemedText>}
-
-              <Spacer height={6} />
-              <InfoHint text="On-behalf requests must match allowed kinship in the database. Invalid relationships will be rejected." />
             </>
           )}
         </ThemedCard>
@@ -524,15 +526,6 @@ function RowTitle({ icon, title }: { icon: any; title: string }) {
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={styles.iconPill}><Ionicons name={icon} size={16} color={BRAND} /></View>
       <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
-    </View>
-  )
-}
-
-function InfoHint({ text }: { text: string }) {
-  return (
-    <View style={styles.hintPill}>
-      <Ionicons name="information-circle-outline" size={16} color={BRAND} />
-      <ThemedText small style={{ marginLeft: 6 }}>{text}</ThemedText>
     </View>
   )
 }
@@ -696,7 +689,6 @@ const styles = StyleSheet.create({
   errorText: { color: '#C0392B', marginTop: 6 },
 
   iconPill: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(49,1,1,0.08)', alignItems: 'center', justifyContent: 'center' },
-  hintPill: { flexDirection: 'row', alignItems: 'center', padding: 8, borderRadius: 10, backgroundColor: 'rgba(49,1,1,0.06)' },
 
   feeRow: {
     borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12,
