@@ -1,4 +1,3 @@
-// hooks/useHouseholdCreation.ts
 import { Alert } from 'react-native'
 import { HouseholdCreation as Repo } from '@/repository/householCreation'
 import { HouseholdCreationService } from '@/services/householdCreation'
@@ -7,6 +6,7 @@ import { useGeolocationStore } from '@/store/geolocationStore'
 import { useHouseholdCreationStore } from '@/store/householdCreationStore'
 import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
+import { MembershipException } from '@/exception/membershipExcption'
 
 export function useHouseholdCreation() {
     const service = new HouseholdCreationService(new Repo())
@@ -24,7 +24,11 @@ export function useHouseholdCreation() {
             clearHouseholdCreation()
             return result;
         } catch (err: any) {
-            Alert.alert('Information', `Household creation failed: ${err.message}`)
+            if (err instanceof MembershipException) {
+                Alert.alert('Information', err.message)
+                return;
+            }
+            console.error(err)
             return;
         }
     }

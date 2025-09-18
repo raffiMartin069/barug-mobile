@@ -81,7 +81,12 @@ const HomeAddress = () => {
                 <ThemedTextInput
                     placeholder='House Number BHW'
                     value={hnum}
-                    onChangeText={setHNum}
+                    onChangeText={(val) => {
+                        // a little formating to allow only numbers
+                        const formatted = val.replace(/[^0-9]/g, '')
+                        setHNum(formatted)
+                    }}
+                    keyboardType='numeric'
                 />
                 <Spacer height={10}/>
                 <ThemedTextInput

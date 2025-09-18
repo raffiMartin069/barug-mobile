@@ -1,5 +1,6 @@
 import { supabase } from "@/constants/supabase";
-import { MembershipException } from "@/exception/database/membershipExcption";
+import { MemberRemovalException } from "@/exception/memberRemovalException";
+import { MembershipException } from "@/exception/membershipExcption";
 import { MemberRemovalType } from "@/types/memberRemoval";
 
 export class HouseholdRepository {
@@ -21,13 +22,13 @@ export class HouseholdRepository {
         const func = "remove_house_member";
         const { data, error } = await supabase.rpc(func, req);
         if (error) {
-            console.error(`Error calling ${func}:`, error);
-
-            if (error.code === "P6045" && error.message.includes("House member not found.")) {
-                throw new MembershipException("House member not found.");
+            const code = String(error.code ?? "").trim();
+            if (MemberRemovalException.getErrorCodes().has(code)) {
+                console.warn(error)
+                throw new MemberRemovalException(error.message);
             }
-
-            return null;
+            console.error(error)
+            throw new Error(error.message);
         }
         return data || null;
     }
@@ -49,8 +50,7 @@ export class HouseholdRepository {
         .eq('household_head_id', id)
         .single()
         if (error) {
-            console.error("Error fetching household ID:", error)
-            return null
+            throw new MembershipException("The selected Household Head does not have an existing household yet.");
         }
         return data?.household_id || null
     }

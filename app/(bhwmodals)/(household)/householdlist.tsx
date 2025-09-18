@@ -8,12 +8,23 @@ import ThemedDropdown from "@/components/ThemedDropdown";
 import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
+
+import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
+import { useMemberRemoval } from "@/hooks/useMemberRemoval";
+
 import { FamilyRepository } from "@/repository/familyRepository";
 import { HouseholdRepository } from "@/repository/householdRepository";
+
 import { HouseholdListService } from "@/services/householdList";
+import { MemberRemovalService } from "@/services/memberRemovalService";
+
 import { useHouseMateStore } from "@/store/houseMateStore";
+
+import { Family } from "@/types/familyTypes";
+import { Household } from "@/types/householdType";
 import { MgaKaHouseMates } from "@/types/houseMates";
-import { MemberRemovalType } from "@/types/memberRemoval";
+import { Member } from "@/types/memberTypes";
+
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -30,35 +41,6 @@ import {
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
-type Member = {
-  id: string;
-  name: string;
-  relation: string;
-  age: number;
-  sex: "Male" | "Female";
-};
-
-type Family = {
-  familyNum: string;
-  headName: string;
-  type: string;
-  nhts: string | boolean;
-  indigent: string | boolean;
-  monthlyIncome: string;
-  sourceIncome: string;
-  members: Member[];
-};
-
-type Household = {
-  id: string;
-  householdNum: string;
-  householdHead: string;
-  address: string;
-  houseType: string;
-  houseOwnership: string;
-  families: Family[];
-};
-
 const REMOVAL_REASONS = [
   'MOVED OUT',
   'DECEASED',
@@ -71,56 +53,17 @@ type RemovalReason = typeof REMOVAL_REASONS[number]
 
 const HouseholdList = () => {
   const router = useRouter();
-
-  const [households, setHouseholds] = useState<Household[]>([]);
+  
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
+  const { households, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
 
   const isFocused = useIsFocused();
 
   const fetchHouseholds = async () => {
-    const householdRepository = new HouseholdRepository();
-    const familyRepository = new FamilyRepository();
-    const service = new HouseholdListService(
-      familyRepository,
-      householdRepository
-    );
-    const rawData = await service.execute();
-    if (!rawData) return;
-    const transformed: Household[] = rawData.map((item: any) => {
-      const parsed = JSON.parse(item.members);
-      return {
-        id: String(item.household_id),
-        householdNum: item.household_num,
-        householdHead: item.household_head_name,
-        address: item.address,
-        houseType: parsed.household.house_type,
-        houseOwnership: parsed.household.house_ownership,
-        families: parsed.families.map((fam: any) => ({
-          familyNum: fam.family_num,
-          headName: fam.family_head_name,
-          type: fam.household_type,
-          nhts: fam.nhts_status,
-          indigent: fam.indigent_status,
-          monthlyIncome: fam.monthly_income,
-          sourceIncome: fam.source_of_income,
-          members: fam.members.map((m: any, idx: number) => ({
-            id: `${m.person_id}-${idx}`,
-            name: m.full_name,
-            relation: "",
-            age: 0,
-            sex: "Male",
-          })),
-        })),
-      };
-    });
-    setHouseholds(transformed);
-    setSelectedHousehold(prev => {
-      if (!prev) return prev;
-      const found = transformed.find(h => h.id === prev.id);
-      return found ?? prev;
-    });
+    const service = new HouseholdListService(new FamilyRepository(), new HouseholdRepository());
+    await getHouseholds(service);
   };
 
   useEffect(() => {
@@ -130,9 +73,9 @@ const HouseholdList = () => {
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false);
-  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
-    null
-  );
+  // const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
+  //   null
+  // );
 
   const [removeOpen, setRemoveOpen] = useState(false)
 
@@ -191,36 +134,19 @@ const HouseholdList = () => {
     });
   }
 
+  const { removeMember, loading, error } = useMemberRemoval()
+
   const memberRemovalHandler = async (id: string) => {
-    const repo = new HouseholdRepository();
-    const trimmedReason = selectedReason === 'OTHER' ? otherReason.trim() : selectedReason
-    if (trimmedReason.length === 0) {
-      alert('Please specify a reason for removal.')
-      return
-    }
     const memberId = pendingRemoval?.member.id ? Number(pendingRemoval.member.id.split('-')[0]) : null
-    if (!memberId) {
-      alert('Something went wrong, please try again.')
-      return
-    }
-    try {
-      // this is the actual id of the house member, the id passed from the parameter is for person_id
-      const houseMemberId = await repo.getMemberId(Number(memberId))
-      const data: MemberRemovalType = {
-        p_house_member_id: Number(houseMemberId),
-        p_performed_by: 1,
-        p_reason: trimmedReason
+    const service = new MemberRemovalService(new HouseholdRepository())
+      const res = await removeMember(memberId, selectedReason, service)
+      if (!res) {
+        Alert.alert('Failed', error ?? 'Unable to remove member. Please try again later.')
+        return;
       }
-      console.info('Removing member with data:', data)
-      const res = await repo.removeMember(data)
-      if (res) {
-        Alert.alert('Success', 'Member has been removed from the household.')
-        setRemoveOpen(false)
-        await fetchHouseholds()
-      }
-    } catch (e) {
-      Alert.alert('Warning', (e as Error).message)
-    }
+      Alert.alert('Success', 'Member has been removed successfully.')
+      setRemoveOpen(false)
+      await fetchHouseholds()
   }
 
   return (
