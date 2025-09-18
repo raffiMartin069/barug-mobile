@@ -4,19 +4,33 @@ import ThemedBottomSheet from "@/components/ThemedBottomSheet";
 import ThemedButton from "@/components/ThemedButton";
 import ThemedCard from "@/components/ThemedCard";
 import ThemedChip from "@/components/ThemedChip";
+import ThemedDropdown from "@/components/ThemedDropdown";
 import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
+
+import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
+import { useMemberRemoval } from "@/hooks/useMemberRemoval";
+
 import { FamilyRepository } from "@/repository/familyRepository";
 import { HouseholdRepository } from "@/repository/householdRepository";
+
 import { HouseholdListService } from "@/services/householdList";
+import { MemberRemovalService } from "@/services/memberRemovalService";
+
 import { useHouseMateStore } from "@/store/houseMateStore";
+
+import { Family } from "@/types/familyTypes";
+import { Household } from "@/types/householdType";
 import { MgaKaHouseMates } from "@/types/houseMates";
+import { Member } from "@/types/memberTypes";
+
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Pressable,
@@ -27,104 +41,60 @@ import {
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
-type Member = {
-  id: string;
-  name: string;
-  relation: string;
-  age: number;
-  sex: "Male" | "Female";
-};
+const REMOVAL_REASONS = [
+  'MOVED OUT',
+  'DECEASED',
+  'DATA CORRECTION',
+  'DUPLICATE ENTRY',
+  'OTHER'
+] as const
 
-type Family = {
-  familyNum: string;
-  headName: string;
-  type: string;
-  nhts: string | boolean;
-  indigent: string | boolean;
-  monthlyIncome: string;
-  sourceIncome: string;
-  members: Member[];
-};
-
-type Household = {
-  id: string;
-  householdNum: string;
-  householdHead: string;
-  address: string;
-  houseType: string;
-  houseOwnership: string;
-  families: Family[];
-};
+type RemovalReason = typeof REMOVAL_REASONS[number]
 
 const HouseholdList = () => {
   const router = useRouter();
-
-  const [households, setHouseholds] = useState<Household[]>([]);
+  
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
+  const { households, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
 
   const isFocused = useIsFocused();
 
+  const fetchHouseholds = async () => {
+    const service = new HouseholdListService(new FamilyRepository(), new HouseholdRepository());
+    await getHouseholds(service);
+  };
+
   useEffect(() => {
-    console.log(isFocused ? "HouseholdList is focused" : "HouseholdList is not focused");
     if (!isFocused) return;
-
-    const householdRepository = new HouseholdRepository();
-    const familyRepository = new FamilyRepository();
-    const service = new HouseholdListService(
-      familyRepository,
-      householdRepository
-    );
-    const fetchHouseholds = async () => {
-      const rawData = await service.execute();
-      if (!rawData) return;
-
-      const transformed: Household[] = rawData.map((item: any) => {
-        const parsed = JSON.parse(item.members);
-
-        return {
-          id: String(item.household_id),
-          householdNum: item.household_num,
-          householdHead: item.household_head_name,
-          address: item.address,
-          houseType: parsed.household.house_type,
-          houseOwnership: parsed.household.house_ownership,
-          families: parsed.families.map((fam: any) => ({
-            familyNum: fam.family_num,
-            headName: fam.family_head_name,
-            type: fam.household_type,
-            nhts: fam.nhts_status,
-            indigent: fam.indigent_status,
-            monthlyIncome: fam.monthly_income,
-            sourceIncome: fam.source_of_income,
-            members: fam.members.map((m: any, idx: number) => ({
-              id: `${m.person_id}-${idx}`,
-              name: m.full_name,
-              relation: "",
-              age: 0,
-              sex: "Male",
-            })),
-          })),
-        };
-      });
-
-      setHouseholds(transformed);
-
-      setSelectedHousehold(prev => {
-      if (!prev) return prev;
-      const found = transformed.find(h => h.id === prev.id);
-      return found ?? prev;
-    });
-    };
     fetchHouseholds();
   }, [isFocused]);
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false);
-  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
-    null
-  );
+  // const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
+  //   null
+  // );
+
+  const [removeOpen, setRemoveOpen] = useState(false)
+
+  const [reasonOpen, setReasonOpen] = useState(false) // toggles dropdown options
+  const [selectedReason, setSelectedReason] = useState<RemovalReason | null>(null)
+  const [otherReason, setOtherReason] = useState('')
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    householdId: string
+    familyNum: string
+    member: Member
+  } | null>(null)
+
+  const openRemoveModal = (householdId: string, familyNum: string, member: Member) => {
+    setPendingRemoval({ householdId, familyNum, member })
+    setSelectedReason(null)
+    setOtherReason('')
+    setReasonOpen(false)
+    setRemoveOpen(true)
+  }
 
   const [familyIndex, setFamilyIndex] = useState(0);
   const familiesScrollRef = useRef<ScrollView>(null);
@@ -162,6 +132,21 @@ const HouseholdList = () => {
     router.push({
       pathname: "/(bhwmodals)/(family)/addmember",
     });
+  }
+
+  const { removeMember, loading, error } = useMemberRemoval()
+
+  const memberRemovalHandler = async (id: string) => {
+    const memberId = pendingRemoval?.member.id ? Number(pendingRemoval.member.id.split('-')[0]) : null
+    const service = new MemberRemovalService(new HouseholdRepository())
+      const res = await removeMember(memberId, selectedReason, service)
+      if (!res) {
+        Alert.alert('Failed', error ?? 'Unable to remove member. Please try again later.')
+        return;
+      }
+      Alert.alert('Success', 'Member has been removed successfully.')
+      setRemoveOpen(false)
+      await fetchHouseholds()
   }
 
   return (
@@ -387,6 +372,8 @@ const HouseholdList = () => {
                               key={m.id}
                               label={m.name}
                               onPress={() => onPressMember(fam, m)}
+                              removable
+                              onRemove={() => openRemoveModal(selectedHousehold.id, fam.familyNum, m)}
                             />
                           ))}
                         </View>
@@ -404,6 +391,59 @@ const HouseholdList = () => {
             </ScrollView>
           </View>
         )}
+      </ThemedBottomSheet>
+      {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
+      <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
+        <View style={{ flex: 1 }}>
+          {/* Scrollable content above the fixed footer */}
+          <ScrollView
+            contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave room for footer
+            showsVerticalScrollIndicator={false}
+          >
+            <ThemedText subtitle>Remove Member</ThemedText>
+            {pendingRemoval && (
+              <View style={{ gap: 6, marginTop: 10 }}>
+                <ThemedText style={{ color: '#475569' }}>You are removing:</ThemedText>
+                <View style={[styles.familyCover, { paddingVertical: 10 }]}>
+                  <Ionicons name="person-outline" size={18} color="#475569" />
+                  <View style={{ marginLeft: 8 }}>
+                    <ThemedText style={{ fontWeight: '700' }}>{pendingRemoval.member.name}</ThemedText>
+                    <ThemedText style={{ color: '#64748b' }}>
+                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} years
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+            )}
+            <View style={{ marginTop: 16, gap: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
+              {/* Use your ThemedDropdown — order=0 => highest zIndex so menu overlays footer */}
+              <ThemedDropdown
+                placeholder="Select a Reason"
+                items={REMOVAL_REASONS.map(r => ({ label: r, value: r }))}
+                value={selectedReason}
+                setValue={setSelectedReason}
+                order={0}
+              />
+            </View>
+          </ScrollView>
+          {/* Fixed footer with actions */}
+          <View style={styles.sheetFooter}>
+            <ThemedButton
+              submit={false}
+              onPress={() => setRemoveOpen(false)}
+              style={{ flex: 1 }}
+            >
+              <ThemedText non_btn>Cancel</ThemedText>
+            </ThemedButton>
+            <View style={{ width: 10 }} />
+            <ThemedButton
+              style={{ flex: 1 }}
+            >
+              <ThemedText onPress={() => memberRemovalHandler(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
+            </ThemedButton>
+          </View>
+        </View>
       </ThemedBottomSheet>
     </ThemedView>
   );
@@ -453,11 +493,54 @@ const styles = StyleSheet.create({
   },
   badgeText: { fontSize: 12, color: "#334155" },
   sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
     marginBottom: 6,
+  },
+  selectBox: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  optionPanel: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 6
+  },
+  optionItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textField: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF'
+  },
+  sheetFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1, // lower than dropdown's zIndex so menu can overlay if needed
   },
   sectionTitle: { fontWeight: "700", flexShrink: 1 },
 });

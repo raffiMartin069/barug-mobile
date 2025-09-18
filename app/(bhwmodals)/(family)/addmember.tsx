@@ -7,12 +7,13 @@ import ThemedSearchSelect from "@/components/ThemedSearchSelect";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
 import { RELATIONSHIP } from "@/constants/relationship";
+import { useAddMember } from "@/hooks/useAddMember";
 import { usePersonSearchByKey } from "@/hooks/usePersonSearch";
 import { FamilyRepository } from "@/repository/familyRepository";
 import { useHouseMateStore } from "@/store/houseMateStore";
 import { FamilyMembershipType } from "@/types/familyMembership";
 import { MgaKaHouseMates } from "@/types/houseMates";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 type Resident = {
@@ -59,7 +60,8 @@ const AddMember = () => {
     const [hhheadrel, setHhHeadReal] = useState("");
     const [familyId, setFamilyId] = useState<number | null>(null);
     const familyNumber = useHouseMateStore((state: MgaKaHouseMates) => state.familyId);
-    const { results: residentItems, search } = usePersonSearchByKey()
+    const { results: residentItems, search } = usePersonSearchByKey();
+    const { addMember, loading, error } = useAddMember();
 
     useEffect(() => {
         const getFamilyId = async () => {
@@ -70,6 +72,7 @@ const AddMember = () => {
     }, [familyNumber]);
 
     const submitHandler = async () => {
+        // TODO: Replace p_added_by_id with actual user ID from auth
         const data: FamilyMembershipType = {
             p_family_id: familyId,
             p_added_by_id: 1,
@@ -77,18 +80,15 @@ const AddMember = () => {
             p_relationship_to_hholdhead_id: Number(hhheadrel),
             p_relationship_to_family_head_id: Number(famheadrel),
         }
-        const res = await new FamilyRepository().insertMember(data);
-
+        const res = await addMember(data);
         if (!res) {
-            Alert.alert("Uh oh!", "Failed to add member. Please try again.");
+            Alert.alert("Warning", error || "Failed to add member. Please try again.");
             return;
         }
-
         Alert.alert("Success!", "Member added successfully!")
         setFamHeadRel("")
         setHhHeadReal("")
         setResidentSearchText("")
-
     }
 
     return (
@@ -156,7 +156,7 @@ const AddMember = () => {
                 <Spacer height={15} />
 
                 <View>
-                    <ThemedButton onPress={submitHandler} disabled={!residentId || !famheadrel || !hhheadrel}>
+                    <ThemedButton onPress={submitHandler} disabled={!residentId || !famheadrel || !hhheadrel }>
                         <ThemedText btn>Continue</ThemedText>
                     </ThemedButton>
                 </View>

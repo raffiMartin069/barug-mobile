@@ -1,15 +1,14 @@
-import { useState, useMemo } from "react"
-import { FamilyCreationService } from "@/services/familyCreation"
+import { MembershipException } from "@/exception/membershipExcption"
 import { FamilyCreationRepository } from "@/repository/familyCreation"
 import { HouseholdRepository } from "@/repository/householdRepository"
+import { FamilyCreationService } from "@/services/familyCreation"
 import { FamilyCreationRequest } from "@/types/request/familyCreationRequest"
-import { MembershipException } from "@/exception/database/membershipExcption"
+import { useMemo, useState } from "react"
 
 export function useFamilyCreation() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState(false)
-
     const service = useMemo(
         () => new FamilyCreationService(
             new FamilyCreationRepository(), 
@@ -29,7 +28,11 @@ export function useFamilyCreation() {
             setSuccess(true)
             return result
         } catch (err) {
-            setError(err instanceof MembershipException ? err.message : String(err))
+            if (err instanceof MembershipException) {
+                setError(err.message)
+                return null
+            }
+            console.error("Unexpected error:", err)
             return null
         } finally {
             setLoading(false)
