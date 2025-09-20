@@ -15,6 +15,7 @@ import React, { useRef, useState } from 'react'
 import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
+const ACTION_BTN_HEIGHT = 44
 
 type Member = {
   id: string
@@ -54,9 +55,11 @@ const REMOVAL_REASONS = [
 ] as const
 type RemovalReason = typeof REMOVAL_REASONS[number]
 
-const HouseholdList = () => {
+const QuarterlySched = () => {
   const router = useRouter()
   const [search, setSearch] = useState('')
+
+  // NEW: dropdown state
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
 
@@ -116,7 +119,7 @@ const HouseholdList = () => {
           indigent: 'NO',
           monthlyIncome: '₱10,000 - ₱12,000',
           sourceIncome: 'Construction Work',
-          members: [], // no members yet
+          members: [],
         },
       ],
     },
@@ -173,7 +176,6 @@ const HouseholdList = () => {
 
   // ---------- remove modal states ----------
   const [removeOpen, setRemoveOpen] = useState(false)
-  const [reasonOpen, setReasonOpen] = useState(false) // toggles dropdown options
   const [selectedReason, setSelectedReason] = useState<RemovalReason | null>(null)
   const [otherReason, setOtherReason] = useState('')
   const [pendingRemoval, setPendingRemoval] = useState<{
@@ -186,13 +188,12 @@ const HouseholdList = () => {
     setPendingRemoval({ householdId, familyNum, member })
     setSelectedReason(null)
     setOtherReason('')
-    setReasonOpen(false)
     setRemoveOpen(true)
   }
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
-      <ThemedAppBar title='List of Household' />
+      <ThemedAppBar title='' />
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
@@ -271,11 +272,20 @@ const HouseholdList = () => {
                     </ThemedText>
                   </View>
 
-                  <Spacer height={15} />
+                  <Spacer height={12} />
 
-                  <ThemedButton submit={false} onPress={() => openSheet(hh)}>
-                    <ThemedText non_btn={true}>View Details</ThemedText>
-                  </ThemedButton>
+                  {/* CTA: single 'Reschedule' button aligned right */}
+                  <View style={styles.ctaRow}>
+                    <ThemedButton
+                      submit={false}
+                      onPress={() => openSheet(hh)}
+                    >
+                      <View style={styles.reschedContent}>
+                        <Ionicons name="calendar-outline" size={18} color="#310101" />
+                        <ThemedText non_btn>Reschedule</ThemedText>
+                      </View>
+                    </ThemedButton>
+                  </View>
                 </ThemedCard>
               </Pressable>
 
@@ -302,21 +312,22 @@ const HouseholdList = () => {
               {/* Household Info */}
               <View style={{ marginTop: 6 }}>
                 <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>Household Information</ThemedText>
+
                 <View style={styles.kvRow}>
                   <ThemedText>Household Head</ThemedText>
-                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseType}</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.householdHead}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>Household No.</ThemedText>
-                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseOwnership}</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.householdNum}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>House Type</ThemedText>
-                  <ThemedText style={styles.kvVal}>{selectedHousehold.address}</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseType}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>House Ownership</ThemedText>
-                  <ThemedText style={styles.kvVal}>{selectedHousehold.address}</ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseOwnership}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>Home Address</ThemedText>
@@ -404,9 +415,8 @@ const HouseholdList = () => {
       {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
       <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
         <View style={{ flex: 1 }}>
-          {/* Scrollable content above the fixed footer */}
           <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave room for footer
+            contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
           >
             <ThemedText subtitle>Remove Member</ThemedText>
@@ -429,10 +439,9 @@ const HouseholdList = () => {
             <View style={{ marginTop: 16, gap: 8 }}>
               <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
 
-              {/* Use your ThemedDropdown — order=0 => highest zIndex so menu overlays footer */}
               <ThemedDropdown
                 placeholder="Select a Reason"
-                items={[]}
+                items={[] /* plug your items here e.g., REMOVAL_REASONS */ }
                 value={selectedReason}
                 setValue={setSelectedReason}
                 order={0}
@@ -440,21 +449,18 @@ const HouseholdList = () => {
             </View>
           </ScrollView>
 
-          {/* Fixed footer with actions */}
           <View style={styles.sheetFooter}>
             <ThemedButton
               submit={false}
               onPress={() => setRemoveOpen(false)}
-              style={{ flex: 1 }}
+              style={{ flex: 1, height: ACTION_BTN_HEIGHT }}
             >
               <ThemedText non_btn>Cancel</ThemedText>
             </ThemedButton>
 
             <View style={{ width: 10 }} />
 
-            <ThemedButton
-              style={{ flex: 1}}
-            >
+            <ThemedButton style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
               <ThemedText btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>
@@ -465,7 +471,7 @@ const HouseholdList = () => {
   )
 }
 
-export default HouseholdList
+export default QuarterlySched
 
 const styles = StyleSheet.create({
   rowContainer: {
@@ -478,10 +484,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  kvRow: {},
-  kvKey: { color: '#64748b', minWidth: 120 },
-  kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
 
+  // filters
   filtersWrap: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -497,6 +501,14 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 6,
   },
+
+  kvRow: {
+    marginVertical: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  kvKey: { color: '#64748b', minWidth: 120 },
+  kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
 
   familyCover: {
     flexDirection: 'row',
@@ -521,49 +533,30 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontWeight: '700', flexShrink: 1 },
 
-  // dropdown styles
-  selectBox: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+  // CTA (single right-aligned 'Reschedule' button)
+  ctaRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  reschedContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    gap: 8,
   },
-  optionPanel: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginTop: 6
-  },
-  optionItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  textField: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF'
-  },
-  sheetFooter: {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  padding: 12,
-  backgroundColor: '#FFFFFF',
-  borderTopWidth: 1,
-  borderColor: '#E2E8F0',
-  flexDirection: 'row',
-  alignItems: 'center',
-  zIndex: 1, // lower than dropdown's zIndex so menu can overlay if needed
-},
 
+  // dropdown styles (modal footer)
+  sheetFooter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1,
+  },
 })
