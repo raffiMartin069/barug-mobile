@@ -18,8 +18,8 @@ import {
 } from '@/constants/formoptions'
 import { profileResident, type ProfileResidentArgs } from '@/services/profiling'
 import { useResidentFormStore } from '@/store/forms'
-import { useRouter } from 'expo-router'
-import React, { useState } from 'react'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import React, { useMemo, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 function toYYYYMMDD(input?: unknown) {
@@ -49,29 +49,41 @@ function toYYYYMMDD(input?: unknown) {
   return String(input)
 }
 
-/** Normalize single ID to integer or null (DB wants integer|null) */
 const toIntOrNull = (v?: string | number | null) => {
   if (v === null || v === undefined || v === '') return null
   const n = Number(v)
   return Number.isFinite(n) ? n : null
 }
-
-/** Normalize an array of IDs into integer[] (DB wants integer[]) */
 const toIntArray = (arr?: Array<string | number> | null): number[] => {
   if (!Array.isArray(arr)) return []
   return arr.map((x) => Number(x)).filter((n) => Number.isFinite(n)) as number[]
 }
-
-/** Normalize numeric input to number|null (for latitude/longitude) */
 const toNumberOrNull = (v?: string | number | null) => {
   if (v === null || v === undefined || v === '') return null
   const n = Number(v)
   return Number.isFinite(n) ? n : null
 }
 
+const parseGovCsvToIds = (csv?: string | null): number[] => {
+  if (!csv) return []
+  return csv
+    .split(',')
+    .map(s => Number(String(s).trim()))
+    .filter(n => Number.isFinite(n))
+}
+
+const idsToLabels = (ids: number[]) => {
+  if (!ids.length) return ['—']
+  return ids.map(id => govProgMap[id] ?? String(id))
+}
+
 const ReviewInputsProfile = () => {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
+
+  // from /SocioeconomicInfo route param
+  const { isStudent: isStudentParam } = useLocalSearchParams<{ isStudent?: string }>()
+  const isStudent = isStudentParam === '1'
 
   // 🔔 NiceModal local state (with optional success callback)
   const [modal, setModal] = useState<{
@@ -90,9 +102,13 @@ const ReviewInputsProfile = () => {
   const data = useResidentFormStore()
   const resetForm = useResidentFormStore((s) => s.reset)
 
+  // Compute gov program labels from CSV stored in govprogrm
+  const govIds = useMemo(() => parseGovCsvToIds(data.govprogrm), [data.govprogrm])
+  const govLabels = useMemo(() => idsToLabels(govIds), [govIds])
+  const primaryGovId = govIds[0] ?? 7 // keep compat with old single-field (7 = None)
+
   const handleSuccessOk = () => {
     closeModal()
-    // ✅ take the user out of the flow after OK
     router.replace('/(bhw)/(tabs)/profiling')
   }
 
@@ -104,7 +120,7 @@ const ReviewInputsProfile = () => {
       const last = data.lname?.trim()
       const birthdate = toYYYYMMDD(data.dob)
       const mobile = data.mobnum?.trim()
-      const email = data.email?.trim() || null // DB accepts text|null
+      const email = data.email?.trim() || null
 
       if (!first || !last || !birthdate || !mobile) {
         openModal({
@@ -119,11 +135,11 @@ const ReviewInputsProfile = () => {
       const performerId = 5
       const residencyPeriod = 0
 
-      console.log("MOTHER ID: ", data.motherId)
-      console.log("FATHER ID: ", data.fatherId)
-      console.log("GUARDIAN ID: ", data.guardianId)
-      
-      const payload: ProfileResidentArgs = {
+      const payload: ProfileResidentArgs & {
+        // add fields expected by the updated RPC without touching services/profiling.ts signature
+        p_is_student?: boolean
+        p_gov_mem_prog_ids?: number[]
+      } = {
         p_performer_id: performerId,
         p_last_name: last,
         p_first_name: first,
@@ -135,14 +151,18 @@ const ReviewInputsProfile = () => {
         p_residency_period: residencyPeriod,
         p_occupation: data.occupation?.trim() || '',
 
-        // lookups -> integer (use selected gender id; no hardcode)
         p_sex_id: toIntOrNull(data.gender) ?? 0,
         p_civil_status_id: toIntOrNull(data.civilStatus) ?? 0,
         p_nationality_id: toIntOrNull(data.nationality) ?? 0,
         p_religion_id: toIntOrNull(data.religion) ?? 0,
         p_education_id: toIntOrNull(data.educattainment) ?? 0,
         p_employment_status_id: toIntOrNull(data.employmentstat) ?? 0,
-        p_gov_mem_prog_id: toIntOrNull(data.govprogrm) ?? 0,
+
+        // keep old single-value for backward-compat, but…
+        // …also send the new array + student flag (RPC will use these)
+        p_gov_mem_prog_ids: govIds,
+        p_is_student: !!isStudent,
+
         p_mnthly_personal_income_id: toIntOrNull(data.mnthlypersonalincome) ?? 0,
 
         // address
@@ -151,17 +171,14 @@ const ReviewInputsProfile = () => {
         p_city: data.city?.trim() || '',
         p_purok_sitio_name: data.purokSitio?.trim() || '',
 
-        // coords (numeric|null)
+        // coords
         p_latitude: toNumberOrNull(data.latitude),
         p_longitude: toNumberOrNull(data.longitude),
 
-        // relationships (ids must be integer or null / integer[])
+        // relationships
         p_mother_person_id: toIntOrNull(data.motherId),
         p_father_person_id: toIntOrNull(data.fatherId),
-
-        // ✅ single guardian -> ProfileResidentArgs expects integer[]
         p_guardian_person_ids: toIntArray(data.guardianId ? [data.guardianId] : []),
-
         p_child_person_ids: toIntArray(data.childIds),
 
         // flags
@@ -169,12 +186,11 @@ const ReviewInputsProfile = () => {
         p_is_email_verified: false,
         p_is_id_valid: false,
       }
-      console.log("DEBUG payload: ", payload)
-      await profileResident(payload)
 
-      // ✅ Clear everything in the form store immediately after success
+      // Call RPC (cast to any to tolerate extra fields until you update the TS type)
+      await profileResident(payload as any)
+
       resetForm()
-
       openModal({
         title: 'Success',
         message: 'Resident profile submitted successfully.',
@@ -307,7 +323,7 @@ const ReviewInputsProfile = () => {
           <Spacer height={10} />
           <View style={styles.row}>
             <ThemedText subtitle>Occupation:</ThemedText>
-            <ThemedText subtitle>{data.occupation}</ThemedText>
+            <ThemedText subtitle>{data.occupation || '—'}</ThemedText>
           </View>
 
           <Spacer height={10} />
@@ -317,9 +333,19 @@ const ReviewInputsProfile = () => {
           </View>
 
           <Spacer height={10} />
+          <View style={styles.rowTopAligned}>
+            <ThemedText subtitle>Government Programs:</ThemedText>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              {govLabels.map((lbl, i) => (
+                <ThemedText key={i} subtitle>• {lbl}</ThemedText>
+              ))}
+            </View>
+          </View>
+
+          <Spacer height={10} />
           <View style={styles.row}>
-            <ThemedText subtitle>Government Program:</ThemedText>
-            <ThemedText subtitle>{govProgMap[data.govprogrm as keyof typeof govProgMap]}</ThemedText>
+            <ThemedText subtitle>Are you still a student?</ThemedText>
+            <ThemedText subtitle>{isStudent ? 'Yes' : 'No'}</ThemedText>
           </View>
 
           <Spacer height={20} />
@@ -337,31 +363,22 @@ const ReviewInputsProfile = () => {
             <ThemedText subtitle>{data.fatherName || '—'}</ThemedText>
           </View>
 
-          {/* ✅ Single guardian */}
           <Spacer height={10} />
           <View style={styles.row}>
             <ThemedText subtitle>Guardian:</ThemedText>
             <ThemedText subtitle>{data.guardianName || '—'}</ThemedText>
           </View>
 
-          {/* Children list */}
           <Spacer height={10} />
           <View style={styles.rowTopAligned}>
             <ThemedText subtitle>Children:</ThemedText>
-
             {data.childNames.length ? (
               <View style={styles.childList}>
                 {data.childNames.map((name, idx) => (
-                  <View
-                    key={data.childIds[idx] ?? idx}
-                    style={styles.childItem}
-                  >
+                  <View key={data.childIds[idx] ?? idx} style={styles.childItem}>
                     <View style={styles.childBadge}>
-                      <ThemedText non_btn style={styles.childBadgeText}>
-                        {idx + 1}
-                      </ThemedText>
+                      <ThemedText non_btn style={styles.childBadgeText}>{idx + 1}</ThemedText>
                     </View>
-
                     <View style={{ flex: 1 }}>
                       <ThemedText subtitle>{name}</ThemedText>
                     </View>
@@ -382,16 +399,13 @@ const ReviewInputsProfile = () => {
         </View>
       </ThemedKeyboardAwareScrollView>
 
-      {/* 🟢 NiceModal */}
       <NiceModal
         visible={modal.visible}
         title={modal.title}
         message={modal.message}
         variant={modal.variant}
         primaryText="OK"
-        onPrimary={() => {
-          modal._onOk ? modal._onOk() : closeModal()
-        }}
+        onPrimary={() => { modal._onOk ? modal._onOk() : closeModal() }}
         onClose={closeModal}
       />
     </ThemedView>

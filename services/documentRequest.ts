@@ -1,7 +1,35 @@
 import { supabase } from '@/constants/supabase'
 
-export type DocType = { document_type_id: number; document_type_name: string }
-export type Purpose = {
+/* ========= Lookups ========= */
+
+export type DocType = {
+  document_type_id: number
+  document_type_name: string
+}
+
+export type BusinessLite = { business_id: number; business_name: string }
+
+/** v2 purpose row WITH waiver flags (preferred) */
+export type PurposeWithFeeFlags = {
+  document_purpose_id: number
+  request_document_type_id: number
+  purpose_code: string
+  purpose_label: string
+  fee_item_id: number
+  fee_code: string
+  current_amount: number
+  max_amount: number | null
+  default_details: any
+  default_offense_no: number | null
+  exempt_ftj: boolean
+  exempt_senior: boolean
+  exempt_pwd: boolean
+  exempt_indigent: boolean
+  exempt_student: boolean
+}
+
+/** legacy v1 shape (no flags) – used only if v2 RPC is missing */
+export type PurposeV1 = {
   document_purpose_id: number
   purpose_code: string
   purpose_label: string
@@ -11,7 +39,6 @@ export type Purpose = {
   default_details: any
   default_offense_no: number | null
 }
-export type BusinessLite = { business_id: number; business_name: string }
 
 export async function getDocumentTypes(): Promise<DocType[]> {
   const { data, error } = await supabase.rpc('get_document_types')
@@ -19,12 +46,67 @@ export async function getDocumentTypes(): Promise<DocType[]> {
   return (data ?? []) as DocType[]
 }
 
-export async function getPurposesByDocumentType(document_type_id: number): Promise<Purpose[]> {
-  const { data, error } = await supabase.rpc('get_purposes_by_document_type', {
-    p_document_type_id: document_type_id,
-  })
-  if (error) throw error
-  return (data ?? []) as Purpose[]
+/**
+ * Get purposes for a document type.
+ * Tries v2 (with waiver flags). If the function doesn’t exist yet, falls back to v1.
+ */
+export async function getPurposesByDocumentType(
+  documentTypeId: number
+): Promise<PurposeWithFeeFlags[]> {
+  // Try v2
+  const v2 = await supabase
+    .rpc('get_purposes_by_document_type_v2', { p_document_type_id: documentTypeId })
+
+  if (!v2.error && v2.data) {
+    return (v2.data as any[]).map(normalizePurposeV2)
+  }
+
+  // Fallback to v1 (no flags) – we’ll fill flags as false
+  const v1 = await supabase
+    .rpc('get_purposes_by_document_type', { p_document_type_id: documentTypeId })
+  if (v1.error) throw v1.error
+
+  return (v1.data as any[]).map((r) => normalizePurposeV1toV2(r as PurposeV1))
+}
+
+function normalizePurposeV2(row: any): PurposeWithFeeFlags {
+  return {
+    document_purpose_id: Number(row.document_purpose_id),
+    request_document_type_id: Number(row.request_document_type_id),
+    purpose_code: String(row.purpose_code),
+    purpose_label: String(row.purpose_label),
+    fee_item_id: Number(row.fee_item_id),
+    fee_code: String(row.fee_code ?? ''),
+    current_amount: Number(row.current_amount ?? 0),
+    max_amount: row.max_amount == null ? null : Number(row.max_amount),
+    default_details: row.default_details ?? {},
+    default_offense_no: row.default_offense_no == null ? null : Number(row.default_offense_no),
+    exempt_ftj: !!row.exempt_ftj,
+    exempt_senior: !!row.exempt_senior,
+    exempt_pwd: !!row.exempt_pwd,
+    exempt_indigent: !!row.exempt_indigent,
+    exempt_student: !!row.exempt_student,
+  }
+}
+
+function normalizePurposeV1toV2(row: PurposeV1): PurposeWithFeeFlags {
+  return {
+    document_purpose_id: Number(row.document_purpose_id),
+    request_document_type_id: -1, // not returned by v1
+    purpose_code: row.purpose_code,
+    purpose_label: row.purpose_label,
+    fee_item_id: -1, // not returned by v1
+    fee_code: row.fee_code,
+    current_amount: Number(row.current_amount ?? 0),
+    max_amount: row.max_amount == null ? null : Number(row.max_amount),
+    default_details: row.default_details ?? {},
+    default_offense_no: row.default_offense_no == null ? null : Number(row.default_offense_no),
+    exempt_ftj: false,
+    exempt_senior: false,
+    exempt_pwd: false,
+    exempt_indigent: false,
+    exempt_student: false,
+  }
 }
 
 export async function getBusinessesOwnedByPerson(person_id: number): Promise<BusinessLite[]> {
@@ -32,6 +114,8 @@ export async function getBusinessesOwnedByPerson(person_id: number): Promise<Bus
   if (error) throw error
   return (data ?? []) as BusinessLite[]
 }
+
+/* ========= Create request ========= */
 
 type CreateInput = {
   requested_by: number
@@ -77,9 +161,62 @@ export async function attachAuthorizationLetter(opts: {
   if (error) throw error
 }
 
+/* ========= Waiver preview helpers ========= */
+
+/**
+ * Ask Postgres how much should be waived PER UNIT for this person & fee item.
+ * (Uses your compute_exemption_amount(p_person_id, p_fee_item_id, p_details))
+ */
+export async function computeExemptionAmount(
+  personId: number,
+  feeItemId: number,
+  details: any = {}
+): Promise<number> {
+  const { data, error } = await supabase.rpc('compute_exemption_amount', {
+    p_person_id: personId,
+    p_fee_item_id: feeItemId,
+    p_details: details,
+  })
+  if (error) throw error
+  return Number(data ?? 0)
+}
+
+/** Utility: compute a pretty preview text and final totals for a selected purpose. */
+export async function previewTotalsForPerson(opts: {
+  personId: number
+  purpose: PurposeWithFeeFlags
+  quantity: number
+  details?: any
+}): Promise<{
+  unit_amount: number
+  exempt_unit: number
+  net_unit: number
+  quantity: number
+  total_due: number
+  label: string // e.g., "₱0.00 (waived – senior)" or "₱80 × 1"
+}> {
+  const unit_amount = Number(opts.purpose.current_amount || 0)
+  const exempt_unit = opts.purpose.fee_item_id > 0
+    ? await computeExemptionAmount(opts.personId, opts.purpose.fee_item_id, opts.details ?? {})
+    : 0
+  const net_unit = Math.max(0, unit_amount - Number(exempt_unit || 0))
+  const total_due = net_unit * Math.max(1, Number(opts.quantity || 1))
+
+  // quick human label
+  const label =
+    net_unit === 0
+      ? `₱0.00 (waived)`
+      : `₱${net_unit.toLocaleString()} × ${Math.max(1, Number(opts.quantity || 1))}`
+
+  return { unit_amount, exempt_unit, net_unit, quantity: Math.max(1, Number(opts.quantity || 1)), total_due, label }
+}
+
+/* ========= Formatting ========= */
+
 export const peso = (n: number | null | undefined) => `₱${Number(n || 0).toLocaleString()}`
 
-// --- Types for list UI ---
+/* ========= Lists & detail views (unchanged) ========= */
+
 export type DocRequestDetailRow = {
   doc_request_id: number
   request_code: string
@@ -99,18 +236,10 @@ export type DocLineLite = {
   purpose_code: string | null
 }
 
-export type DocRequestListItem = DocRequestDetailRow & {
-  doc_types: string[]
-}
+export type DocRequestListItem = DocRequestDetailRow & { doc_types: string[] }
 
-type ListOptions = {
-  status?: string
-  search?: string
-  limit?: number
-  offset?: number
-}
+type ListOptions = { status?: string; search?: string; limit?: number; offset?: number }
 
-/** Fetch the resident's requests and aggregate document types per request */
 export async function fetchMyDocRequests(personId: number, opts: ListOptions = {}): Promise<DocRequestListItem[]> {
   const { status, search, limit = 50, offset = 0 } = opts
 
@@ -149,16 +278,11 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
     if (ln.document_type_name) mapTypes.get(key)!.add(ln.document_type_name)
   }
 
-  // merge
-  const merged: DocRequestListItem[] = hdrs.map(h => ({
-    ...h,
-    doc_types: Array.from(mapTypes.get(h.doc_request_id) ?? []),
-  }))
-
-  return merged
+  return hdrs.map(h => ({ ...h, doc_types: Array.from(mapTypes.get(h.doc_request_id) ?? []) }))
 }
 
-// --- Detail view types ---
+/* ========= Payments ========= */
+
 export type DocRequestLineDetail = {
   doc_request_line_id: number
   doc_request_id: number
@@ -195,7 +319,6 @@ export type TimelineEvent = {
   resident_name: string | null
 }
 
-/** Fetches header, lines, payments, and timeline for a single request */
 export async function fetchDocRequestDetailBundle(docRequestId: number): Promise<{
   header: DocRequestDetailRow
   lines: DocRequestLineDetail[]
@@ -259,4 +382,13 @@ export async function getPaymentMethodMap(): Promise<Record<number, string>> {
   } catch {
     return {}
   }
+}
+
+export async function getResidentFullProfile(personId: number) {
+  const { data, error } = await supabase.rpc('get_specific_resident_full_profile', {
+    p_person_id: personId,
+  })
+  if (error) throw error
+  // This RPC returns an array; take the first row
+  return (Array.isArray(data) ? data[0] : data) || null
 }
