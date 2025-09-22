@@ -403,6 +403,12 @@ const QuarterlySched = () => {
                           There is no family member in this family.
                         </ThemedText>
                       )}
+
+                      <Spacer height={15}/>
+
+                      <ThemedButton submit={false}>
+                        <ThemedText non_btn>Mark as Done</ThemedText>
+                      </ThemedButton>
                     </View>
                   ))}
                 </ScrollView>
