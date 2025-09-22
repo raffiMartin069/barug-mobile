@@ -101,7 +101,7 @@ const ResidentHome = () => {
           <Spacer height={5} />
 
           {/* Full Verification prompt — show only if NOT yet fully verified */}
-          {details?.is_id_valid === true && (
+          {details?.is_id_valid === false && (
             <>
               <TouchableOpacity
                 activeOpacity={0.85}
