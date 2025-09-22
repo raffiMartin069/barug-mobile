@@ -15,6 +15,7 @@ import React, { useRef, useState } from 'react'
 import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
+const ACTION_BTN_HEIGHT = 44
 
 type Member = {
   id: string
@@ -52,12 +53,13 @@ const REMOVAL_REASONS = [
   'DUPLICATE ENTRY',
   'OTHER'
 ] as const
-
 type RemovalReason = typeof REMOVAL_REASONS[number]
 
-const HouseholdList = () => {
+const QuarterlySched = () => {
   const router = useRouter()
   const [search, setSearch] = useState('')
+
+  // NEW: dropdown state
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
 
@@ -117,7 +119,7 @@ const HouseholdList = () => {
           indigent: 'NO',
           monthlyIncome: '₱10,000 - ₱12,000',
           sourceIncome: 'Construction Work',
-          members: [], // no members yet
+          members: [],
         },
       ],
     },
@@ -142,14 +144,38 @@ const HouseholdList = () => {
   ])
 
   // ---------- bottom sheet + member states ----------
-  const [open, setOpen] = useState(false);
-  // const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
-  //   null
-  // );
+  const [open, setOpen] = useState(false)
+  const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null)
 
+  const [familyIndex, setFamilyIndex] = useState(0)
+  const familiesScrollRef = useRef<ScrollView>(null)
+
+  const openSheet = (item: Household) => {
+    setSelectedHousehold(item)
+    setOpen(true)
+    setFamilyIndex(0)
+    setTimeout(() => {
+      familiesScrollRef.current?.scrollTo({ x: 0, animated: false })
+    }, 0)
+  }
+
+  const closeSheet = () => setOpen(false)
+
+  const onFamiliesScroll = (e: any) => {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH)
+    setFamilyIndex(idx)
+  }
+
+  const onPressMember = (fam: Family, mem: Member) => {
+    closeSheet()
+    router.push({
+      pathname: '/memberprofile',
+      params: { id: mem.id },
+    })
+  }
+
+  // ---------- remove modal states ----------
   const [removeOpen, setRemoveOpen] = useState(false)
-
-  const [reasonOpen, setReasonOpen] = useState(false) // toggles dropdown options
   const [selectedReason, setSelectedReason] = useState<RemovalReason | null>(null)
   const [otherReason, setOtherReason] = useState('')
   const [pendingRemoval, setPendingRemoval] = useState<{
@@ -162,72 +188,15 @@ const HouseholdList = () => {
     setPendingRemoval({ householdId, familyNum, member })
     setSelectedReason(null)
     setOtherReason('')
-    setReasonOpen(false)
     setRemoveOpen(true)
   }
 
-  const [familyIndex, setFamilyIndex] = useState(0);
-  const familiesScrollRef = useRef<ScrollView>(null);
-
-  const openSheet = (item: Household) => {
-    setSelectedHousehold(item);
-    setOpen(true);
-    setFamilyIndex(0);
-    setTimeout(() => {
-      familiesScrollRef.current?.scrollTo({ x: 0, animated: false });
-    }, 0);
-  };
-
-  const closeSheet = () => setOpen(false);
-
-  const onFamiliesScroll = (e: any) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setFamilyIndex(idx);
-  };
-
-  const onPressMember = (fam: Family, mem: Member) => {
-    closeSheet();
-    setMemberId(Number(mem.id.split("-")[0]));
-    setFamilyId(Number(fam.familyNum.split("-")[1]));
-    setHouseholdId(Number(fam.familyNum.split("-")[0]));
-    // refactored:
-    // navigation works with /memberprofile but it does not mount the component which causes console.logs or useEffect not to execute.
-    router.push({
-      pathname: "/(bhwmodals)/(family)/memberprofile",
-    });
-  };
-
-  const onPressAddMember = async (id: string) => {
-    setFamilyId(Number(id));
-    router.push({
-      pathname: "/(bhwmodals)/(family)/addmember",
-    });
-  }
-
-  const { removeMember, loading, error } = useMemberRemoval()
-
-  const memberRemovalHandler = async (id: string) => {
-    const memberId = pendingRemoval?.member.id ? Number(pendingRemoval.member.id.split('-')[0]) : null
-    const service = new MemberRemovalService(new HouseholdRepository())
-      const res = await removeMember(memberId, selectedReason, service)
-      if (!res) {
-        Alert.alert('Failed', error ?? 'Unable to remove member. Please try again later.')
-        return;
-      }
-      Alert.alert('Success', 'Member has been removed successfully.')
-      setRemoveOpen(false)
-      await fetchHouseholds()
-  }
-
   return (
-    <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
-      <ThemedAppBar title="List of Household" />
+    <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
+      <ThemedAppBar title='' />
 
       <KeyboardAvoidingView>
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 50 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
           <Spacer height={20} />
 
           <View style={{ paddingHorizontal: 40 }}>
@@ -274,19 +243,16 @@ const HouseholdList = () => {
                   <View style={styles.rowContainer}>
                     <View style={styles.rowSubContainer}>
                       <ThemedIcon
-                        name={"home"}
-                        bgColor={"#310101"}
+                        name={'home'}
+                        bgColor={'#310101'}
                         containerSize={40}
                         size={18}
                       />
                       <View style={{ marginLeft: 10 }}>
-                        <ThemedText
-                          style={{ fontWeight: "700" }}
-                          subtitle={true}
-                        >
+                        <ThemedText style={{ fontWeight: '700' }} subtitle={true}>
                           {hh.householdNum}
                         </ThemedText>
-                        <ThemedText style={{ color: "#475569" }}>
+                        <ThemedText style={{ color: '#475569' }}>
                           Household Head: {hh.householdHead}
                         </ThemedText>
                       </View>
@@ -294,34 +260,32 @@ const HouseholdList = () => {
                     <Ionicons name="chevron-forward" size={18} />
                   </View>
 
-                  <View
-                    style={[
-                      styles.rowSubContainer,
-                      { paddingBottom: 5, paddingTop: 5 },
-                    ]}
-                  >
-                    <Ionicons
-                      name="location-outline"
-                      size={16}
-                      color="#475569"
-                    />
-                    <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
-                      {hh.address}
-                    </ThemedText>
+                  <View style={[styles.rowSubContainer, { paddingBottom: 5, paddingTop: 5 }]}>
+                    <Ionicons name="location-outline" size={16} color="#475569" />
+                    <ThemedText style={{ marginLeft: 10, color: '#475569' }}>{hh.address}</ThemedText>
                   </View>
 
                   <View style={styles.rowSubContainer}>
                     <Ionicons name="people-outline" size={16} color="#475569" />
-                    <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
+                    <ThemedText style={{ marginLeft: 10, color: '#475569' }}>
                       {hh.families.length} Families
                     </ThemedText>
                   </View>
 
-                  <Spacer height={15} />
+                  <Spacer height={12} />
 
-                  <ThemedButton submit={false} onPress={() => openSheet(hh)}>
-                    <ThemedText non_btn={true}>View Details</ThemedText>
-                  </ThemedButton>
+                  {/* CTA: single 'Reschedule' button aligned right */}
+                  <View style={styles.ctaRow}>
+                    <ThemedButton
+                      submit={false}
+                      onPress={() => openSheet(hh)}
+                    >
+                      <View style={styles.reschedContent}>
+                        <Ionicons name="calendar-outline" size={18} color="#310101" />
+                        <ThemedText non_btn>Reschedule</ThemedText>
+                      </View>
+                    </ThemedButton>
+                  </View>
                 </ThemedCard>
               </Pressable>
 
@@ -331,15 +295,13 @@ const HouseholdList = () => {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* ---------- Bottom Sheet --------- */}
+      {/* ---------- Household Bottom Sheet --------- */}
       <ThemedBottomSheet visible={open} onClose={closeSheet}>
         {selectedHousehold && (
           <View style={{ flex: 1 }}>
             <View style={{ marginBottom: 8 }}>
               <ThemedText subtitle>{selectedHousehold.householdNum}</ThemedText>
-              <ThemedText style={{ color: "#475569" }}>
-                {selectedHousehold.householdHead}
-              </ThemedText>
+              <ThemedText style={{ color: '#475569' }}>{selectedHousehold.householdHead}</ThemedText>
             </View>
 
             <ScrollView
@@ -349,51 +311,38 @@ const HouseholdList = () => {
             >
               {/* Household Info */}
               <View style={{ marginTop: 6 }}>
-                <ThemedText style={{ fontWeight: "700", marginBottom: 6 }}>
-                  Household Information
-                </ThemedText>
+                <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>Household Information</ThemedText>
+
                 <View style={styles.kvRow}>
                   <ThemedText>Household Head</ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.householdHead}
-                  </ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.householdHead}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>Household No.</ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.householdNum}
-                  </ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.householdNum}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>House Type</ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.houseType}
-                  </ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseType}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>House Ownership</ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.houseOwnership}
-                  </ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.houseOwnership}</ThemedText>
                 </View>
                 <View style={styles.kvRow}>
                   <ThemedText>Home Address</ThemedText>
-                  <ThemedText style={styles.kvVal}>
-                    {selectedHousehold.address}
-                  </ThemedText>
+                  <ThemedText style={styles.kvVal}>{selectedHousehold.address}</ThemedText>
                 </View>
               </View>
 
               {/* Families */}
               <View style={{ marginTop: 16 }}>
                 <View style={styles.sectionHeaderRow}>
-                  <ThemedText style={styles.sectionTitle}>
-                    Families in this Household
-                  </ThemedText>
+                  <ThemedText style={styles.sectionTitle}>Families in this Household</ThemedText>
 
                   <ThemedChip
-                    label={"Add Family Unit"}
-                    onPress={() => router.push("/createfamily")}
+                    label={'Add Family Unit'}
+                    onPress={() => router.push('/createfamily')}
                     filled={false}
                   />
                 </View>
@@ -407,54 +356,20 @@ const HouseholdList = () => {
                   scrollEventThrottle={16}
                 >
                   {selectedHousehold.families.map((fam) => (
-                    <View
-                      key={fam.familyNum}
-                      style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}
-                    >
+                    <View key={fam.familyNum} style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}>
                       <View style={styles.familyCover}>
-                        <Ionicons
-                          name="home-outline"
-                          size={20}
-                          color="#475569"
-                        />
+                        <Ionicons name="home-outline" size={20} color="#475569" />
                         <View style={{ marginLeft: 10 }}>
-                          <ThemedText style={{ fontWeight: "700" }}>
-                            {fam.familyNum}
-                          </ThemedText>
-                          <ThemedText
-                            style={{ color: "#64748b", marginTop: 2 }}
-                          >
-                            Family Head:{" "}
-                            <ThemedText style={{ fontWeight: "700" }}>
-                              {fam.headName}
-                            </ThemedText>
+                          <ThemedText style={{ fontWeight: '700' }}>{fam.familyNum}</ThemedText>
+                          <ThemedText style={{ color: '#64748b', marginTop: 2 }}>
+                            Family Head: <ThemedText style={{ fontWeight: '700' }}>{fam.headName}</ThemedText>
                           </ThemedText>
                           <View style={styles.badgesRow}>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Type: {fam.type}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                NHTS: {String(fam.nhts)}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Indigent: {String(fam.indigent)}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Monthly Income: {fam.monthlyIncome}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Source of Income: {fam.sourceIncome}
-                              </ThemedText>
-                            </View>
+                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Type: {fam.type}</ThemedText></View>
+                            <View style={styles.badge}><ThemedText style={styles.badgeText}>NHTS: {String(fam.nhts)}</ThemedText></View>
+                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Indigent: {String(fam.indigent)}</ThemedText></View>
+                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Monthly Income: {fam.monthlyIncome}</ThemedText></View>
+                            <View style={styles.badge}><ThemedText style={styles.badgeText}>Source of Income: {fam.sourceIncome}</ThemedText></View>
                           </View>
                         </View>
                       </View>
@@ -462,12 +377,11 @@ const HouseholdList = () => {
                       <Spacer height={10} />
 
                       <View style={styles.sectionHeaderRow}>
-                        <ThemedText style={styles.sectionTitle}>
-                          Members
-                        </ThemedText>
+                        <ThemedText style={styles.sectionTitle}>Members</ThemedText>
+
                         <ThemedChip
-                          label={"Add Member"}
-                          onPress={() => onPressAddMember(fam.familyNum)}
+                          label={'Add Member'}
+                          onPress={() => router.push('/addmember')}
                           filled={false}
                         />
                       </View>
@@ -485,12 +399,16 @@ const HouseholdList = () => {
                           ))}
                         </View>
                       ) : (
-                        <ThemedText
-                          style={{ color: "#64748b", fontStyle: "italic" }}
-                        >
+                        <ThemedText style={{ color: '#64748b', fontStyle: 'italic' }}>
                           There is no family member in this family.
                         </ThemedText>
                       )}
+
+                      <Spacer height={15}/>
+
+                      <ThemedButton submit={false}>
+                        <ThemedText non_btn>Mark as Done</ThemedText>
+                      </ThemedButton>
                     </View>
                   ))}
                 </ScrollView>
@@ -499,15 +417,16 @@ const HouseholdList = () => {
           </View>
         )}
       </ThemedBottomSheet>
+
       {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
       <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
         <View style={{ flex: 1 }}>
-          {/* Scrollable content above the fixed footer */}
           <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 120 }} // leave room for footer
+            contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
             showsVerticalScrollIndicator={false}
           >
             <ThemedText subtitle>Remove Member</ThemedText>
+
             {pendingRemoval && (
               <View style={{ gap: 6, marginTop: 10 }}>
                 <ThemedText style={{ color: '#475569' }}>You are removing:</ThemedText>
@@ -516,63 +435,63 @@ const HouseholdList = () => {
                   <View style={{ marginLeft: 8 }}>
                     <ThemedText style={{ fontWeight: '700' }}>{pendingRemoval.member.name}</ThemedText>
                     <ThemedText style={{ color: '#64748b' }}>
-                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} years
+                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} yrs
                     </ThemedText>
                   </View>
                 </View>
               </View>
             )}
+
             <View style={{ marginTop: 16, gap: 8 }}>
               <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
-              {/* Use your ThemedDropdown — order=0 => highest zIndex so menu overlays footer */}
+
               <ThemedDropdown
                 placeholder="Select a Reason"
-                items={REMOVAL_REASONS.map(r => ({ label: r, value: r }))}
+                items={[] /* plug your items here e.g., REMOVAL_REASONS */ }
                 value={selectedReason}
                 setValue={setSelectedReason}
                 order={0}
               />
             </View>
           </ScrollView>
-          {/* Fixed footer with actions */}
+
           <View style={styles.sheetFooter}>
             <ThemedButton
               submit={false}
               onPress={() => setRemoveOpen(false)}
-              style={{ flex: 1 }}
+              style={{ flex: 1, height: ACTION_BTN_HEIGHT }}
             >
               <ThemedText non_btn>Cancel</ThemedText>
             </ThemedButton>
+
             <View style={{ width: 10 }} />
-            <ThemedButton
-              style={{ flex: 1 }}
-            >
-              <ThemedText onPress={() => memberRemovalHandler(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
+
+            <ThemedButton style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
+              <ThemedText btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>
         </View>
       </ThemedBottomSheet>
-    </ThemedView>
-  );
-};
 
-export default HouseholdList;
+    </ThemedView>
+  )
+}
+
+export default QuarterlySched
 
 const styles = StyleSheet.create({
   rowContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginVertical: 5,
   },
   rowSubContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  kvRow: {},
-  kvKey: { color: '#64748b', minWidth: 120 },
-  kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
 
+  // filters
   filtersWrap: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -589,27 +508,28 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
+  kvRow: {
+    marginVertical: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  kvKey: { color: '#64748b', minWidth: 120 },
+  kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
+
   familyCover: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: "#E9EDEF",
+    borderColor: '#E9EDEF',
     borderRadius: 12,
     padding: 12,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
   },
-  memberGrid: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 6 },
-  badgesRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 6 },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  badgeText: { fontSize: 12, color: "#334155" },
+  memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  badgeText:   { fontSize: 12, color: '#334155' },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -617,36 +537,21 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 6,
   },
-  selectBox: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+  sectionTitle: { fontWeight: '700', flexShrink: 1 },
+
+  // CTA (single right-aligned 'Reschedule' button)
+  ctaRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  reschedContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    gap: 8,
   },
-  optionPanel: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginTop: 6
-  },
-  optionItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  textField: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#FFFFFF'
-  },
+
+  // dropdown styles (modal footer)
   sheetFooter: {
     position: 'absolute',
     left: 0,
@@ -658,7 +563,6 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 1, // lower than dropdown's zIndex so menu can overlay if needed
+    zIndex: 1,
   },
-  sectionTitle: { fontWeight: "700", flexShrink: 1 },
-});
+})
