@@ -62,6 +62,7 @@ const REMOVAL_REASONS = [
   'DUPLICATE ENTRY',
   'OTHER'
 ] as const
+
 type RemovalReason = typeof REMOVAL_REASONS[number]
 
 type WeekRange = { start: Date; end: Date }
@@ -699,99 +700,7 @@ const QuarterlySched = () => {
           </View>
         </View>
       </ThemedBottomSheet>
-      {/* ---------- Remove Member Modal ---------- */}
-      <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
-        <View style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-            <ThemedText subtitle>Remove Member</ThemedText>
-
-            {pendingRemoval && (
-              <View style={{ gap: 6, marginTop: 10 }}>
-                <ThemedText style={{ color: '#475569' }}>You are removing:</ThemedText>
-                <View style={[styles.familyCover, { paddingVertical: 10 }]}>
-                  <Ionicons name="person-outline" size={18} color="#475569" />
-                  <View style={{ marginLeft: 8 }}>
-                    <ThemedText style={{ fontWeight: '700' }}>{pendingRemoval.member.name}</ThemedText>
-                    <ThemedText style={{ color: '#64748b' }}>
-                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} yrs
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            <View style={{ marginTop: 16, gap: 8 }}>
-              <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
-              <ThemedDropdown
-                placeholder="Select a Reason"
-                items={[] /* your items here if needed */}
-                value={selectedReason}
-                setValue={setSelectedReason}
-                order={0}
-              />
-            </View>
-          </ScrollView>
-
-          <View style={styles.sheetFooter}>
-            <ThemedButton submit={false} onPress={() => setRemoveOpen(false)} style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
-              <ThemedText non_btn>Cancel</ThemedText>
-            </ThemedButton>
-
-            <View style={{ width: 10 }} />
-
-            <ThemedButton style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
-              <ThemedText btn>Confirm Remove</ThemedText>
-            </ThemedButton>
-          </View>
-        </View>
-      </ThemedBottomSheet>
-      {/* ---------- Remove Member Modal ---------- */}
-      <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
-        <View style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
-            <ThemedText subtitle>Remove Member</ThemedText>
-
-            {pendingRemoval && (
-              <View style={{ gap: 6, marginTop: 10 }}>
-                <ThemedText style={{ color: '#475569' }}>You are removing:</ThemedText>
-                <View style={[styles.familyCover, { paddingVertical: 10 }]}>
-                  <Ionicons name="person-outline" size={18} color="#475569" />
-                  <View style={{ marginLeft: 8 }}>
-                    <ThemedText style={{ fontWeight: '700' }}>{pendingRemoval.member.name}</ThemedText>
-                    <ThemedText style={{ color: '#64748b' }}>
-                      {pendingRemoval.member.relation} • {pendingRemoval.member.sex} • {pendingRemoval.member.age} yrs
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
-            )}
-
-            <View style={{ marginTop: 16, gap: 8 }}>
-              <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
-              <ThemedDropdown
-                placeholder="Select a Reason"
-                items={[] /* your items here if needed */}
-                value={selectedReason}
-                setValue={setSelectedReason}
-                order={0}
-              />
-            </View>
-          </ScrollView>
-
-          <View style={styles.sheetFooter}>
-            <ThemedButton submit={false} onPress={() => setRemoveOpen(false)} style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
-              <ThemedText non_btn>Cancel</ThemedText>
-            </ThemedButton>
-
-            <View style={{ width: 10 }} />
-
-            <ThemedButton style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
-              <ThemedText btn>Confirm Remove</ThemedText>
-            </ThemedButton>
-          </View>
-        </View>
-      </ThemedBottomSheet>
-
+      
       {/* ========= Reschedule Visit Modal (Bottom Sheet) ========= */}
       <ThemedBottomSheet visible={reschedOpen} onClose={() => setReschedOpen(false)} heightPercent={0.6}>
         <View style={{ flex: 1 }}>
