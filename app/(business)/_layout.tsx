@@ -5,56 +5,71 @@ import React from 'react'
 import { Platform, StyleSheet, TouchableNativeFeedback, TouchableOpacity, useColorScheme, View } from 'react-native'
 
 const BusinessLayout = () => {
-  const colorScheme = useColorScheme()
-  const theme = Colors[colorScheme] ?? Colors.light
+    const colorScheme = useColorScheme()
+    const theme = Colors[colorScheme] ?? Colors.light
 
-  return (
-    <>
-        <Tabs
-            screenOptions={{
-                headerShown: false,
-                tabBarStyle: {backgroundColor: theme.background, height: 100},
-                tabBarActiveTintColor: theme.tabIconSelected,
-                tabBarInactiveTintColor: theme.tabIconDefault,
-                tabBarButton: (props) => (
-                    Platform.OS === 'android' ? (
-                    <TouchableNativeFeedback
-                        background={TouchableNativeFeedback.Ripple(
-                        theme.tabIconSelected + '33',
-                        false,
-                        30
-                        )}
-                        useForeground={true}
-                        onPress={props.onPress}
-                    >
-                        <View style={styles.tabButton}>{props.children}</View>
-                    </TouchableNativeFeedback>
-                    ) : (
-                    <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={props.onPress}
-                        style={styles.tabButton}
-                    >
-                        {props.children}
-                    </TouchableOpacity>
-                    )
-                ),
-            }}
-        >
-            <Tabs.Screen
-                name='(tabs)/businesshome'
-                options={{title: 'Home', tabBarIcon: ({focused}) => (
-                    <Ionicons
-                    name={focused ? 'home' : 'home-outline'}
-                    size={20}
-                    color={focused ? theme.tabIconSelected : theme.tabIconDefault}
-                    />
-                )}}
-            />
+    return (
+        <>
+            <Tabs
+                screenOptions={{
+                    headerShown: false,
+                    tabBarStyle: { backgroundColor: theme.background, height: 100 },
+                    tabBarActiveTintColor: theme.tabIconSelected,
+                    tabBarInactiveTintColor: theme.tabIconDefault,
+                    tabBarButton: (props) => (
+                        Platform.OS === 'android' ? (
+                            <TouchableNativeFeedback
+                                background={TouchableNativeFeedback.Ripple(
+                                    theme.tabIconSelected + '33',
+                                    false,
+                                    30
+                                )}
+                                useForeground={true}
+                                onPress={props.onPress}
+                            >
+                                <View style={styles.tabButton}>{props.children}</View>
+                            </TouchableNativeFeedback>
+                        ) : (
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={props.onPress}
+                                style={styles.tabButton}
+                            >
+                                {props.children}
+                            </TouchableOpacity>
+                        )
+                    ),
+                }}
+            >
+                <Tabs.Screen
+                    name='(tabs)/businesshome'
+                    options={{
+                        title: 'Home', tabBarIcon: ({ focused }) => (
+                            <Ionicons
+                                name={focused ? 'home' : 'home-outline'}
+                                size={20}
+                                color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+                            />
+                        )
+                    }}
+                />
 
-        </Tabs>
-    </>
-  )
+                <Tabs.Screen
+                    name='(tabs)/docreqhistory'
+                    options={{
+                        title: 'Document Request', tabBarIcon: ({ focused }) => (
+                            <Ionicons
+                                name={focused ? 'newspaper' : 'newspaper-outline'}
+                                size={20}
+                                color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+                            />
+                        )
+                    }}
+                />
+            </Tabs>
+
+        </>
+    )
 }
 
 export default BusinessLayout

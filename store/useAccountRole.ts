@@ -1,7 +1,7 @@
 // store/useAccountRole.ts
 import { fetchResidentPlus } from '@/services/profile'
-// import { fetchStaffProfile } from '@/services/staff'      // TODO: add when ready
-// import { fetchBusinessProfile } from '@/services/business' // TODO: add when ready
+// import { fetchStaffProfile } from '@/services/staff'
+// import { fetchBusinessProfile } from '@/services/business'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
@@ -15,6 +15,11 @@ const MAX_AGE = 5 * 60_000 // 5 minutes
 type Profiles = Partial<Record<Role, { data: Profile; cachedAt: number }>>
 
 type State = {
+  /** Persist hydration is finished. Useful to avoid reading before cache is available. */
+  hasHydrated: boolean
+  /** Promise you can await to ensure hydration finished before doing anything. */
+  waitForHydration: () => Promise<void>
+
   /** Which role the user is currently using in the UI. */
   currentRole: Role | null
   /** If the user is staff, we store the staffId here after the first successful fetch. */
@@ -34,8 +39,10 @@ type State = {
   setProfile: (role: Role, data: Profile) => void
   /**
    * Ensure a profile is available and fresh in the cache.
+   * - Waits for hydration first (so we can return from cached immediately if fresh)
    * - Returns cached data if fresh (<= MAX_AGE) and force !== true
    * - Otherwise fetches the profile for that role, stores it, and returns it.
+   * - On fetch error, returns the last known cached data (no throw).
    */
   ensureLoaded: (role: Role, opts?: { force?: boolean }) => Promise<Profile | null>
 
@@ -43,10 +50,18 @@ type State = {
   clearAll: () => void
 }
 
+/* ---------- Hydration gate (module-scope) ---------- */
+let resolveHydration: (() => void) | null = null
+const hydrationPromise = new Promise<void>((res) => { resolveHydration = res })
+
 export const useAccountRole = create<State>()(
   persist(
     (set, get) => ({
-      currentRole: null,
+      hasHydrated: false,
+      waitForHydration: () => hydrationPromise,
+
+      // If most screens assume 'resident', make this the default to reduce null checks.
+      currentRole: 'resident',
       staffId: null,
       profiles: {},
 
@@ -68,49 +83,69 @@ export const useAccountRole = create<State>()(
       },
 
       ensureLoaded: async (role, opts) => {
+        // 1) Wait for hydration, so the cache is available immediately if present.
+        await get().waitForHydration()
+
         const entry = get().profiles[role]
         const force = !!opts?.force
         const stale = !entry || Date.now() - entry.cachedAt > MAX_AGE
 
+        // 2) Fast path: fresh cache → return immediately
         if (!force && !stale) {
-          // fresh cache → return immediately
           return entry?.data ?? null
         }
 
-        // ---- Fetch per role ----
-        if (role === 'resident') {
-          // Your API returns: { details, is_staff, staff_id }
-          const { details, is_staff, staff_id } = await fetchResidentPlus()
-          if (is_staff && staff_id && get().staffId !== staff_id) {
-            set({ staffId: staff_id })
+        // 3) Fetch per-role (with error protection). On error, return last cache.
+        try {
+          if (role === 'resident') {
+            // Your API returns: { details, is_staff, staff_id }
+            const { details, is_staff, staff_id } = await fetchResidentPlus()
+            if (is_staff && staff_id && get().staffId !== staff_id) {
+              set({ staffId: staff_id })
+            }
+            if (details) get().setProfile('resident', details)
+            return details ?? entry?.data ?? null
           }
-          if (details) get().setProfile('resident', details)
-          return details ?? null
-        }
 
-        if (role === 'staff') {
-          // TODO: Replace with your actual staff fetcher:
-          // const details = await fetchStaffProfile()
-          // if (details) get().setProfile('staff', details)
-          return get().profiles.staff?.data ?? null
-        }
+          if (role === 'staff') {
+            // const details = await fetchStaffProfile()
+            // if (details) get().setProfile('staff', details)
+            return get().profiles.staff?.data ?? null
+          }
 
-        if (role === 'business') {
-          // TODO: Replace with your actual business fetcher:
-          // const details = await fetchBusinessProfile()
-          // if (details) get().setProfile('business', details)
-          return get().profiles.business?.data ?? null
-        }
+          if (role === 'business') {
+            // const details = await fetchBusinessProfile()
+            // if (details) get().setProfile('business', details)
+            return get().profiles.business?.data ?? null
+          }
 
-        return null
+          return entry?.data ?? null
+        } catch (e) {
+          // 4) Never throw to the UI. Return whatever is cached (may be null).
+          console.log('[ensureLoaded] fetch failed:', e)
+          return entry?.data ?? null
+        }
       },
 
-      clearAll: () => set({ currentRole: null, staffId: null, profiles: {} }),
+      clearAll: () => set({ currentRole: 'resident', staffId: null, profiles: {} }),
     }),
     {
       name: 'role-store-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      // Optional: version/migration hooks can go here later
+
+      // Let components know when hydration finishes.
+      onRehydrateStorage: () => {
+        // runs *before* rehydration
+        return (state, error) => {
+          // runs *after* rehydration
+          if (error) {
+            console.log('[useAccountRole] rehydrate error:', error)
+          }
+          // mark hydrated and resolve the gate
+          state?.hasHydrated === false && set({ hasHydrated: true })
+          resolveHydration?.()
+        }
+      },
     }
   )
 )

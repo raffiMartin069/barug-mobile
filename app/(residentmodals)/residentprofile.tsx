@@ -1,4 +1,4 @@
-// app/residentprofile.tsx 
+// app/residentprofile.tsx
 import NiceModal, { type ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -90,8 +90,10 @@ export default function ResidentProfile() {
 
   // Data (from params or cached store)
   const params = useLocalSearchParams<{ profile?: string }>()
-  const role = currentRole ?? 'resident'
+  const role = currentRole ?? 'no role'
   const isStaff = role === 'staff'
+  const isBusiness = role === 'business' // ✅ added business role check
+  const roleLabel = isStaff ? 'Staff' : isBusiness ? 'Business Owner' : 'Resident' // ✅ use in badge
 
   const parsedFromParams = (() => {
     if (!params?.profile) return null
@@ -125,12 +127,12 @@ export default function ResidentProfile() {
   // SWR-ish refresh
   useEffect(() => {
     let live = true
-      ; (async () => {
-        const fresh = await ensureLoaded('resident') // keep using resident payload
-        if (!live) return
-        if (fresh) setProfile(fresh)
-        setLoading(false)
-      })()
+    ;(async () => {
+      const fresh = await ensureLoaded('resident') // keep using resident payload
+      if (!live) return
+      if (fresh) setProfile(fresh)
+      setLoading(false)
+    })()
     return () => {
       live = false
     }
@@ -159,9 +161,9 @@ export default function ResidentProfile() {
     v == null || v === ''
       ? '—'
       : `₱${Number(v).toLocaleString('en-PH', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
 
   const openModal = (
     title: string,
@@ -194,7 +196,7 @@ export default function ResidentProfile() {
         onPrimary: async () => {
           try {
             await AsyncStorage.removeItem(UNLOCKED_SESSION_KEY)
-          } catch { }
+          } catch {}
           try {
             await supabase.auth.signOut()
           } finally {
@@ -247,8 +249,8 @@ export default function ResidentProfile() {
                 src={
                   profile?.profile_picture
                     ? {
-                      uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png',
-                    }
+                        uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png',
+                      }
                     : require('@/assets/images/default-image.jpg')
                 }
                 size={50}
@@ -261,7 +263,11 @@ export default function ResidentProfile() {
             </ThemedText>
 
             <View style={styles.badgesRow}>
-              <ThemedChip label={isStaff ? 'Staff' : 'Resident'} filled style={[styles.badge, isStaff && styles.staffBadge]} />
+              <ThemedChip
+                label={roleLabel} // ✅ shows Staff / Business Owner / Resident
+                filled
+                style={[styles.badge, isStaff && styles.staffBadge]}
+              />
               {!isStaff && (
                 <ThemedChip
                   label={`ID: ${profile?.person_id ?? '—'}`}
@@ -291,7 +297,7 @@ export default function ResidentProfile() {
           <InfoRow label="Civil Status:" value={profile?.civil_status ?? '—'} />
           <InfoRow label="Nationality:" value={profile?.nationality ?? '—'} />
 
-          {/* If current role is staff: swap Religion row -> Staff Name, and add Role/Position */}
+          {/* If current role is staff: swap Religion row -> Staff Position */}
           {!isStaff ? (
             <InfoRow label="Religion:" value={profile?.religion ?? '—'} />
           ) : (
@@ -378,7 +384,7 @@ export default function ResidentProfile() {
           </>
         )}
 
-        {/* Resident-only blocks remain the same */}
+        {/* Resident & Business Owner share the same details for now */}
         {!isStaff && (
           <>
             {/* SOCIOECONOMIC */}
@@ -642,9 +648,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eee',
     backgroundColor: '#fafafa',
-    alignItems: 'center',       // ⬅️ center horizontally
-    justifyContent: 'center',   // ⬅️ center vertically
-    gap: 8,                     // if your RN version doesn’t support gap, remove and keep marginBottom on the icon
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
 
   toolIconWrap: {
@@ -653,18 +659,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#561C24',
-    alignItems: 'center',       // ⬅️ center icon
+    alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',        // ⬅️ ensure the circle itself is centered in the tile
-    marginBottom: 6,            // works even if `gap` isn’t supported
+    alignSelf: 'center',
+    marginBottom: 6,
     backgroundColor: '#fff',
   },
 
   toolLabel: {
     fontWeight: '700',
-    textAlign: 'center',        // ⬅️ center label text
+    textAlign: 'center',
   },
-
 
   chipsWrap: {
     flexDirection: 'row',

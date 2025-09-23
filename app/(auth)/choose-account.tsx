@@ -41,28 +41,28 @@ export default function ChooseAccount() {
   // Ensure we have a fresh resident profile (store handles TTL)
   useEffect(() => {
     let live = true
-    ;(async () => {
-      try {
-        const fresh = await store.ensureLoaded('resident')
-        if (!live) return
-        if (fresh) setDetails(fresh)
-
-        // If we learned staff_id here and store doesn't have it yet, set it
-        if (fresh?.is_staff && fresh?.staff_id && store.staffId !== fresh.staff_id) {
-          store.setStaff(fresh.staff_id)
-          // But keep currentRole resident to start
-          store.setResident()
-        }
-
-        // Debug: show persisted role-store snapshot
+      ; (async () => {
         try {
-          const raw = await AsyncStorage.getItem('role-store-v1')
-          // if (raw) console.log('[ChooseAccount] role-store-v1:', JSON.parse(raw))
-        } catch {}
-      } finally {
-        if (live) setLoading(false)
-      }
-    })()
+          const fresh = await store.ensureLoaded('resident')
+          if (!live) return
+          if (fresh) setDetails(fresh)
+
+          // If we learned staff_id here and store doesn't have it yet, set it
+          if (fresh?.is_staff && fresh?.staff_id && store.staffId !== fresh.staff_id) {
+            store.setStaff(fresh.staff_id)
+            // But keep currentRole resident to start
+            store.setResident()
+          }
+
+          // Debug: show persisted role-store snapshot
+          try {
+            const raw = await AsyncStorage.getItem('role-store-v1')
+            // if (raw) console.log('[ChooseAccount] role-store-v1:', JSON.parse(raw))
+          } catch { }
+        } finally {
+          if (live) setLoading(false)
+        }
+      })()
     return () => { live = false }
   }, [store])
 
@@ -121,9 +121,10 @@ export default function ChooseAccount() {
       return router.replace('/(resident)/(tabs)/residenthome')
     }
     if (type === 'business') {
-      // placeholder until business area exists
-      store.setResident()
-      return router.replace('/(resident)/(tabs)/residenthome')
+      // ✅ set the correct role
+      store.setBusiness()
+      // Point this to your business owner home (adjust path to your routes)
+      return router.replace('/(business)/(tabs)/businesshome')
     }
     if (type === 'staff') {
       const sid = details?.staff_id ?? store.staffId
