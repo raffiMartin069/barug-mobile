@@ -35,7 +35,7 @@ const MUTED = '#6b7280'
 const OK = { bg: '#d1fae5', fg: '#065f46' }
 
 const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE'
-const NEW_REQ_ROUTE = '/(businessmodals)/bussiness_doc_req'
+const NEW_REQ_ROUTE = '/(businessmodals)/business_doc_req'
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; fg: string }> = {
   FOR_TREASURER_REVIEW: { label: 'For Treasurer Review', bg: '#fde68a', fg: '#92400e' },
