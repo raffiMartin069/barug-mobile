@@ -181,7 +181,7 @@ const QuarterlySched = () => {
     try {
       const service = new SchedulingService(new HealthWorkerRepository());
       const raw = await service.Execute();
-
+      console.log("Raw data from scheduling service:", raw);
       const docs = (Array.isArray(raw) ? raw : [])
         .map((r) => {
           if (typeof r === "string") {
@@ -287,6 +287,22 @@ const QuarterlySched = () => {
     Alert.alert('Success', 'Member has been removed successfully.')
     setRemoveOpen(false)
     setOpen(false)
+    await fetchData();
+  }
+
+  const markAsDone = async () => {
+    const schedId = await HealthWorkerRepository.GetScheduleIdByHouseholdId(Number(selectedHousehold?.id.split("-")[1]));
+    if (!schedId) {
+      Alert.alert('Error', 'Schedule ID not found for this household.');
+      return;
+    }
+    const res = await HealthWorkerRepository.InsertMarkAsDone({ p_hth_id: schedId, p_staff_id: 1, p_remarks: "N/A" });
+    if (!res) {
+      Alert.alert('Failed', 'Unable to mark as done. Please try again later.');
+      return;
+    }
+    Alert.alert('Success', 'Household marked as done.');
+    setOpen(false);
     await fetchData();
   }
 
@@ -507,7 +523,9 @@ const QuarterlySched = () => {
 
                       <Spacer height={15} />
 
-                      <ThemedButton submit={false}>
+                      <ThemedButton onPress={() => {
+                        markAsDone();
+                      }}  submit={false}>
                         <ThemedText non_btn>Mark as Done</ThemedText>
                       </ThemedButton>
                     </View>
