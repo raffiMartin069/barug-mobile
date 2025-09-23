@@ -15,7 +15,7 @@ export class FamilyCreationService {
     }
 
     async createFamily(req: FamilyCreationRequest) {
-        const householdId = await this.householdRepo.getHouseholdIdByResidentId(req.p_household_id);
+        const householdId = await this.householdRepo.GetHouseholdIdByResidentId(req.p_household_id);
         req.p_household_id = householdId;
         return await this.familyCreationRepo.createFamily(req);
     }

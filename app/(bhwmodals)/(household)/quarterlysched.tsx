@@ -9,10 +9,19 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { supabase } from '@/constants/supabase'
+import { useMemberRemoval } from '@/hooks/useMemberRemoval'
+import { HealthWorkerRepository } from '@/repository/HealthWorkerRepository'
+import { HouseholdRepository } from '@/repository/householdRepository'
+import { MemberRemovalService } from '@/services/memberRemovalService'
+import { SchedulingService } from '@/services/SchedulingService'
+import { useHouseMateStore } from '@/store/houseMateStore'
+import { MgaKaHouseMates } from '@/types/houseMates'
 import { Ionicons } from '@expo/vector-icons'
+import { useIsFocused } from '@react-navigation/native'
 import { useRouter } from 'expo-router'
-import React, { useRef, useState } from 'react'
-import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { Alert, Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const ACTION_BTN_HEIGHT = 44
@@ -62,6 +71,8 @@ const QuarterlySched = () => {
   // NEW: dropdown state
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
+  const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
+  const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
 
   const [households, setHouseholds] = useState<Household[]>([
     {
@@ -166,13 +177,77 @@ const QuarterlySched = () => {
     setFamilyIndex(idx)
   }
 
+  const fetchData = async () => {
+    try {
+      const service = new SchedulingService(new HealthWorkerRepository());
+      const raw = await service.Execute();
+
+      const docs = (Array.isArray(raw) ? raw : [])
+        .map((r) => {
+          if (typeof r === "string") {
+            try { return JSON.parse(r); } catch { return null; }
+          }
+          return r;
+        })
+        .filter(Boolean);
+
+      const mapped = docs.map((doc: any) => {
+        const hh = doc.household ?? {};
+        const families = Array.isArray(doc.families) ? doc.families : [];
+
+        return {
+          id: hh.household_id ? `HH-${hh.household_id}` : `HH-${hh.household_num ?? Math.random().toString(36).slice(2, 8)}`,
+          householdNum: hh.household_num ?? String(hh.household_id ?? ""),
+          householdHead: hh.household_head_name ?? "",
+          address: hh.address ?? "",
+          houseType: hh.house_type ?? "",
+          houseOwnership: hh.house_ownership ?? "",
+          families: families.map((f: any) => ({
+            familyNum: f.family_num ?? (f.family_id ? `FAM-${f.family_id}` : ""),
+            headName: f.family_head_name ?? "",
+            type: f.household_type ?? "",
+            nhts: f.nhts_status ?? "",
+            indigent: f.indigent_status ?? "",
+            monthlyIncome: f.monthly_income ?? "",
+            sourceIncome: f.source_of_income ?? "",
+            members: Array.isArray(f.members)
+              ? f.members.map((m: any) => ({
+                id: m.person_id ? `P-${m.person_id}` : (m.full_name ?? "").replace(/\s+/g, "_"),
+                name: m.full_name ?? "",
+                relation: m.relationship_to_household_head ?? m.relationship ?? "",
+                age: typeof m.age === "number" ? m.age : parseInt(m.age, 10) || 0,
+                sex: m.sex ?? "",
+              }))
+              : [],
+          })),
+        };
+      });
+
+      setHouseholds(mapped);
+    } catch (err) {
+      console.error("Failed to fetch/normalize households:", err);
+      setHouseholds([]);
+    }
+  };
+
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+      if (!isFocused) return;
+      fetchData();
+      setOpen(false);
+    }, [isFocused]);
+
   const onPressMember = (fam: Family, mem: Member) => {
-    closeSheet()
+    closeSheet();
+    setMemberId(Number(mem.id.split("-")[1]));
+    // refactored:
+    // navigation works with /memberprofile but it does not mount the component which causes console.logs or useEffect not to execute.
     router.push({
-      pathname: '/memberprofile',
-      params: { id: mem.id },
-    })
-  }
+      pathname: "/(bhwmodals)/(family)/memberprofile",
+    });
+
+  };
 
   // ---------- remove modal states ----------
   const [removeOpen, setRemoveOpen] = useState(false)
@@ -191,6 +266,30 @@ const QuarterlySched = () => {
     setRemoveOpen(true)
   }
 
+  const onPressAddMember = async (id: string) => {
+    setFamilyId(Number(id));
+    router.push({
+      pathname: "/(bhwmodals)/(family)/addmember",
+    });
+    await fetchData();
+  }
+
+  const { removeMember, loading, error } = useMemberRemoval();
+
+  const memberRemovalHandler = async (id: string) => {
+    const memberId = pendingRemoval?.member.id ? Number(pendingRemoval.member.id.split('-')[1]) : null
+    const service = new MemberRemovalService(new HouseholdRepository())
+    const res = await removeMember(memberId, selectedReason, service)
+    if (!res) {
+      Alert.alert('Failed', error ?? 'Unable to remove member. Please try again later.')
+      return;
+    }
+    Alert.alert('Success', 'Member has been removed successfully.')
+    setRemoveOpen(false)
+    setOpen(false)
+    await fetchData();
+  }
+
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
       <ThemedAppBar title='' />
@@ -203,7 +302,9 @@ const QuarterlySched = () => {
             <ThemedTextInput
               placeholder='Search household #, household head...'
               value={search}
-              onChangeText={setSearch}
+              onChangeText={(text) => {
+                setSearch(text);
+              }}
             />
 
             <Spacer height={10} />
@@ -233,7 +334,7 @@ const QuarterlySched = () => {
               </View>
             </View>
 
-            <Spacer height={10}/>
+            <Spacer height={10} />
           </View>
 
           {households.map((hh) => (
@@ -381,7 +482,7 @@ const QuarterlySched = () => {
 
                         <ThemedChip
                           label={'Add Member'}
-                          onPress={() => router.push('/addmember')}
+                          onPress={() => onPressAddMember(fam.familyNum)}
                           filled={false}
                         />
                       </View>
@@ -404,7 +505,7 @@ const QuarterlySched = () => {
                         </ThemedText>
                       )}
 
-                      <Spacer height={15}/>
+                      <Spacer height={15} />
 
                       <ThemedButton submit={false}>
                         <ThemedText non_btn>Mark as Done</ThemedText>
@@ -447,7 +548,7 @@ const QuarterlySched = () => {
 
               <ThemedDropdown
                 placeholder="Select a Reason"
-                items={[] /* plug your items here e.g., REMOVAL_REASONS */ }
+                items={REMOVAL_REASONS.map(r => ({ label: r, value: r }))}
                 value={selectedReason}
                 setValue={setSelectedReason}
                 order={0}
@@ -467,7 +568,7 @@ const QuarterlySched = () => {
             <View style={{ width: 10 }} />
 
             <ThemedButton style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
-              <ThemedText btn>Confirm Remove</ThemedText>
+              <ThemedText onPress={() => memberRemovalHandler(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>
         </View>
@@ -527,9 +628,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
-  badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
-  badgeText:   { fontSize: 12, color: '#334155' },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  badgeText: { fontSize: 12, color: '#334155' },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
