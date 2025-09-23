@@ -1,7 +1,7 @@
 export class VisitingScheduleException extends Error {
 
     private static readonly ERROR_CODES = new Set(
-        ["P5083", "P5085", "P5086", "P5093"]
+        ["P5083", "P5085", "P5086", "P5093", "P6027", "P6028", "P6029", "P6030"]
     );
 
     constructor(message: string) {
