@@ -13,24 +13,24 @@ export class SearchSchedulingService {
         let res = null;
         switch (executionType) {
             case 1:
-                res = await HealthWorkerRepository.FindByKey(String(key))
+                res = await this.schedulingRepo.FindByKey(String(key))
                 for (let i = 0; i < res?.length!; i++) {
-                    households.push(await HealthWorkerRepository.CallActiveSchedulingFunc(res![i]));
+                    households.push(await this.schedulingRepo.CallActiveSchedulingFunc(res![i]));
                 }
                 break;
             case 2:
-                res = await HealthWorkerRepository.FilterByStatus(parseInt(String(key)));
+                res = await this.schedulingRepo.FilterByStatus(parseInt(String(key)));
                 for (let i = 0; i < res?.length!; i++) {
-                    households.push(await HealthWorkerRepository.CallActiveSchedulingFunc(res![i]));
+                    households.push(await this.schedulingRepo.CallActiveSchedulingFunc(res![i]));
                 }
                 break;
             case 3:
-                res = await HealthWorkerRepository.GetWeeklyScheduleId(String(key));
+                res = await this.schedulingRepo.GetWeeklyScheduleId(String(key));
                 if (res === null) {
                     return [];
                 }
                 for (let i = 0; i < res?.length!; i++) {
-                    households.push(await HealthWorkerRepository.CallActiveSchedulingFunc(res![i]));
+                    households.push(await this.schedulingRepo.CallActiveSchedulingFunc(res![i]));
                 }
                 break;
             default:

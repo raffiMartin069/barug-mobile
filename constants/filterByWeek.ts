@@ -1,0 +1,16 @@
+export const FILTER_BY_WEEK = [
+    "All",
+    "Week of Jul 07 – Jul 11",
+    "Week of Jul 14 – Jul 18",
+    "Week of Jul 21 – Jul 25",
+    "Week of Jul 28 – Aug 01",
+    "Week of Aug 04 – Aug 08",
+    "Week of Aug 11 – Aug 15",
+    "Week of Aug 18 – Aug 22",
+    "Week of Aug 25 – Aug 29",
+    "Week of Sep 01 – Sep 05",
+    "Week of Sep 08 – Sep 12",
+    "Week of Sep 15 – Sep 19",
+    "Week of Sep 22 – Sep 26",
+    "Week of Sep 29 – Sep 30",
+]

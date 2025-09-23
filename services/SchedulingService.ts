@@ -9,10 +9,10 @@ export class SchedulingService {
     }
 
     public async Execute() {
-        const householdId = await HealthWorkerRepository.GetHouseholdIdWithSchedule()
+        const householdId = await this.schedulingRepo.GetHouseholdIdWithSchedule()
         const households = [];
         for (let i = 0; i < householdId?.length!; i++) {
-            households.push(await HealthWorkerRepository.CallActiveSchedulingFunc(householdId![i]));
+            households.push(await this.schedulingRepo.CallActiveSchedulingFunc(householdId![i]));
         }
         return households;
     }

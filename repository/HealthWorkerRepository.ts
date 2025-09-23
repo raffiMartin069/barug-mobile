@@ -5,7 +5,7 @@ import { ScheduleCompletedType } from "@/types/scheduleCompleted";
 
 export class HealthWorkerRepository {
 
-    static async GetWeeklyScheduleId(weekLabel: string) {
+    async GetWeeklyScheduleId(weekLabel: string) {
         const func = "filter_households_by_week_range";
         const { data, error } = await supabase.rpc(func, { p_week_label: weekLabel });
         if (error) {
@@ -16,11 +16,10 @@ export class HealthWorkerRepository {
         for (let i = 0; i < data.length; i++) {
             ids.push(data[i].household_id);
         }
-        console.log("Extracted household IDs:", ids);
         return ids.length > 0 ? ids : null;
     }
 
-    static async FilterByStatus(status: number) {
+    async FilterByStatus(status: number) {
         const func = "filter_households_by_schedule_status";
         const { data, error } = await supabase.rpc(func, { p_status_id: status });
         if (error) {
@@ -34,7 +33,7 @@ export class HealthWorkerRepository {
         return ids.length > 0 ? ids : null;
     }
 
-    static async FindByKey(key: string) {
+    async FindByKey(key: string) {
         const func = "search_households_by_num_or_head";
         const { data, error } = await supabase.rpc(func, { p_key: key });
         if (error) {
@@ -48,7 +47,7 @@ export class HealthWorkerRepository {
         return ids.length > 0 ? ids : null;
     }
 
-    static async GetAllWeeklySchedules() {
+    async GetAllWeeklySchedules() {
         const { data, error } = await supabase.from("calendar_week").select("week_id, week_label, year_num");
         if (error) {
             console.error("Error fetching weekly schedules:", error);
@@ -61,7 +60,7 @@ export class HealthWorkerRepository {
         return weekRanges || null;
     }
 
-    static async GetScheduleIdByHouseholdId(id: number) {
+    async GetScheduleIdByHouseholdId(id: number) {
         const { data, error } = await supabase
             .from("bhw_schedule")
             .select("schedule_id")
@@ -74,7 +73,7 @@ export class HealthWorkerRepository {
         return data ? data.schedule_id : null;
     }
 
-    static async InsertMarkAsDone(info: ScheduleCompletedType) {
+    async InsertMarkAsDone(info: ScheduleCompletedType) {
         const func = "complete_visit";
         console.log("Inserting mark as done with info:", info);
         const { data, error } = await supabase.rpc(func, info);
@@ -89,8 +88,7 @@ export class HealthWorkerRepository {
         return data;
     }
 
-    static async InsertReschedule(info: RescheduleType) {
-        console.log("With info:", info);
+    async InsertReschedule(info: RescheduleType) {
         const func = "reschedule_bhw_schedule"
         const { data, error } = await supabase.rpc(func, info);
         if (error) {
@@ -104,7 +102,7 @@ export class HealthWorkerRepository {
         return data;
     }
 
-    static async GetHouseholdIdWithSchedule() {
+    async GetHouseholdIdWithSchedule() {
         const { data, error } = await supabase.from("bhw_schedule").select("household_id");
         if (error) {
             console.error("Error fetching household IDs:", error);
@@ -113,7 +111,7 @@ export class HealthWorkerRepository {
         return data.map(itm => itm.household_id) || null;
     }
 
-    static async CallActiveSchedulingFunc(householdId: number) {
+    async CallActiveSchedulingFunc(householdId: number) {
         const func = "get_active_household_fam_and_member";
         const { data, error } = await supabase.rpc(func, { p_household_id: householdId });
         if (error) {

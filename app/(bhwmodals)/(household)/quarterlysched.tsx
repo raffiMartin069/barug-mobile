@@ -1,3 +1,9 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { Alert, Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
+import { useIsFocused } from '@react-navigation/native'
+import { useRouter } from 'expo-router'
+
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedBottomSheet from '@/components/ThemedBottomSheet'
@@ -9,20 +15,26 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import { supabase } from '@/constants/supabase'
+
+import { FILTER_BY_STATUS } from '@/constants/filterByStatus'
+import { FILTER_BY_WEEK } from '@/constants/filterByWeek'
+import { RESCHED_REASONS } from '@/constants/rescheduleReasons'
+
+import { useFetchSchedule } from '@/hooks/useFetchSchedule'
 import { useMemberRemoval } from '@/hooks/useMemberRemoval'
+
 import { HealthWorkerRepository } from '@/repository/HealthWorkerRepository'
 import { HouseholdRepository } from '@/repository/householdRepository'
+
 import { MemberRemovalService } from '@/services/memberRemovalService'
-import { SchedulingService } from '@/services/SchedulingService'
+import { ReSchedulingService } from '@/services/ReSchedulingSerivce'
 import { SearchSchedulingService } from '@/services/SearchSchedulingService'
+
 import { useHouseMateStore } from '@/store/houseMateStore'
+
 import { MgaKaHouseMates } from '@/types/houseMates'
-import { Ionicons } from '@expo/vector-icons'
-import { useIsFocused } from '@react-navigation/native'
-import { useRouter } from 'expo-router'
-import React, { useEffect, useRef, useState } from 'react'
-import { Alert, Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+
+import { SchedulingUtility } from '@/utilities/SchedulingUtlitiy'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const ACTION_BTN_HEIGHT = 44
@@ -73,41 +85,6 @@ type WeeklySchedule = {
   range: string
 }
 
-const FILTER_BY_WEEK = [
-  "All",
-  "Week of Jul 07 – Jul 11",
-  "Week of Jul 14 – Jul 18",
-  "Week of Jul 21 – Jul 25",
-  "Week of Jul 28 – Aug 01",
-  "Week of Aug 04 – Aug 08",
-  "Week of Aug 11 – Aug 15",
-  "Week of Aug 18 – Aug 22",
-  "Week of Aug 25 – Aug 29",
-  "Week of Sep 01 – Sep 05",
-  "Week of Sep 08 – Sep 12",
-  "Week of Sep 15 – Sep 19",
-  "Week of Sep 22 – Sep 26",
-  "Week of Sep 29 – Sep 30",
-]
-
-
-const FILTER_BY_STATUS = [
-  { label: "All", value: 0 },
-  { label: "PENDING", value: 1 },
-  { label: "UNDER REVIEW", value: 2 },
-  { label: "APPROVED", value: 3 },
-  { label: "REJECTED", value: 4 },
-  { label: "CANCELLED", value: 5 },
-  { label: "ACCOMPLISHED", value: 6 },
-  { label: "DECLINE", value: 7 },
-  { label: "FOR TREASURER REVIEW", value: 8 },
-  { label: "PAID", value: 9 },
-  { label: "FOR PRINTING", value: 10 },
-  { label: "RELEASED", value: 11 },
-  { label: "READY FOR PICKUP", value: 12 },
-];
-
-
 function getWeekStart(d: Date): Date {
   // Monday as week start
   const dt = new Date(d)
@@ -134,20 +111,6 @@ function fmtRange(r: WeekRange): string {
   return `${s} – ${e}`
 }
 
-const RESCHED_REASONS = [
-  "No one at home",
-  "Household requested new date",
-  "Emergency in household",
-  "Bad weather conditions",
-  "Health worker unavailable",
-  "Barangay activity conflict",
-  "Incorrect address given",
-  "Ongoing household event (e.g., wake, celebration)",
-  "Security/safety concern",
-  "Access to area restricted"
-] as const;
-
-
 const QuarterlySched = () => {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -168,85 +131,7 @@ const QuarterlySched = () => {
     setListWeek(makeWeekRange(base))
   }
 
-  const [households, setHouseholds] = useState<Household[]>([
-    {
-      id: 'HH-2024-001',
-      householdNum: 'HH-2024-001',
-      householdHead: 'Raphael H. Bellosillo',
-      address: 'Purok 3, Sitio San Roque',
-      houseType: 'Concrete',
-      houseOwnership: 'Owned',
-      families: [
-        {
-          familyNum: 'FAM-001',
-          headName: 'Raphael H. Bellosillo',
-          type: 'NUCLEAR',
-          nhts: 'YES',
-          indigent: 'NO',
-          monthlyIncome: '₱15,000 - ₱20,000',
-          sourceIncome: 'Employment',
-          members: [
-            { id: 'P-1', name: 'Raphael H. Bellosillo', relation: 'HEAD', age: 45, sex: 'Male' },
-            { id: 'P-2', name: 'Ana Bellosillo', relation: 'SPOUSE', age: 43, sex: 'Female' },
-            { id: 'P-3', name: 'Miko Bellosillo', relation: 'CHILD', age: 16, sex: 'Male' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'HH-2024-002',
-      householdNum: 'HH-2024-002',
-      householdHead: 'Maria Santos',
-      address: 'Purok 5, Sitio Mabini',
-      houseType: 'Wooden',
-      houseOwnership: 'Renting',
-      families: [
-        {
-          familyNum: 'FAM-002',
-          headName: 'Maria Santos',
-          type: 'EXTENDED',
-          nhts: 'NO',
-          indigent: 'YES',
-          monthlyIncome: '₱5,000 - ₱8,000',
-          sourceIncome: 'Small Business',
-          members: [
-            { id: 'P-4', name: 'Maria Santos', relation: 'HEAD', age: 50, sex: 'Female' },
-            { id: 'P-5', name: 'Jose Santos', relation: 'CHILD', age: 22, sex: 'Male' },
-            { id: 'P-6', name: 'Liza Santos', relation: 'CHILD', age: 19, sex: 'Female' },
-            { id: 'P-7', name: 'Juan Dela Cruz', relation: 'GRANDCHILD', age: 5, sex: 'Male' },
-          ],
-        },
-        {
-          familyNum: 'FAM-003',
-          headName: 'Pedro Cruz',
-          type: 'NUCLEAR',
-          nhts: 'NO',
-          indigent: 'NO',
-          monthlyIncome: '₱10,000 - ₱12,000',
-          sourceIncome: 'Construction Work',
-          members: [],
-        },
-      ],
-    },
-    {
-      id: 'HH-2024-111',
-      householdNum: 'HH-2024-001',
-      householdHead: 'Raphael H. Bellosillo',
-      address: 'Purok 3, Sitio San Roque',
-      houseType: 'Concrete',
-      houseOwnership: 'Owned',
-      families: [],
-    },
-    {
-      id: 'HH-2024-112',
-      householdNum: 'HH-2024-001',
-      householdHead: 'Raphael H. Bellosillo',
-      address: 'Purok 3, Sitio San Roque',
-      houseType: 'Concrete',
-      houseOwnership: 'Owned',
-      families: [],
-    },
-  ])
+  const { households, setHouseholds, fetchSchedules } = useFetchSchedule();
 
   // ---------- Household details bottom sheet ----------
   const [open, setOpen] = useState(false)
@@ -271,67 +156,16 @@ const QuarterlySched = () => {
     setFamilyIndex(idx)
   }
 
-  function normalizeDocs(docs: any[]): Household[] {
-    return docs.map((doc: any) => {
-      const hh = doc.household ?? {};
-      const families = Array.isArray(doc.families) ? doc.families : [];
-
-      return {
-        id: hh.household_id ? `HH-${hh.household_id}` : `HH-${hh.household_num ?? Math.random().toString(36).slice(2, 8)}`,
-        householdNum: hh.household_num ?? String(hh.household_id ?? ""),
-        householdHead: hh.household_head_name ?? "",
-        address: hh.address ?? "",
-        houseType: hh.house_type ?? "",
-        houseOwnership: hh.house_ownership ?? "",
-        families: families.map((f: any) => ({
-          familyNum: f.family_num ?? (f.family_id ? `FAM-${f.family_id}` : ""),
-          headName: f.family_head_name ?? "",
-          type: f.household_type ?? "",
-          nhts: f.nhts_status ?? "",
-          indigent: f.indigent_status ?? "",
-          monthlyIncome: f.monthly_income ?? "",
-          sourceIncome: f.source_of_income ?? "",
-          members: Array.isArray(f.members)
-            ? f.members.map((m: any) => ({
-              id: m.person_id ? `P-${m.person_id}` : (m.full_name ?? "").replace(/\s+/g, "_"),
-              name: m.full_name ?? "",
-              relation: m.relationship_to_household_head ?? m.relationship ?? "",
-              age: typeof m.age === "number" ? m.age : parseInt(m.age, 10) || 0,
-              sex: m.sex ?? "",
-            }))
-            : [],
-        })),
-      };
-    });
-  }
-
-  const fetchData = async () => {
-    try {
-      const service = new SchedulingService(new HealthWorkerRepository());
-      const raw = await service.Execute();
-      const docs = (Array.isArray(raw) ? raw : [])
-        .map((r) => {
-          if (typeof r === "string") {
-            try { return JSON.parse(r); } catch { return null; }
-          }
-          return r;
-        })
-        .filter(Boolean);
-      return setHouseholds(normalizeDocs(docs));
-    } catch (err) {
-      console.error("Failed to fetch/normalize households:", err);
-      setHouseholds([]);
-    }
-  };
 
   const isFocused = useIsFocused();
 
   useEffect(() => {
     if (!isFocused) return;
-    fetchData();
+    fetchSchedules();
     setOpen(false);
     const weeklyScheduleData = async () => {
-      const data = await HealthWorkerRepository.GetAllWeeklySchedules();
+      const repo = new HealthWorkerRepository();
+      const data = await repo.GetAllWeeklySchedules();
       setWeeklySchedules(data);
       if (data.length > 0) {
         setReschedWeek(data[1]);
@@ -391,9 +225,9 @@ const QuarterlySched = () => {
 
   const handleConfirmResched = async () => {
     try {
-      const schedId = await HealthWorkerRepository.GetScheduleIdByHouseholdId(Number(reschedTarget?.id.split("-")[1]));
-      const res = await HealthWorkerRepository.InsertReschedule({
-        p_schedule_id: schedId,
+      const service = new ReSchedulingService(new HealthWorkerRepository());
+      const res = await service.Execute({
+        p_schedule_id: Number(reschedTarget?.id.split("-")[1]),
         p_new_week_id: reschedWeek.week_id,
         p_resched_by_id: 1,
         p_reason: reschedReason ?? "N/A"
@@ -413,7 +247,7 @@ const QuarterlySched = () => {
     router.push({
       pathname: "/(bhwmodals)/(family)/addmember",
     });
-    await fetchData();
+    await fetchSchedules();
   }
 
   const { removeMember, loading, error } = useMemberRemoval();
@@ -429,25 +263,23 @@ const QuarterlySched = () => {
     Alert.alert('Success', 'Member has been removed successfully.')
     setRemoveOpen(false)
     setOpen(false)
-    await fetchData();
+    await fetchSchedules();
   }
 
   const markAsDone = async () => {
-    const schedId = await HealthWorkerRepository.GetScheduleIdByHouseholdId(Number(selectedHousehold?.id.split("-")[1]));
-    if (!schedId) {
-      console.warn("Schedule ID not found for household:", selectedHousehold?.id);
-      Alert.alert('Uh oh!', 'Something went wwrong. Please try again later.');
-      return;
-    }
     try {
-      const res = await HealthWorkerRepository.InsertMarkAsDone({ p_hth_id: schedId, p_staff_id: 1, p_remarks: "N/A" });
-      if (!res) {
-        Alert.alert('Warning', 'Unable to mark as done. Please try again later.');
+      const msg = await SchedulingUtility.MarkAsDone({
+        p_hth_id: Number(selectedHousehold?.id.split("-")[1]),
+        p_staff_id: 1,
+        p_remarks: "N/A"
+      })
+      if (!msg) {
+        Alert.alert('Failed', msg || 'Unable to mark as done. Please try again later.');
         return;
       }
-      Alert.alert('Success', 'Household marked as done.');
+      Alert.alert('Success', msg);
       setOpen(false);
-      await fetchData();
+      await fetchSchedules();
     } catch (error) {
       Alert.alert('Error', (error as Error).message || 'An unexpected error occurred.');
       return;
@@ -458,15 +290,16 @@ const QuarterlySched = () => {
 
   const findHousehold = async (q: string | number, executionType: number) => {
     if (q === 0 || q === "All") {
-      await fetchData();
+      await fetchSchedules();
+      setStatus(null);
+      setWeekRangeFilter(null);
       return;
     }
-
     if (typeof q === "string") {
       q = typeof q === "string" ? q.trim() : String(q);
       if (!q) {
         latestQueryRef.current = '';
-        await fetchData();
+        await fetchSchedules();
         return;
       }
       latestQueryRef.current = q;
@@ -477,6 +310,7 @@ const QuarterlySched = () => {
       const raw = await service.Execute(q, executionType);
 
       if (raw.length < 1) {
+        setHouseholds([]);
         return;
       }
       const docs = (Array.isArray(raw) ? raw : [])
@@ -487,7 +321,7 @@ const QuarterlySched = () => {
           return r;
         })
         .filter(Boolean);
-      const mapped = normalizeDocs(docs);
+      const mapped = SchedulingUtility.NormalizeDocs(docs);
       setHouseholds(mapped);
     } catch (err) {
       console.error("Failed searching households:", err);
@@ -564,6 +398,17 @@ const QuarterlySched = () => {
 
             <Spacer height={10} />
           </View>
+
+          {households.length < 1 && (
+            <ThemedView style={{ flex: 1, alignItems: 'center', marginTop: 50 }}>
+              <Ionicons name="search-circle-outline" size={60} color="#9ca3af" />
+              <Spacer height={10} />
+              <ThemedText style={{ color: '#9ca3af' }}>
+                {searching ? 'Searching...' : 'No households found.'}
+              </ThemedText>
+            </ThemedView>
+          )}
+
 
           {households.map((hh) => (
             <View key={hh.id}>
