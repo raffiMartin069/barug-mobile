@@ -1,45 +1,49 @@
-import Spacer from "@/components/Spacer";
-import ThemedAppBar from "@/components/ThemedAppBar";
-import ThemedBottomSheet from "@/components/ThemedBottomSheet";
-import ThemedButton from "@/components/ThemedButton";
-import ThemedCard from "@/components/ThemedCard";
-import ThemedChip from "@/components/ThemedChip";
-import ThemedDropdown from "@/components/ThemedDropdown";
-import ThemedIcon from "@/components/ThemedIcon";
-import ThemedText from "@/components/ThemedText";
-import ThemedView from "@/components/ThemedView";
+import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
+import ThemedBottomSheet from '@/components/ThemedBottomSheet'
+import ThemedButton from '@/components/ThemedButton'
+import ThemedCard from '@/components/ThemedCard'
+import ThemedChip from '@/components/ThemedChip'
+import ThemedDropdown from '@/components/ThemedDropdown'
+import ThemedIcon from '@/components/ThemedIcon'
+import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
+import ThemedView from '@/components/ThemedView'
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
+import React, { useRef, useState } from 'react'
+import { Dimensions, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, View } from 'react-native'
 
-import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
-import { useMemberRemoval } from "@/hooks/useMemberRemoval";
+const SCREEN_WIDTH = Dimensions.get('window').width
 
-import { FamilyRepository } from "@/repository/familyRepository";
-import { HouseholdRepository } from "@/repository/householdRepository";
+type Member = {
+  id: string
+  name: string
+  relation: string
+  age: number
+  sex: 'Male' | 'Female'
+}
 
-import { HouseholdListService } from "@/services/householdList";
-import { MemberRemovalService } from "@/services/memberRemovalService";
+type Family = {
+  familyNum: string
+  headName: string
+  type: string
+  nhts: string | boolean
+  indigent: string | boolean
+  monthlyIncome: string
+  sourceIncome: string
+  members: Member[]
+}
 
-import { useHouseMateStore } from "@/store/houseMateStore";
-
-import { Family } from "@/types/familyTypes";
-import { Household } from "@/types/householdType";
-import { MgaKaHouseMates } from "@/types/houseMates";
-import { Member } from "@/types/memberTypes";
-
-import { Ionicons } from "@expo/vector-icons";
-import { useIsFocused } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Dimensions,
-  KeyboardAvoidingView,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
-
-const SCREEN_WIDTH = Dimensions.get("window").width;
+type Household = {
+  id: string
+  householdNum: string
+  householdHead: string
+  address: string
+  houseType: string
+  houseOwnership: string
+  families: Family[]
+}
 
 const REMOVAL_REASONS = [
   'MOVED OUT',
@@ -52,24 +56,90 @@ const REMOVAL_REASONS = [
 type RemovalReason = typeof REMOVAL_REASONS[number]
 
 const HouseholdList = () => {
-  const router = useRouter();
-  
-  const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
-  const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
-  const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
+  const router = useRouter()
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState()
+  const [weekRange, setWeekRange] = useState()
 
-  const isFocused = useIsFocused();
-
-  const fetchHouseholds = async () => {
-    const service = new HouseholdListService(new FamilyRepository(), new HouseholdRepository());
-    await getHouseholds(service);
-  };
-
-  useEffect(() => {
-    if (!isFocused) return;
-    fetchHouseholds();
-  }, [isFocused]);
+  const [households, setHouseholds] = useState<Household[]>([
+    {
+      id: 'HH-2024-001',
+      householdNum: 'HH-2024-001',
+      householdHead: 'Raphael H. Bellosillo',
+      address: 'Purok 3, Sitio San Roque',
+      houseType: 'Concrete',
+      houseOwnership: 'Owned',
+      families: [
+        {
+          familyNum: 'FAM-001',
+          headName: 'Raphael H. Bellosillo',
+          type: 'NUCLEAR',
+          nhts: 'YES',
+          indigent: 'NO',
+          monthlyIncome: '₱15,000 - ₱20,000',
+          sourceIncome: 'Employment',
+          members: [
+            { id: 'P-1', name: 'Raphael H. Bellosillo', relation: 'HEAD', age: 45, sex: 'Male' },
+            { id: 'P-2', name: 'Ana Bellosillo', relation: 'SPOUSE', age: 43, sex: 'Female' },
+            { id: 'P-3', name: 'Miko Bellosillo', relation: 'CHILD', age: 16, sex: 'Male' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'HH-2024-002',
+      householdNum: 'HH-2024-002',
+      householdHead: 'Maria Santos',
+      address: 'Purok 5, Sitio Mabini',
+      houseType: 'Wooden',
+      houseOwnership: 'Renting',
+      families: [
+        {
+          familyNum: 'FAM-002',
+          headName: 'Maria Santos',
+          type: 'EXTENDED',
+          nhts: 'NO',
+          indigent: 'YES',
+          monthlyIncome: '₱5,000 - ₱8,000',
+          sourceIncome: 'Small Business',
+          members: [
+            { id: 'P-4', name: 'Maria Santos', relation: 'HEAD', age: 50, sex: 'Female' },
+            { id: 'P-5', name: 'Jose Santos', relation: 'CHILD', age: 22, sex: 'Male' },
+            { id: 'P-6', name: 'Liza Santos', relation: 'CHILD', age: 19, sex: 'Female' },
+            { id: 'P-7', name: 'Juan Dela Cruz', relation: 'GRANDCHILD', age: 5, sex: 'Male' },
+          ],
+        },
+        {
+          familyNum: 'FAM-003',
+          headName: 'Pedro Cruz',
+          type: 'NUCLEAR',
+          nhts: 'NO',
+          indigent: 'NO',
+          monthlyIncome: '₱10,000 - ₱12,000',
+          sourceIncome: 'Construction Work',
+          members: [], // no members yet
+        },
+      ],
+    },
+    {
+      id: 'HH-2024-111',
+      householdNum: 'HH-2024-001',
+      householdHead: 'Raphael H. Bellosillo',
+      address: 'Purok 3, Sitio San Roque',
+      houseType: 'Concrete',
+      houseOwnership: 'Owned',
+      families: [],
+    },
+    {
+      id: 'HH-2024-112',
+      householdNum: 'HH-2024-001',
+      householdHead: 'Raphael H. Bellosillo',
+      address: 'Purok 3, Sitio San Roque',
+      houseType: 'Concrete',
+      houseOwnership: 'Owned',
+      families: [],
+    },
+  ])
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false);
@@ -159,6 +229,43 @@ const HouseholdList = () => {
           showsVerticalScrollIndicator={false}
         >
           <Spacer height={20} />
+
+          <View style={{ paddingHorizontal: 40 }}>
+            <ThemedTextInput
+              placeholder='Search household #, household head...'
+              value={search}
+              onChangeText={setSearch}
+            />
+
+            <Spacer height={10} />
+
+            {/* Filters row (Status + Week Range) */}
+            <View style={styles.filtersWrap}>
+              <View style={styles.filterCol}>
+                <ThemedText style={styles.filterLabel}>Status</ThemedText>
+                <ThemedDropdown
+                  placeholder="All"
+                  items={[]}
+                  value={status}
+                  setValue={setStatus}
+                  order={0}
+                />
+              </View>
+
+              <View style={styles.filterCol}>
+                <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
+                <ThemedDropdown
+                  placeholder="This Week"
+                  items={[]}
+                  value={weekRange}
+                  setValue={setWeekRange}
+                  order={0}
+                />
+              </View>
+            </View>
+
+            <Spacer height={10}/>
+          </View>
 
           {households.map((hh) => (
             <View key={hh.id}>
@@ -463,12 +570,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   kvRow: {},
-  kvKey: { color: "#64748b", minWidth: 120 },
-  kvVal: {
-    fontWeight: "600",
-    color: "#0f172a",
-    flexShrink: 1,
-    textAlign: "right",
+  kvKey: { color: '#64748b', minWidth: 120 },
+  kvVal: { fontWeight: '600', color: '#0f172a', flexShrink: 1, textAlign: 'right' },
+
+  filtersWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  filterCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  filterLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 6,
   },
 
   familyCover: {

@@ -89,12 +89,12 @@ const ResidentHome = () => {
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
           <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
             <ThemedText title={true}>
-              Welcome, {details?.first_name ?? fullName}! ID: {details?.person_id}
+              Welcome, {details?.first_name ?? fullName}!
             </ThemedText>
             <ThemedImage
               // if you store a URL in profile_picture, you can switch to { uri: details?.profile_picture }
-              src={require('@/assets/images/default-image.jpg')}
-              size={60}
+              src={details?.profile_picture ? { uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png' } : require('@/assets/images/default-image.jpg')}
+              size={50}
             />
           </View>
 
@@ -153,48 +153,10 @@ const ResidentHome = () => {
                 <ThemedText style={styles.badgeText}>Approved</ThemedText>
               </View>
             </View>
-
-            <View style={styles.activityItem}>
-              <ThemedIcon
-                name={'newspaper'}
-                iconColor={'#6b4c3b'}
-                bgColor={'#f2e5d7'}
-                shape='square'
-                containerSize={50}
-                size={20}
-              />
-              <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityTitle}>Document Request</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Requested on: June 10, 2023</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Reference #: BRG-2023-0042</ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: '#c8e6c9' }]}>
-                <ThemedText style={styles.badgeText}>Approved</ThemedText>
-              </View>
-            </View>
-
+            
             <Spacer height={15} />
             <ThemedDivider />
             <Spacer height={15} />
-
-            <View style={styles.activityItem}>
-              <ThemedIcon
-                name={'receipt'}
-                iconColor={'#4a5c6a'}
-                bgColor={'#dfe3e6'}
-                shape='square'
-                containerSize={50}
-                size={20}
-              />
-              <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityTitle}>Blotter Report</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Filed on: June 15, 2023</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Reference #: BLT-2023-0018</ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: '#ffe082' }]}>
-                <ThemedText style={styles.badgeText}>Processing</ThemedText>
-              </View>
-            </View>
 
             <View style={styles.activityItem}>
               <ThemedIcon
@@ -238,29 +200,6 @@ const ResidentHome = () => {
               </View>
             </View>
           </ThemedCard>
-
-          <ThemedCard>
-            <Spacer height={20} />
-            <View style={styles.activityItem}>
-              <ThemedIcon
-                name={'folder-open'}
-                iconColor={'#4e6151'}
-                bgColor={'#dce5dc'}
-                shape='square'
-                containerSize={50}
-                size={20}
-              />
-              <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityTitle}>Barangay Case</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Hearing Date: June 25, 2023</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Case #: BC-2023-0007</ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: '#b3e5fc' }]}>
-                <ThemedText style={styles.badgeText}>Scheduled</ThemedText>
-              </View>
-            </View>
-          </ThemedCard>
-
           <Spacer height={20} />
 
           <ThemedCard>

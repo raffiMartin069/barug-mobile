@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 
 type ResidentFormState = {
-  // PERSONAL (unchanged)
+  // PERSONAL
   fname: string
   mname: string
   lname: string
@@ -22,12 +22,15 @@ type ResidentFormState = {
   mobnum: string
   email: string
 
-  // SOCIOECON (unchanged)
+  // SOCIOECON
   educattainment: string
   employmentstat: string
   occupation: string
   mnthlypersonalincome: string
+  /** legacy single select (keep for backward compatibility) */
   govprogrm: string
+  /** NEW: multi-select IDs used by the edit screen */
+  govprogIds: string[]
 
   // 🔗 RELATIONSHIPS
   motherId: string | null
@@ -40,7 +43,7 @@ type ResidentFormState = {
   guardianName: string | null
 
   childIds: string[]
-  childNames: string[]           // same order as childIds
+  childNames: string[]
 
   // helpers
   setMany: (patch: Partial<ResidentFormState>) => void
@@ -70,14 +73,12 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
   // SOCIOECON
   educattainment: '', employmentstat: '', occupation: '',
   mnthlypersonalincome: '', govprogrm: '',
+  govprogIds: [],
 
   // RELATIONSHIPS
   motherId: null, motherName: null,
   fatherId: null, fatherName: null,
-
-  // ✅ single guardian
   guardianId: null, guardianName: null,
-
   childIds: [], childNames: [],
 
   setMany: (patch) => set(patch),
@@ -92,6 +93,7 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
       mobnum: '', email: '',
       educattainment: '', employmentstat: '', occupation: '',
       mnthlypersonalincome: '', govprogrm: '',
+      govprogIds: [],
       motherId: null, motherName: null,
       fatherId: null, fatherName: null,
       guardianId: null, guardianName: null,
@@ -120,8 +122,21 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
     set({ childIds: ids, childNames: names });
   },
 
-  // 🔌 Load a DB row (like your sample) into the store
+  // 🔌 Load a DB row into the store (with debug)
   loadFromProfileRow: (row: any) => {
+    // Normalize gov program IDs from various backend shapes
+    const govIds: string[] =
+      Array.isArray(row.gov_mem_prog_ids) && row.gov_mem_prog_ids.length
+        ? row.gov_mem_prog_ids.map((x: any) => String(x))
+        : row.gov_mem_prog_id != null
+          ? [String(row.gov_mem_prog_id)]
+          : typeof row.gov_mem_prog_csv === 'string'
+            ? row.gov_mem_prog_csv.split(',').map((s: string) => s.trim()).filter(Boolean)
+            : [];
+
+    console.log('[Store] loadFromProfileRow raw:', row);
+    console.log('[Store] loadFromProfileRow normalized govIds:', govIds);
+
     set({
       fname: row.first_name ?? '',
       mname: row.middle_name ?? '',
@@ -145,6 +160,7 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
       occupation: row.occupation ?? '',
       mnthlypersonalincome: row.personal_monthly_income ?? '',
       govprogrm: row.gov_program ?? '',
+      govprogIds: govIds,
       motherId: row.mother_id?.toString?.() ?? null,
       motherName: row.mother_name ?? null,
       fatherId: row.father_id?.toString?.() ?? null,

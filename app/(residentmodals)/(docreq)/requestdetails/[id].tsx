@@ -237,7 +237,7 @@ const StatusPill = ({ status }: { status: AppStatus }) => {
   )
 }
 
-export default function RequestDetailsScreen() {
+export default function DocRequestDetailsScreen() {
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const data = id ? STATIC_REQUESTS[String(id)] : null
