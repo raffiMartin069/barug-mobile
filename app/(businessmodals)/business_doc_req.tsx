@@ -417,7 +417,7 @@ export default function BusinessDocRequest() {
         {/* Purpose & Copies — purpose dropdown "like this" (from generic screen) */}
         <Spacer height={12} />
         <ThemedCard>
-          <RowTitle icon="document-text-outline" title="Purpose & Copies" />
+          <RowTitle icon="document-text-outline" title="Business Information" />
           <Spacer height={8} />
 
           <ThemedDropdown

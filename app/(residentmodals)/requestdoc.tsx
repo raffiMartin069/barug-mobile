@@ -1,3 +1,4 @@
+// /(resident)/(tabs)/requestdoc.tsx
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
@@ -38,8 +39,8 @@ import {
   getBusinessesOwnedByPerson,
   createDocumentRequest,
   attachAuthorizationLetter,
-  computeExemptionAmount,          // server-side waiver check
-  getResidentFullProfile,          // hydrate selected "OTHER" person
+  computeExemptionAmount,
+  getResidentFullProfile,
   peso,
   type DocType,
   type Purpose,
@@ -124,7 +125,6 @@ function mapToPersonMinimal(details: any): PersonMinimal {
   const last_name =
     details?.last_name ?? details?.details?.last_name ?? ''
 
-  // address fallbacks: use composed fields OR a single 'address' string
   const composedAddress = [
     details?.haddress ?? details?.street_name ?? details?.street,
     details?.purok_sitio_name ?? details?.purok_sitio,
@@ -134,7 +134,6 @@ function mapToPersonMinimal(details: any): PersonMinimal {
   const address =
     composedAddress || details?.address || details?.details?.address || undefined
 
-  // mobile fallbacks
   const mobile_number =
     details?.mobile_num ??
     details?.mobile_number ??
@@ -352,7 +351,7 @@ export default function RequestDoc() {
   const [purposeNotes, setPurposeNotes] = useState<string>('')
 
   // waiver preview (server-backed)
-  const [exemptUnit, setExemptUnit] = useState<number>(0)    // per unit waived by DB
+  const [exemptUnit, setExemptUnit] = useState<number>(0)
   const [waiverSource, setWaiverSource] = useState<'server' | 'ui' | null>(null)
   const [checkingWaiver, setCheckingWaiver] = useState<boolean>(false)
 
@@ -362,6 +361,12 @@ export default function RequestDoc() {
   const showModal = (opts: Partial<typeof modal>) => setModal(p => ({ ...p, visible: true, ...opts }))
   const hideModal = () => setModal(p => ({ ...p, visible: false }))
 
+  /* ---------- NEW: helper to detect business doc type ----------- */
+  const isBusinessDocTypeName = (name?: string | null) => {
+    const n = String(name || '').toUpperCase().trim()
+    return n === BUSINESS_DOC_NAME || n.includes('BUSINESS CLEARANCE') || n.includes('BARANGAY BUSINESS')
+  }
+
   // load lookups
   useEffect(() => {
     let live = true
@@ -369,7 +374,8 @@ export default function RequestDoc() {
       try {
         const types = await getDocumentTypes()
         if (!live) return
-        setDocTypes(types)
+        // EXCLUDE Barangay Business Clearance for residents
+        setDocTypes((types || []).filter(t => !isBusinessDocTypeName(t.document_type_name)))
       } catch (e) { console.log('[getDocumentTypes] failed:', e) }
     })()
     return () => { live = false }
@@ -412,8 +418,13 @@ export default function RequestDoc() {
   )
   const offenseNo = selectedPurpose?.default_offense_no ?? null
 
+  // DEFENSIVE: also filter when mapping to dropdown items
   const documentItems = useMemo(
-    () => docTypes.map(dt => ({ label: dt.document_type_name, value: dt.document_type_id })), [docTypes]
+    () =>
+      docTypes
+        .filter(dt => !isBusinessDocTypeName(dt.document_type_name))
+        .map(dt => ({ label: dt.document_type_name, value: dt.document_type_id })),
+    [docTypes]
   )
   const purposeItems = useMemo(
     () => purposes.map(p => ({ label: `${p.purpose_label}  •  ${peso(p.current_amount)}`, value: p.document_purpose_id })), [purposes]
@@ -431,7 +442,7 @@ export default function RequestDoc() {
   // Heuristic banner info
   const waiverHint = useMemo(() => computeWaiverApplies(subject, selectedPurpose), [subject, selectedPurpose])
 
-  // SERVER: check waiver per-unit via RPC (authoritative)
+  // SERVER: check waiver per-unit
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -440,7 +451,6 @@ export default function RequestDoc() {
       if (!selectedPurpose || !subject?.person_id) return
       const feeItemId = Number(selectedPurpose.fee_item_id || 0)
       if (!feeItemId) {
-        // No fee item id in v1 fallback; use client hint only
         setWaiverSource(waiverHint.applies ? 'ui' : null)
         return
       }
@@ -659,9 +669,9 @@ export default function RequestDoc() {
                 onSelect={async (p) => {
                   const id = Number(p.person_id)
                   setOtherPerson({ id, display: p.full_name })
-                  setOtherPersonFull(p)                  // optimistic fill (immediate UI)
+                  setOtherPersonFull(p)
                   try {
-                    const full = await getResidentFullProfile(id) // hydrate
+                    const full = await getResidentFullProfile(id)
                     if (full) setOtherPersonFull(full as any)
                   } catch (e) {
                     console.log('[getResidentFullProfile] failed:', e)
@@ -704,14 +714,13 @@ export default function RequestDoc() {
             <RowTitle icon="id-card-outline" title="Subject Details" />
             {subject && (
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                <StatChip
-                  label={isSenior(computeAge(subject?.birth_date)) ? 'Senior (60+)' : 'Not senior'}
-                  tone={isSenior(computeAge(subject?.birth_date)) ? 'ok' : 'neutral'}
-                />
-                <StatChip
-                  label={subject?.is_student ? 'Student' : 'Not student'}
-                  tone={subject?.is_student ? 'ok' : 'neutral'}
-                />
+                {/* SHOW ONLY WHEN TRUE */}
+                {isSenior(computeAge(subject?.birth_date)) && (
+                  <StatChip label="Senior (60+)" tone="ok" />
+                )}
+                {subject?.is_student && (
+                  <StatChip label="Student" tone="ok" />
+                )}
               </View>
             )}
           </View>
@@ -819,7 +828,7 @@ export default function RequestDoc() {
             multiline
           />
 
-          {/* Business picker */}
+          {/* Business picker (won't appear since doc type is excluded, but kept for safety if reused elsewhere) */}
           {docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name === BUSINESS_DOC_NAME && (
             <>
               <Spacer height={12} />

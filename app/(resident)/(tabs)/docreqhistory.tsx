@@ -1,3 +1,4 @@
+// /(resident)/(tabs)/docreqhistory.tsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
@@ -35,6 +36,17 @@ const FILTERS = [
   { key: 'RELEASED', label: 'Released' },
 ] as const
 
+/** Hide Barangay Business Clearance on the resident screen */
+const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE'
+function isBusinessDoc(i: DocRequestListItem) {
+  const names = (i.doc_types || []).map(s => String(s).toUpperCase().trim())
+  return names.some(n =>
+    n === BUSINESS_DOC_NAME ||
+    n.includes('BUSINESS CLEARANCE') ||
+    n.includes('BARANGAY BUSINESS')
+  )
+}
+
 export default function DocReqHistory() {
   const router = useRouter()
 
@@ -60,7 +72,9 @@ export default function DocReqHistory() {
         search,
         limit: 50,
       })
-      setItems(resp)
+      // ⬇️ Exclude Business Clearance for residents
+      const nonBusinessOnly = (resp || []).filter(i => !isBusinessDoc(i))
+      setItems(nonBusinessOnly)
     } catch (e) {
       console.log('[docreqhistory] load error:', e)
     } finally {
@@ -234,7 +248,6 @@ export default function DocReqHistory() {
 
 function formatPh(d: string | Date) {
   const dt = typeof d === 'string' ? new Date(d) : d
-  // fallback for your v_doc_request_detail string format: try keep as-is if invalid
   return isNaN(dt.getTime()) ? String(d) : dt.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
 }
 

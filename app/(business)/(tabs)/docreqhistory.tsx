@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons' // ← use known-good icons
+import { Ionicons } from '@expo/vector-icons'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -35,7 +35,7 @@ const MUTED = '#6b7280'
 const OK = { bg: '#d1fae5', fg: '#065f46' }
 
 const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE'
-const NEW_REQ_ROUTE = '/(businessmodals)/business_doc_req'
+const NEW_REQ_ROUTE = '/(businessmodals)/bussiness_doc_req'
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; fg: string }> = {
   FOR_TREASURER_REVIEW: { label: 'For Treasurer Review', bg: '#fde68a', fg: '#92400e' },
@@ -210,7 +210,6 @@ export default function DocReqHistory() {
         {/* HERO */}
         <View style={styles.hero}>
           <View style={styles.heroRow}>
-            {/* use Ionicons directly → no mystery white circles */}
             <Ionicons name="shield-checkmark-outline" size={18} color="#fff" />
             <ThemedText style={styles.heroTitle}>Business Status</ThemedText>
             {hero && (
@@ -295,49 +294,49 @@ export default function DocReqHistory() {
 
         <Spacer height={16} />
 
-        {loading ? (
-          <View style={{ paddingVertical: 30 }}>
-            <ActivityIndicator />
-          </View>
-        ) : (
-          <>
-            {/* Active */}
-            <ThemedCard>
-              <SectionHeader title="Active Requests" />
-              <Spacer height={8} />
-              <ThemedDivider />
-              <Spacer height={8} />
-              {active.length === 0 ? (
-                <EmptyState text="No active requests." />
-              ) : (
-                active.map(req => (
-                  <View key={req.doc_request_id} style={{ marginBottom: 10 }}>
-                    <CleanItem req={req} />
-                  </View>
-                ))
-              )}
-            </ThemedCard>
+        {/* Active */}
+        <ThemedCard>
+          <SectionHeader title="Active Requests" />
+          <Spacer height={8} />
+          <ThemedDivider />
+          <Spacer height={8} />
+          {loading ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator />
+            </View>
+          ) : active.length === 0 ? (
+            <EmptyState text="No active requests." />
+          ) : (
+            active.map(req => (
+              <View key={req.doc_request_id} style={{ marginBottom: 10 }}>
+                <CleanItem req={req} />
+              </View>
+            ))
+          )}
+        </ThemedCard>
 
-            <Spacer height={16} />
+        <Spacer height={16} />
 
-            {/* History */}
-            <ThemedCard>
-              <SectionHeader title="Request History" />
-              <Spacer height={8} />
-              <ThemedDivider />
-              <Spacer height={8} />
-              {history.length === 0 ? (
-                <EmptyState text="No released requests yet." />
-              ) : (
-                history.map(req => (
-                  <View key={req.doc_request_id} style={{ marginBottom: 10 }}>
-                    <CleanItem req={req} />
-                  </View>
-                ))
-              )}
-            </ThemedCard>
-          </>
-        )}
+        {/* History */}
+        <ThemedCard>
+          <SectionHeader title="Request History" />
+          <Spacer height={8} />
+          <ThemedDivider />
+          <Spacer height={8} />
+          {loading ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator />
+            </View>
+          ) : history.length === 0 ? (
+            <EmptyState text="No released requests yet." />
+          ) : (
+            history.map(req => (
+              <View key={req.doc_request_id} style={{ marginBottom: 10 }}>
+                <CleanItem req={req} />
+              </View>
+            ))
+          )}
+        </ThemedCard>
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -348,7 +347,6 @@ export default function DocReqHistory() {
         activeOpacity={0.9}
         onPress={() => router.push(NEW_REQ_ROUTE)}
       >
-        {/* this one can stay your custom component if you like */}
         <View style={styles.fabCircle}>
           <Ionicons name="add" size={26} color="#fff" />
         </View>
@@ -366,11 +364,10 @@ function SectionHeader({ title }: { title: string }) {
   )
 }
 
+/** Simple empty state (no gray box) */
 function EmptyState({ text }: { text: string }) {
   return (
-    <View style={styles.emptyBox}>
-      <View style={styles.emptyMark} />
-      <Spacer height={6} />
+    <View style={{ alignItems: 'center', paddingVertical: 18 }}>
       <ThemedText muted>{text}</ThemedText>
     </View>
   )
@@ -378,7 +375,7 @@ function EmptyState({ text }: { text: string }) {
 
 /** Clean row with status pill BEFORE title, with working navigation */
 function CleanItem({ req }: { req: DocRequestListItem }) {
-  const router = useRouter() // ← wire navigation
+  const router = useRouter()
   const ui = STATUS_STYLE[req.status] ?? { label: req.status, bg: '#e5e7eb', fg: '#374151' }
   const title = req.doc_types?.length ? req.doc_types.join(', ') : 'Document Request'
   const exp = getExpiryInfo(req.created_at)
@@ -429,7 +426,7 @@ const styles = StyleSheet.create({
   progressTrack: { height: 8, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 8, overflow: 'hidden', marginVertical: 12 },
   progressFill: { height: 8, backgroundColor: '#fff' },
   policyRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  policyText: { color: '#fff', opacity: 0.9, marginLeft: 6, fontSize: 13},
+  policyText: { color: '#fff', opacity: 0.9, marginLeft: 6 },
 
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontSize: 18, fontWeight: '700' },
@@ -449,9 +446,6 @@ const styles = StyleSheet.create({
 
   pill: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, marginLeft: 'auto' },
   pillText: { fontWeight: '700', fontSize: 12 },
-
-  emptyBox: { alignItems: 'center', justifyContent: 'center', paddingVertical: 18 },
-  emptyMark: { width: 34, height: 34, borderRadius: 8, backgroundColor: '#f8f8f8', borderColor: BORDER, borderWidth: 1 },
 
   cleanItem: { backgroundColor: '#fafafa', borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 14 },
   cleanHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
