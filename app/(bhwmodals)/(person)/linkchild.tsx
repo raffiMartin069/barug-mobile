@@ -5,6 +5,7 @@ import ThemedCard from '@/components/ThemedCard'
 import ThemedChip from '@/components/ThemedChip'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
@@ -13,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Modal, Pressable, StyleSheet, View } from 'react-native'
-
 // 🔎 bring in the same search hook & type used in CreateFamily
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { PersonSearchRequest } from '@/types/householdHead'
@@ -98,6 +98,7 @@ const LinkChild = () => {
   return (
     <ThemedView safe>
       <ThemedAppBar title='Link Child / Children' showNotif={false} showProfile={false} />
+      <ThemedProgressBar step={3} totalStep={4} />
 
       <ThemedKeyboardAwareScrollView>
         {/* Linked list */}

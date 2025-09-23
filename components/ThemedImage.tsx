@@ -10,7 +10,7 @@ const ThemedImage = ({style = null, src, size, ...props}) => {
     <View
         style={[
             styles.container,
-            { width: size, height: size, borderRadius: size / 2, borderColor: theme.link },
+            { width: 55, height: 55, borderRadius: size / 2, borderColor: theme.link },
             style,
         ]}
     >
@@ -30,7 +30,7 @@ export default ThemedImage
 const styles = StyleSheet.create({
     container: {
         overflow: 'hidden',
-        borderWidth: 2,
+        borderWidth: 3,
     },
     image: {
     resizeMode: 'cover',

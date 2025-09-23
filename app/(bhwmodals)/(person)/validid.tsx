@@ -192,9 +192,9 @@ const ValidId = () => {
           return
         }
 
-        const front_path = `person/${personId}/front.jpg`
-        const back_path = `person/${personId}/back.jpg`
-        const selfie_path = `person/${personId}/front.jpg`
+        const front_path = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/id-uploads/person/${personId}/front.jpg`
+        const back_path = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/id-uploads/person/${personId}/back.jpg`
+        const selfie_path = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/id-uploads/person/${personId}/selfie.jpg`
 
         // 🔵 DIRECT RPC CALL
         const { error: rpcError } = await supabase.rpc('insert_valid_id', {

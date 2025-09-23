@@ -5,16 +5,16 @@ import ThemedCard from '@/components/ThemedCard'
 import ThemedChip from '@/components/ThemedChip'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { useResidentFormStore } from '@/store/forms'
+import { PersonSearchRequest } from '@/types/householdHead'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Modal, Pressable, StyleSheet, View } from 'react-native'
-
-import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
-import { PersonSearchRequest } from '@/types/householdHead'
 
 type Rel = 'MOTHER' | 'FATHER' | 'GUARDIAN'
 type Linked = { id: string; name: string; rel: Rel }
@@ -99,7 +99,7 @@ const LinkParentGuardian = () => {
   return (
     <ThemedView safe>
       <ThemedAppBar title='Link Parent(s) / Guardian' showNotif={false} showProfile={false} />
-
+      <ThemedProgressBar step={2} totalStep={4} />
       <ThemedKeyboardAwareScrollView>
 
         {/* Linked preview chips */}

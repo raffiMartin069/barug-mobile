@@ -1,9 +1,13 @@
+// app/blotter-history.tsx (example path)
+
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedIcon from '@/components/ThemedIcon'
+import ThemedItemCard from '@/components/ThemedItemCard'
 import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import React from 'react'
 import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
@@ -33,8 +37,9 @@ const BlotRptHistory = () => {
             <Spacer height={10}/>
           </ThemedCard>
 
-          <Spacer height={20}/>
+          <Spacer height={20} />
 
+          {/* History */}
           <ThemedCard>
             <View style={styles.row}>
               <ThemedText style={styles.title}>Blotter Reports History</ThemedText>
@@ -47,8 +52,6 @@ const BlotRptHistory = () => {
 
             <Spacer height={10}/>
           </ThemedCard>
-
-          <Spacer height={15}/>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -59,7 +62,6 @@ const BlotRptHistory = () => {
           size={24}
         />
       </TouchableOpacity>
-
     </ThemedView>
   )
 }
@@ -74,9 +76,9 @@ const styles = StyleSheet.create({
     marginVertical: 5,
   },
   title: {
-    fontSize: 20, 
-    fontWeight: 'bold'
-  },  
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   fab: {
     position: 'absolute',
     bottom: 20,

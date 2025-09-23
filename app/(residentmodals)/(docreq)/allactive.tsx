@@ -4,18 +4,18 @@ import ThemedCard from '@/components/ThemedCard'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedItemCard from '@/components/ThemedItemCard'
 import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
-import React from 'react'
-import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native'
+import React, { useState } from 'react'
+import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const STATUS_UI: Record<
-  'pending' | 'ready' | 'completed' | 'declined',
+  'pending' | 'ready' | 'completed',
   { label: string; bg: string; fg: string }
 > = {
   pending:   { label: 'Pending',   bg: '#fde68a', fg: '#92400e' }, // amber
   ready:     { label: 'Ready',     bg: '#d1fae5', fg: '#065f46' }, // green
   completed: { label: 'Completed', bg: '#e5e7eb', fg: '#374151' }, // gray
-  declined:  { label: 'Declined',  bg: '#fecaca', fg: '#7f1d1d' }, // red
 }
 
 type RequestItem = {
@@ -44,7 +44,20 @@ const ACTIVE_REQUESTS: RequestItem[] = [
   },
 ]
 
+// Filters (UI-only for now)
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'completed', label: 'Completed' },
+] as const
+
+type FilterKey = typeof FILTERS[number]['key']
+
 const AllActive = () => {
+  const [search, setSearch] = useState('')
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
+
   return (
     <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
       <ThemedAppBar title="Active Requests" />
@@ -54,6 +67,39 @@ const AllActive = () => {
           contentContainerStyle={{ paddingBottom: 50 }}
           showsVerticalScrollIndicator={false}
         >
+          <Spacer />
+
+          {/* Search and Filters */}
+          <View style={{ paddingHorizontal: 40 }}>
+            <ThemedTextInput
+              placeholder="Search request no. or title..."
+              value={search}
+              onChangeText={setSearch}
+            />
+
+            <Spacer height={10} />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.chipRow}>
+                {FILTERS.map((f) => {
+                  const selected = f.key === activeFilter
+                  return (
+                    <TouchableOpacity
+                      key={f.key}
+                      activeOpacity={0.7}
+                      onPress={() => setActiveFilter(f.key)}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                    >
+                      <ThemedText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                        {f.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </ScrollView>
+          </View>
+
           <Spacer />
 
           <ThemedCard>
@@ -69,6 +115,7 @@ const AllActive = () => {
               <ThemedText style={styles.empty}>No active requests right now.</ThemedText>
             )}
 
+            {/* NOTE: Not applying search/filter yet, UI only */}
             {ACTIVE_REQUESTS.map((req) => {
               const ui = STATUS_UI[req.status]
               return (
@@ -100,4 +147,18 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '700' },
   empty: { textAlign: 'center', opacity: 0.6, paddingVertical: 8 },
+
+  chipRow: { flexDirection: 'row', gap: 8 },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginRight: 8,
+    backgroundColor: '#ffffff',
+  },
+  chipSelected: { borderColor: '#310101' },
+  chipText: { fontSize: 12 },
+  chipTextSelected: { color: '#310101', fontWeight: '600' },
 })
