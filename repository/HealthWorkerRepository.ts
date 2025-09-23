@@ -5,6 +5,49 @@ import { ScheduleCompletedType } from "@/types/scheduleCompleted";
 
 export class HealthWorkerRepository {
 
+    static async GetWeeklyScheduleId(weekLabel: string) {
+        const func = "filter_households_by_week_range";
+        const { data, error } = await supabase.rpc(func, { p_week_label: weekLabel });
+        if (error) {
+            console.error("Error fetching week ID:", error);
+            return null;
+        }
+        const ids = [];
+        for (let i = 0; i < data.length; i++) {
+            ids.push(data[i].household_id);
+        }
+        console.log("Extracted household IDs:", ids);
+        return ids.length > 0 ? ids : null;
+    }
+
+    static async FilterByStatus(status: number) {
+        const func = "filter_households_by_schedule_status";
+        const { data, error } = await supabase.rpc(func, { p_status_id: status });
+        if (error) {
+            console.error("Error filtering households:", error);
+            return null;
+        }
+        const ids = [];
+        for (let i = 0; i < data.length; i++) {
+            ids.push(data[i].household_id);
+        }
+        return ids.length > 0 ? ids : null;
+    }
+
+    static async FindByKey(key: string) {
+        const func = "search_households_by_num_or_head";
+        const { data, error } = await supabase.rpc(func, { p_key: key });
+        if (error) {
+            console.error("Error searching households:", error);
+            return null;
+        }
+        const ids = [];
+        for (let i = 0; i < data.length; i++) {
+            ids.push(data[i].household_id);
+        }
+        return ids.length > 0 ? ids : null;
+    }
+
     static async GetAllWeeklySchedules() {
         const { data, error } = await supabase.from("calendar_week").select("week_id, week_label, year_num");
         if (error) {
@@ -12,7 +55,7 @@ export class HealthWorkerRepository {
             return null;
         }
         const weekRanges = [];
-        for(let i=0; i<data.length; i++) {
+        for (let i = 0; i < data.length; i++) {
             weekRanges.push({ week_id: data[i].week_id, range: data[i].week_label + ", " + data[i].year_num });
         }
         return weekRanges || null;
@@ -20,10 +63,10 @@ export class HealthWorkerRepository {
 
     static async GetScheduleIdByHouseholdId(id: number) {
         const { data, error } = await supabase
-        .from("bhw_schedule")
-        .select("schedule_id")
-        .eq("household_id", id)
-        .single();
+            .from("bhw_schedule")
+            .select("schedule_id")
+            .eq("household_id", id)
+            .single();
         if (error) {
             console.error("Error fetching schedule ID:", error);
             return null;

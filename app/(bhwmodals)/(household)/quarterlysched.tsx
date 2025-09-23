@@ -4,7 +4,7 @@ import ThemedBottomSheet from '@/components/ThemedBottomSheet'
 import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedChip from '@/components/ThemedChip'
-import ThemedDropdown from '@/components/ThemedDropdown'
+import ThemedDropdown from '@/components/ThemedDropdown_'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
@@ -15,6 +15,7 @@ import { HealthWorkerRepository } from '@/repository/HealthWorkerRepository'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { MemberRemovalService } from '@/services/memberRemovalService'
 import { SchedulingService } from '@/services/SchedulingService'
+import { SearchSchedulingService } from '@/services/SearchSchedulingService'
 import { useHouseMateStore } from '@/store/houseMateStore'
 import { MgaKaHouseMates } from '@/types/houseMates'
 import { Ionicons } from '@expo/vector-icons'
@@ -72,6 +73,41 @@ type WeeklySchedule = {
   range: string
 }
 
+const FILTER_BY_WEEK = [
+  "All",
+  "Week of Jul 07 – Jul 11",
+  "Week of Jul 14 – Jul 18",
+  "Week of Jul 21 – Jul 25",
+  "Week of Jul 28 – Aug 01",
+  "Week of Aug 04 – Aug 08",
+  "Week of Aug 11 – Aug 15",
+  "Week of Aug 18 – Aug 22",
+  "Week of Aug 25 – Aug 29",
+  "Week of Sep 01 – Sep 05",
+  "Week of Sep 08 – Sep 12",
+  "Week of Sep 15 – Sep 19",
+  "Week of Sep 22 – Sep 26",
+  "Week of Sep 29 – Sep 30",
+]
+
+
+const FILTER_BY_STATUS = [
+  { label: "All", value: 0 },
+  { label: "PENDING", value: 1 },
+  { label: "UNDER REVIEW", value: 2 },
+  { label: "APPROVED", value: 3 },
+  { label: "REJECTED", value: 4 },
+  { label: "CANCELLED", value: 5 },
+  { label: "ACCOMPLISHED", value: 6 },
+  { label: "DECLINE", value: 7 },
+  { label: "FOR TREASURER REVIEW", value: 8 },
+  { label: "PAID", value: 9 },
+  { label: "FOR PRINTING", value: 10 },
+  { label: "RELEASED", value: 11 },
+  { label: "READY FOR PICKUP", value: 12 },
+];
+
+
 function getWeekStart(d: Date): Date {
   // Monday as week start
   const dt = new Date(d)
@@ -124,6 +160,7 @@ const QuarterlySched = () => {
   const [weeklySchedules, setWeeklySchedules] = useState<WeeklySchedule[]>([])
   const [reschedWeek, setReschedWeek] = useState<WeeklySchedule | null>(null)
   const [listWeek, setListWeek] = useState<WeekRange>(makeWeekRange(new Date()))
+  const [searching, setSearching] = useState(false);
 
   const shiftListWeek = (deltaWeeks: number) => {
     const base = new Date(listWeek.start)
@@ -234,6 +271,40 @@ const QuarterlySched = () => {
     setFamilyIndex(idx)
   }
 
+  function normalizeDocs(docs: any[]): Household[] {
+    return docs.map((doc: any) => {
+      const hh = doc.household ?? {};
+      const families = Array.isArray(doc.families) ? doc.families : [];
+
+      return {
+        id: hh.household_id ? `HH-${hh.household_id}` : `HH-${hh.household_num ?? Math.random().toString(36).slice(2, 8)}`,
+        householdNum: hh.household_num ?? String(hh.household_id ?? ""),
+        householdHead: hh.household_head_name ?? "",
+        address: hh.address ?? "",
+        houseType: hh.house_type ?? "",
+        houseOwnership: hh.house_ownership ?? "",
+        families: families.map((f: any) => ({
+          familyNum: f.family_num ?? (f.family_id ? `FAM-${f.family_id}` : ""),
+          headName: f.family_head_name ?? "",
+          type: f.household_type ?? "",
+          nhts: f.nhts_status ?? "",
+          indigent: f.indigent_status ?? "",
+          monthlyIncome: f.monthly_income ?? "",
+          sourceIncome: f.source_of_income ?? "",
+          members: Array.isArray(f.members)
+            ? f.members.map((m: any) => ({
+              id: m.person_id ? `P-${m.person_id}` : (m.full_name ?? "").replace(/\s+/g, "_"),
+              name: m.full_name ?? "",
+              relation: m.relationship_to_household_head ?? m.relationship ?? "",
+              age: typeof m.age === "number" ? m.age : parseInt(m.age, 10) || 0,
+              sex: m.sex ?? "",
+            }))
+            : [],
+        })),
+      };
+    });
+  }
+
   const fetchData = async () => {
     try {
       const service = new SchedulingService(new HealthWorkerRepository());
@@ -246,40 +317,7 @@ const QuarterlySched = () => {
           return r;
         })
         .filter(Boolean);
-
-      const mapped = docs.map((doc: any) => {
-        const hh = doc.household ?? {};
-        const families = Array.isArray(doc.families) ? doc.families : [];
-
-        return {
-          id: hh.household_id ? `HH-${hh.household_id}` : `HH-${hh.household_num ?? Math.random().toString(36).slice(2, 8)}`,
-          householdNum: hh.household_num ?? String(hh.household_id ?? ""),
-          householdHead: hh.household_head_name ?? "",
-          address: hh.address ?? "",
-          houseType: hh.house_type ?? "",
-          houseOwnership: hh.house_ownership ?? "",
-          families: families.map((f: any) => ({
-            familyNum: f.family_num ?? (f.family_id ? `FAM-${f.family_id}` : ""),
-            headName: f.family_head_name ?? "",
-            type: f.household_type ?? "",
-            nhts: f.nhts_status ?? "",
-            indigent: f.indigent_status ?? "",
-            monthlyIncome: f.monthly_income ?? "",
-            sourceIncome: f.source_of_income ?? "",
-            members: Array.isArray(f.members)
-              ? f.members.map((m: any) => ({
-                id: m.person_id ? `P-${m.person_id}` : (m.full_name ?? "").replace(/\s+/g, "_"),
-                name: m.full_name ?? "",
-                relation: m.relationship_to_household_head ?? m.relationship ?? "",
-                age: typeof m.age === "number" ? m.age : parseInt(m.age, 10) || 0,
-                sex: m.sex ?? "",
-              }))
-              : [],
-          })),
-        };
-      });
-
-      setHouseholds(mapped);
+      return setHouseholds(normalizeDocs(docs));
     } catch (err) {
       console.error("Failed to fetch/normalize households:", err);
       setHouseholds([]);
@@ -416,7 +454,55 @@ const QuarterlySched = () => {
     }
   }
 
+  const latestQueryRef = useRef<string>('');
+
+  const findHousehold = async (q: string | number, executionType: number) => {
+    if (q === 0 || q === "All") {
+      await fetchData();
+      return;
+    }
+
+    if (typeof q === "string") {
+      q = typeof q === "string" ? q.trim() : String(q);
+      if (!q) {
+        latestQueryRef.current = '';
+        await fetchData();
+        return;
+      }
+      latestQueryRef.current = q;
+    }
+    setSearching(true);
+    try {
+      const service = new SearchSchedulingService(new HealthWorkerRepository());
+      const raw = await service.Execute(q, executionType);
+
+      if (raw.length < 1) {
+        return;
+      }
+      const docs = (Array.isArray(raw) ? raw : [])
+        .map((r: any) => {
+          if (typeof r === "string") {
+            try { return JSON.parse(r); } catch { return null; }
+          }
+          return r;
+        })
+        .filter(Boolean);
+      const mapped = normalizeDocs(docs);
+      setHouseholds(mapped);
+    } catch (err) {
+      console.error("Failed searching households:", err);
+      if (latestQueryRef.current === q) {
+        setHouseholds([]);
+      }
+    } finally {
+      if (latestQueryRef.current === q) {
+        setSearching(false);
+      }
+    }
+  };
+
   return (
+
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
       <ThemedAppBar title='' />
 
@@ -439,6 +525,7 @@ const QuarterlySched = () => {
               value={search}
               onChangeText={(text) => {
                 setSearch(text);
+                findHousehold(text, 1);
               }}
             />
 
@@ -450,9 +537,12 @@ const QuarterlySched = () => {
                 <ThemedText style={styles.filterLabel}>Status</ThemedText>
                 <ThemedDropdown
                   placeholder="All"
-                  items={[]}
+                  items={FILTER_BY_STATUS}
                   value={status}
-                  setValue={setStatus}
+                  setValue={(stat) => {
+                    setStatus(stat);
+                    findHousehold(stat, 2);
+                  }}
                   order={0}
                 />
               </View>
@@ -461,9 +551,12 @@ const QuarterlySched = () => {
                 <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
                 <ThemedDropdown
                   placeholder="This Week"
-                  items={[]}
+                  items={FILTER_BY_WEEK.map(s => ({ label: s, value: s }))}
                   value={weekRangeFilter}
-                  setValue={setWeekRangeFilter}
+                  setValue={(itm) => {
+                    setWeekRangeFilter(itm);
+                    findHousehold(itm, 3);
+                  }}
                   order={0}
                 />
               </View>
@@ -700,7 +793,7 @@ const QuarterlySched = () => {
           </View>
         </View>
       </ThemedBottomSheet>
-      
+
       {/* ========= Reschedule Visit Modal (Bottom Sheet) ========= */}
       <ThemedBottomSheet visible={reschedOpen} onClose={() => setReschedOpen(false)} heightPercent={0.6}>
         <View style={{ flex: 1 }}>
