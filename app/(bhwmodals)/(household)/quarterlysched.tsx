@@ -46,22 +46,55 @@ type Household = {
   families: Family[]
 }
 
-const REMOVAL_REASONS = [
-  'MOVED OUT',
-  'DECEASED',
-  'DATA CORRECTION',
-  'DUPLICATE ENTRY',
-  'OTHER'
-] as const
+const REMOVAL_REASONS = ['MOVED OUT', 'DECEASED', 'DATA CORRECTION', 'DUPLICATE ENTRY', 'OTHER'] as const
 type RemovalReason = typeof REMOVAL_REASONS[number]
+
+// ─────────────────── Reschedule helpers ───────────────────
+type WeekRange = { start: Date; end: Date }
+
+function getWeekStart(d: Date): Date {
+  // Monday as week start
+  const dt = new Date(d)
+  const day = dt.getDay() // 0=Sun,1=Mon,...6=Sat
+  const diff = day === 0 ? -6 : 1 - day
+  dt.setDate(dt.getDate() + diff)
+  dt.setHours(0, 0, 0, 0)
+  return dt
+}
+
+function makeWeekRange(fromDate: Date): WeekRange {
+  const start = getWeekStart(fromDate)
+  const end = new Date(start)
+  // Mon–Fri (5 days)
+  end.setDate(start.getDate() + 4)
+  end.setHours(23, 59, 59, 999)
+  return { start, end }
+}
+
+function fmtRange(r: WeekRange): string {
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
+  const s = r.start.toLocaleDateString('en-US', opts)
+  const e = r.end.toLocaleDateString('en-US', opts)
+  return `${s} – ${e}`
+}
+
+const RESCHED_REASONS = [] as const
 
 const QuarterlySched = () => {
   const router = useRouter()
   const [search, setSearch] = useState('')
 
-  // NEW: dropdown state
-  const [status, setStatus] = useState()
-  const [weekRange, setWeekRange] = useState()
+  // Filters (placeholder)
+  const [status, setStatus] = useState<any>()
+  const [weekRangeFilter, setWeekRangeFilter] = useState<any>()
+
+  // NEW: top header current week state
+  const [listWeek, setListWeek] = useState<WeekRange>(makeWeekRange(new Date()))
+  const shiftListWeek = (deltaWeeks: number) => {
+    const base = new Date(listWeek.start)
+    base.setDate(base.getDate() + deltaWeeks * 7)
+    setListWeek(makeWeekRange(base))
+  }
 
   const [households, setHouseholds] = useState<Household[]>([
     {
@@ -143,7 +176,7 @@ const QuarterlySched = () => {
     },
   ])
 
-  // ---------- bottom sheet + member states ----------
+  // ---------- Household details bottom sheet ----------
   const [open, setOpen] = useState(false)
   const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null)
 
@@ -168,13 +201,10 @@ const QuarterlySched = () => {
 
   const onPressMember = (fam: Family, mem: Member) => {
     closeSheet()
-    router.push({
-      pathname: '/memberprofile',
-      params: { id: mem.id },
-    })
+    router.push({ pathname: '/memberprofile', params: { id: mem.id } })
   }
 
-  // ---------- remove modal states ----------
+  // ---------- Remove Member modal ----------
   const [removeOpen, setRemoveOpen] = useState(false)
   const [selectedReason, setSelectedReason] = useState<RemovalReason | null>(null)
   const [otherReason, setOtherReason] = useState('')
@@ -191,6 +221,36 @@ const QuarterlySched = () => {
     setRemoveOpen(true)
   }
 
+  // ---------- Reschedule modal ----------
+  const [reschedOpen, setReschedOpen] = useState(false)
+  const [reschedTarget, setReschedTarget] = useState<Household | null>(null)
+  const [reschedWeek, setReschedWeek] = useState<WeekRange>(makeWeekRange(new Date()))
+  const [reschedReason, setReschedReason] = useState<string | null>(null)
+
+  const openResched = (hh: Household) => {
+    setReschedTarget(hh)
+    setReschedReason(null)
+    setReschedWeek(makeWeekRange(new Date()))
+    setReschedOpen(true)
+  }
+
+  const shiftWeek = (deltaWeeks: number) => {
+    const base = new Date(reschedWeek.start)
+    base.setDate(base.getDate() + deltaWeeks * 7)
+    setReschedWeek(makeWeekRange(base))
+  }
+
+  const handleConfirmResched = () => {
+    // TODO: call your API/RPC here
+    // {
+    //   household_id: reschedTarget?.id,
+    //   week_start: reschedWeek.start.toISOString(),
+    //   week_end: reschedWeek.end.toISOString(),
+    //   reason: reschedReason
+    // }
+    setReschedOpen(false)
+  }
+
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
       <ThemedAppBar title='' />
@@ -200,6 +260,14 @@ const QuarterlySched = () => {
           <Spacer height={20} />
 
           <View style={{ paddingHorizontal: 40 }}>
+            {/* ───── Current week header (top) ───── */}
+            <View style={styles.topWeekRow}>
+              <ThemedText style={styles.topWeekLabel}>Current week:</ThemedText>
+              <ThemedText style={styles.topWeekText}>{fmtRange(listWeek)}</ThemedText>
+            </View>
+
+            <Spacer height={10} />
+
             <ThemedTextInput
               placeholder='Search household #, household head...'
               value={search}
@@ -226,8 +294,8 @@ const QuarterlySched = () => {
                 <ThemedDropdown
                   placeholder="This Week"
                   items={[]}
-                  value={weekRange}
-                  setValue={setWeekRange}
+                  value={weekRangeFilter}
+                  setValue={setWeekRangeFilter}
                   order={0}
                 />
               </View>
@@ -276,10 +344,7 @@ const QuarterlySched = () => {
 
                   {/* CTA: single 'Reschedule' button aligned right */}
                   <View style={styles.ctaRow}>
-                    <ThemedButton
-                      submit={false}
-                      onPress={() => openSheet(hh)}
-                    >
+                    <ThemedButton submit={false} onPress={() => openResched(hh)}>
                       <View style={styles.reschedContent}>
                         <Ionicons name="calendar-outline" size={18} color="#310101" />
                         <ThemedText non_btn>Reschedule</ThemedText>
@@ -418,13 +483,10 @@ const QuarterlySched = () => {
         )}
       </ThemedBottomSheet>
 
-      {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
+      {/* ---------- Remove Member Modal ---------- */}
       <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
         <View style={{ flex: 1 }}>
-          <ScrollView
-            contentContainerStyle={{ padding: 16, paddingBottom: 120 }}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
             <ThemedText subtitle>Remove Member</ThemedText>
 
             {pendingRemoval && (
@@ -444,10 +506,9 @@ const QuarterlySched = () => {
 
             <View style={{ marginTop: 16, gap: 8 }}>
               <ThemedText style={{ fontWeight: '700' }}>Select a Reason</ThemedText>
-
               <ThemedDropdown
                 placeholder="Select a Reason"
-                items={[] /* plug your items here e.g., REMOVAL_REASONS */ }
+                items={[] /* your items here if needed */}
                 value={selectedReason}
                 setValue={setSelectedReason}
                 order={0}
@@ -456,11 +517,7 @@ const QuarterlySched = () => {
           </ScrollView>
 
           <View style={styles.sheetFooter}>
-            <ThemedButton
-              submit={false}
-              onPress={() => setRemoveOpen(false)}
-              style={{ flex: 1, height: ACTION_BTN_HEIGHT }}
-            >
+            <ThemedButton submit={false} onPress={() => setRemoveOpen(false)} style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
               <ThemedText non_btn>Cancel</ThemedText>
             </ThemedButton>
 
@@ -473,6 +530,65 @@ const QuarterlySched = () => {
         </View>
       </ThemedBottomSheet>
 
+      {/* ========= Reschedule Visit Modal (Bottom Sheet) ========= */}
+      <ThemedBottomSheet visible={reschedOpen} onClose={() => setReschedOpen(false)} heightPercent={0.6}>
+        <View style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+            <ThemedText subtitle>Reschedule Visit</ThemedText>
+
+            {reschedTarget && (
+              <ThemedText style={{ color: '#64748b', marginTop: 4 }}>
+                {reschedTarget.householdNum} • {reschedTarget.householdHead}
+              </ThemedText>
+            )}
+
+            {/* Week range selector */}
+            <View style={{ marginTop: 16 }}>
+              <ThemedText style={{ fontWeight: '700', marginBottom: 8 }}>Select week range</ThemedText>
+
+              <View style={styles.weekRow}>
+                <Pressable onPress={() => shiftWeek(-1)} style={styles.weekNavBtn} accessibilityLabel="Previous week">
+                  <Ionicons name="chevron-back" size={16} />
+                </Pressable>
+
+                <ThemedText style={styles.weekLabel}>{fmtRange(reschedWeek)}</ThemedText>
+
+                <Pressable onPress={() => shiftWeek(1)} style={styles.weekNavBtn} accessibilityLabel="Next week">
+                  <Ionicons name="chevron-forward" size={16} />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Reason dropdown */}
+            <View style={{ marginTop: 16 }}>
+              <ThemedDropdown
+                placeholder="Reason"
+                items={RESCHED_REASONS.map(r => ({ label: r as string, value: r as string }))}
+                value={reschedReason as any}
+                setValue={setReschedReason as any}
+                order={0}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Footer actions */}
+          <View style={styles.sheetFooter}>
+            <ThemedButton submit={false} onPress={() => setReschedOpen(false)} style={{ flex: 1, height: ACTION_BTN_HEIGHT }}>
+              <ThemedText non_btn>Cancel</ThemedText>
+            </ThemedButton>
+
+            <View style={{ width: 10 }} />
+
+            <ThemedButton
+              style={{ flex: 1, height: ACTION_BTN_HEIGHT, opacity: reschedReason ? 1 : 0.6 }}
+              disabled={!reschedReason}
+              onPress={handleConfirmResched}
+            >
+              <ThemedText btn>Confirm</ThemedText>
+            </ThemedButton>
+          </View>
+        </View>
+      </ThemedBottomSheet>
     </ThemedView>
   )
 }
@@ -527,9 +643,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   memberGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
-  badgesRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
-  badge:       { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
-  badgeText:   { fontSize: 12, color: '#334155' },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
+  badgeText: { fontSize: 12, color: '#334155' },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -551,7 +667,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  // dropdown styles (modal footer)
+  // Bottom sheet footer
   sheetFooter: {
     position: 'absolute',
     left: 0,
@@ -564,5 +680,57 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 1,
+  },
+
+  // Reschedule week row (modal)
+  weekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    justifyContent: 'space-between',
+  },
+  weekNavBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekLabel: {
+    fontWeight: '700',
+  },
+
+  // Top header current week
+  topWeekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  topWeekLabel: {
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  topWeekRange: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  topWeekChevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topWeekText: {
+    fontWeight: '700',
+    marginHorizontal: 8,
   },
 })

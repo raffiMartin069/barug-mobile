@@ -52,6 +52,17 @@ const BusinessLayout = () => {
                 )}}
             />
 
+            <Tabs.Screen
+                name='(tabs)/businesses'
+                options={{title: 'Businesses', tabBarIcon: ({focused}) => (
+                    <Ionicons
+                    name={focused ? 'home' : 'home-outline'}
+                    size={20}
+                    color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+                    />
+                )}}
+            />
+
         </Tabs>
     </>
   )
