@@ -5,7 +5,7 @@ import { MemberRemovalType } from "@/types/memberRemoval";
 
 export class HouseholdRepository {
 
-    async getMemberId(residentId: number) {
+    async GetMemberId(residentId: number) {
         const { data, error } = await supabase
             .from("house_member")
             .select("house_member_id")
@@ -18,7 +18,7 @@ export class HouseholdRepository {
         return data?.house_member_id || null;
     }
 
-    async removeMember(req: MemberRemovalType) {
+    async RemoveMember(req: MemberRemovalType) {
         const func = "remove_house_member";
         const { data, error } = await supabase.rpc(func, req);
         if (error) {
@@ -33,7 +33,7 @@ export class HouseholdRepository {
         return data || null;
     }
 
-    async getActiveHousehold() {
+    async GetActiveHousehold() {
         const func = "get_active_households";
         const { data, error } = await supabase.rpc(func);
         if (error) {
@@ -43,7 +43,7 @@ export class HouseholdRepository {
         return data || null;
     }
 
-    async getHouseholdIdByResidentId(id: number) {
+    async GetHouseholdIdByResidentId(id: number) {
         const { data, error } = await supabase
         .from("household_info")
         .select('household_id')

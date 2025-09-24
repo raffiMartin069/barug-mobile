@@ -120,6 +120,8 @@ export default function DocReqHistory() {
   return (
     <ThemedView style={{ flex: 1 }} safe>
       <ThemedAppBar title="Document Requests" />
+    <ThemedView style={{ flex: 1 }} safe>
+      <ThemedAppBar title="Document Requests" />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 88 }}
@@ -132,7 +134,19 @@ export default function DocReqHistory() {
             value={search}
             onChangeText={(t) => { setSearch(t); /* optional: debounce then load() */ }}
           />
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 88 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Spacer />
+        <View style={{ paddingHorizontal: 40 }}>
+          <ThemedTextInput
+            placeholder="Search by code, name, or type…"
+            value={search}
+            onChangeText={(t) => { setSearch(t); /* optional: debounce then load() */ }}
+          />
 
+          <Spacer height={10} />
           <Spacer height={10} />
 
           {/* Status filter chips */}
@@ -156,7 +170,29 @@ export default function DocReqHistory() {
             </View>
           </ScrollView>
         </View>
+          {/* Status filter chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.chipRow}>
+              {FILTERS.map(f => {
+                const selected = selectedFilter === f.key
+                return (
+                  <TouchableOpacity
+                    key={f.key}
+                    activeOpacity={0.8}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    onPress={() => setSelectedFilter(f.key)}
+                  >
+                    <ThemedText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                      {f.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          </ScrollView>
+        </View>
 
+        <Spacer />
         <Spacer />
 
         {loading ? (
@@ -170,7 +206,21 @@ export default function DocReqHistory() {
               <View style={styles.row}>
                 <ThemedText style={styles.title}>Active Requests</ThemedText>
               </View>
+        {loading ? (
+          <View style={{ paddingVertical: 30 }}>
+            <ActivityIndicator />
+          </View>
+        ) : (
+          <>
+            {/* Active */}
+            <ThemedCard>
+              <View style={styles.row}>
+                <ThemedText style={styles.title}>Active Requests</ThemedText>
+              </View>
 
+              <Spacer height={10} />
+              <ThemedDivider />
+              <Spacer height={10} />
               <Spacer height={10} />
               <ThemedDivider />
               <Spacer height={10} />
@@ -199,7 +249,32 @@ export default function DocReqHistory() {
                 })
               )}
             </ThemedCard>
+              {active.length === 0 ? (
+                <ThemedText muted>No active requests.</ThemedText>
+              ) : (
+                active.map(req => {
+                  const ui = STATUS_STYLE[req.status] ?? { label: req.status, bg: '#e5e7eb', fg: '#374151' }
+                  return (
+                    <View key={req.doc_request_id} style={{ marginBottom: 10 }}>
+                      <ThemedItemCard
+                        title={req.doc_types?.length ? req.doc_types.join(', ') : 'Document Request'}
+                        meta1={`Request #: ${req.request_code}`}
+                        meta2={`Requested: ${formatPh(req.created_at)}${req.on_behalf_of ? ` • On behalf of: ${req.on_behalf_of}` : ''}`}
+                        meta3={req.amount_due > 0 ? `Amount Due: ₱${Number(req.amount_due).toLocaleString()}` : undefined}
+                        showPill
+                        pillLabel={ui.label}
+                        pillBgColor={ui.bg}
+                        pillTextColor={ui.fg}
+                        pillSize="sm"
+                        route={{ pathname: '/(residentmodals)/docreqdetail', params: { id: String(req.doc_request_id) } }}
+                      />
+                    </View>
+                  )
+                })
+              )}
+            </ThemedCard>
 
+            <Spacer height={20} />
             <Spacer height={20} />
 
             {/* History */}
@@ -207,7 +282,15 @@ export default function DocReqHistory() {
               <View style={styles.row}>
                 <ThemedText style={styles.title}>Request History</ThemedText>
               </View>
+            {/* History */}
+            <ThemedCard>
+              <View style={styles.row}>
+                <ThemedText style={styles.title}>Request History</ThemedText>
+              </View>
 
+              <Spacer height={10} />
+              <ThemedDivider />
+              <Spacer height={10} />
               <Spacer height={10} />
               <ThemedDivider />
               <Spacer height={10} />
@@ -238,7 +321,35 @@ export default function DocReqHistory() {
           </>
         )}
       </ScrollView>
+              {history.length === 0 ? (
+                <ThemedText muted>No released requests yet.</ThemedText>
+              ) : (
+                history.map(req => {
+                  const ui = STATUS_STYLE[req.status] ?? { label: req.status, bg: '#e5e7eb', fg: '#374151' }
+                  return (
+                    <View key={req.doc_request_id} style={{ marginBottom: 10 }}>
+                      <ThemedItemCard
+                        title={req.doc_types?.length ? req.doc_types.join(', ') : 'Document Request'}
+                        meta1={`Request #: ${req.request_code}`}
+                        meta2={`Requested: ${formatPh(req.created_at)}${req.on_behalf_of ? ` • On behalf of: ${req.on_behalf_of}` : ''}`}
+                        showPill
+                        pillLabel={ui.label}
+                        pillBgColor={ui.bg}
+                        pillTextColor={ui.fg}
+                        pillSize="sm"
+                        route={{ pathname: '/(residentmodals)/docreqdetail', params: { id: String(req.doc_request_id) } }}
+                      />
+                    </View>
+                  )
+                })
+              )}
+            </ThemedCard>
+          </>
+        )}
+      </ScrollView>
 
+      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(residentmodals)/requestdoc')}>
+        <ThemedIcon name="add" bgColor="#310101" size={24} />
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/(residentmodals)/requestdoc')}>
         <ThemedIcon name="add" bgColor="#310101" size={24} />
       </TouchableOpacity>
@@ -256,11 +367,21 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: 'bold' },
   fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 999 },
   chipRow: { flexDirection: 'row', gap: 8 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 5 },
+  title: { fontSize: 20, fontWeight: 'bold' },
+  fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 999 },
+  chipRow: { flexDirection: 'row', gap: 8 },
   chip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
+    borderWidth: 1, borderColor: '#e5e7eb', marginRight: 8, backgroundColor: '#ffffff',
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999,
     borderWidth: 1, borderColor: '#e5e7eb', marginRight: 8, backgroundColor: '#ffffff',
   },
   chipSelected: { borderColor: '#310101' },
   chipText: { fontSize: 12 },
   chipTextSelected: { color: '#310101', fontWeight: '600' },
+  chipSelected: { borderColor: '#310101' },
+  chipText: { fontSize: 12 },
+  chipTextSelected: { color: '#310101', fontWeight: '600' },
 })
+
