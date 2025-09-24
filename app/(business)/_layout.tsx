@@ -1,11 +1,7 @@
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
 import { Tabs } from 'expo-router'
-import { Colors } from '@/constants/Colors'
-import { Ionicons } from '@expo/vector-icons'
-import { Tabs } from 'expo-router'
 import React from 'react'
-import { Platform, StyleSheet, TouchableNativeFeedback, TouchableOpacity, useColorScheme, View } from 'react-native'
 import { Platform, StyleSheet, TouchableNativeFeedback, TouchableOpacity, useColorScheme, View } from 'react-native'
 
 const BusinessLayout = () => {
@@ -76,16 +72,8 @@ const BusinessLayout = () => {
     )
 }
 
-export default BusinessLayout
-export default BusinessLayout
 
-const styles = StyleSheet.create({
-    tabButton: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-})
+
 const styles = StyleSheet.create({
     tabButton: {
         flex: 1,

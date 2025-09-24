@@ -1,4 +1,4 @@
-// app/residentprofile.tsx 
+// app/residentprofile.tsx
 import NiceModal, { type ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -103,48 +103,6 @@ const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) =
   </View>
 )
 
-// brand accent (matches your maroon header)
-const ACCENT = '#561C24'
-
-/* ===== Theme ===== */
-const COLOR = {
-  primary: '#4A0E0E',
-  primaryText: '#FFFFFF',
-  border: '#EAEAEA',
-  surface: '#FFFFFF',
-  text: '#222222',
-  hint: '#6B7280',
-  chipBg: '#F9F1F1',
-  chipBorder: '#E9D8D8',
-  chipXBg: '#F1E2E2',
-  warn: '#B71C1C',
-  add: '#0B5ED7',
-  mutedSurface: '#FEFCFC',
-  badgeAddBg: '#E8F1FF',
-  badgeAddText: '#0B5ED7',
-  badgeRemBg: '#FFEAEA',
-  badgeRemText: '#B71C1C',
-  arrow: '#6B7280',
-}
-
-/** Small helper so every label/value line looks consistent and wraps nicely */
-const InfoRow = ({
-  label,
-  value,
-}: {
-  label: string
-  value?: React.ReactNode
-}) => (
-  <View style={styles.row}>
-    <ThemedText style={[styles.label]} subtitle>
-      {label}
-    </ThemedText>
-    <ThemedText style={styles.value} subtitle>
-      {value ?? '—'}
-    </ThemedText>
-  </View>
-)
-
 export default function ResidentProfile() {
   const router = useRouter()
   const familyMembers = useMemo(
@@ -177,11 +135,7 @@ export default function ResidentProfile() {
 
   const parsedFromParams = (() => {
     if (!params?.profile) return null
-    try {
-      return JSON.parse(String(params.profile))
-    } catch {
-      return null
-    }
+    try { return JSON.parse(String(params.profile)) } catch { return null }
   })()
 
   const cached = getProfile(role)
@@ -559,14 +513,8 @@ export default function ResidentProfile() {
         variant={modalVariant}
         primaryText={modalPrimaryText}
         secondaryText={modalSecondaryText}
-        onPrimary={() => {
-          modalPrimary?.()
-          setModalOpen(false)
-        }}
-        onSecondary={() => {
-          modalSecondary?.()
-          setModalOpen(false)
-        }}
+        onPrimary={() => { modalPrimary?.(); setModalOpen(false) }}
+        onSecondary={() => { modalSecondary?.(); setModalOpen(false) }}
         onClose={() => setModalOpen(false)}
       />
     </ThemedView>
