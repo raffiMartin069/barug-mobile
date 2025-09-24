@@ -19,14 +19,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 export const options = { href: null }
-
-// keep in sync with your guard/sessionUnlock
 const UNLOCKED_SESSION_KEY = 'unlocked_session'
-
-// brand accent (matches your maroon header)
 const ACCENT = '#561C24'
 
-/* ===== Theme ===== */
 const COLOR = {
   primary: '#4A0E0E',
   primaryText: '#FFFFFF',
@@ -47,21 +42,64 @@ const COLOR = {
   arrow: '#6B7280',
 }
 
+/* -------- DEBUG HELPERS (screen) -------- */
+const EXPECTED_HOUSEHOLD_FIELDS = [
+  'household_head_first_name',
+  'household_head_middle_name',
+  'household_head_last_name',
+  'household_head_suffix',
+  'household_num',
+  'house_type',
+  'house_ownership',
+]
+const EXPECTED_FAMILY_FIELDS = [
+  'family_head_first_name',
+  'family_head_middle_name',
+  'family_head_last_name',
+  'family_head_suffix',
+  'family_num',
+  'household_type',
+  'nhts_status',
+  'indigent_status',
+  'source_of_income',
+  'family_monthly_income',
+]
+
+function summarize(obj: any) {
+  if (!obj || typeof obj !== 'object') return obj
+  const keys = Object.keys(obj)
+  return { keysCount: keys.length, sampleKeys: keys.slice(0, 20) }
+}
+
+function debugProfileAt(prefix: string, profile: any) {
+  console.log(`[ResidentProfile][${prefix}] profile summary:`, summarize(profile))
+  const name = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix].filter(Boolean).join(' ')
+  console.table({
+    person_id: profile?.person_id,
+    person_code: profile?.person_code,
+    name,
+    sex: profile?.sex,
+    birthdate: profile?.birthdate,
+  })
+
+  const hhPick = Object.fromEntries(EXPECTED_HOUSEHOLD_FIELDS.map(k => [k, profile?.[k]]))
+  console.log(`[ResidentProfile][${prefix}] HOUSEHOLD:`)
+  console.table(hhPick)
+  const famPick = Object.fromEntries(EXPECTED_FAMILY_FIELDS.map(k => [k, profile?.[k]]))
+  console.log(`[ResidentProfile][${prefix}] FAMILY:`)
+  console.table(famPick)
+
+  const hhMissing = EXPECTED_HOUSEHOLD_FIELDS.filter(k => profile?.[k] === undefined)
+  const famMissing = EXPECTED_FAMILY_FIELDS.filter(k => profile?.[k] === undefined)
+  if (hhMissing.length) console.warn(`[ResidentProfile][${prefix}] Missing household fields:`, hhMissing)
+  if (famMissing.length) console.warn(`[ResidentProfile][${prefix}] Missing family fields:`, famMissing)
+}
+
 /** Small helper so every label/value line looks consistent and wraps nicely */
-const InfoRow = ({
-  label,
-  value,
-}: {
-  label: string
-  value?: React.ReactNode
-}) => (
+const InfoRow = ({ label, value }: { label: string; value?: React.ReactNode }) => (
   <View style={styles.row}>
-    <ThemedText style={[styles.label]} subtitle>
-      {label}
-    </ThemedText>
-    <ThemedText style={styles.value} subtitle>
-      {value ?? '—'}
-    </ThemedText>
+    <ThemedText style={[styles.label]} subtitle>{label}</ThemedText>
+    <ThemedText style={styles.value} subtitle>{value ?? '—'}</ThemedText>
   </View>
 )
 
@@ -92,16 +130,12 @@ export default function ResidentProfile() {
   const params = useLocalSearchParams<{ profile?: string }>()
   const role = currentRole ?? 'no role'
   const isStaff = role === 'staff'
-  const isBusiness = role === 'business' // ✅ added business role check
-  const roleLabel = isStaff ? 'Staff' : isBusiness ? 'Business Owner' : 'Resident' // ✅ use in badge
+  const isBusiness = role === 'business'
+  const roleLabel = isStaff ? 'Staff' : isBusiness ? 'Business Owner' : 'Resident'
 
   const parsedFromParams = (() => {
     if (!params?.profile) return null
-    try {
-      return JSON.parse(String(params.profile))
-    } catch {
-      return null
-    }
+    try { return JSON.parse(String(params.profile)) } catch { return null }
   })()
 
   const cached = getProfile(role)
@@ -110,7 +144,7 @@ export default function ResidentProfile() {
   const [profile, setProfile] = useState<any | null>(initial)
   const [loading, setLoading] = useState(!initial)
 
-  // Optional: staff profile for name/role display if available
+  // Staff profile for optional display
   const staffProfile = getProfile('staff')
   const staffFullName = useMemo(() => {
     const fn = [
@@ -118,25 +152,47 @@ export default function ResidentProfile() {
       staffProfile?.middle_name,
       staffProfile?.last_name,
       staffProfile?.suffix,
-    ]
-      .filter(Boolean)
-      .join(' ')
+    ].filter(Boolean).join(' ')
     return fn || '—'
   }, [staffProfile])
+
+  // Boot logs
+  useEffect(() => {
+    console.log('[ResidentProfile] BOOT', {
+      role,
+      isStaff,
+      isBusiness,
+      hasParsedFromParams: !!parsedFromParams,
+      hasCached: !!cached,
+    })
+    if (parsedFromParams) debugProfileAt('from-params', parsedFromParams)
+    if (cached) debugProfileAt('from-cache', cached)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // SWR-ish refresh
   useEffect(() => {
     let live = true
     ;(async () => {
-      const fresh = await ensureLoaded('resident') // keep using resident payload
+      console.log('[ResidentProfile] ensureLoaded(resident) …')
+      const fresh = await ensureLoaded('resident')
       if (!live) return
-      if (fresh) setProfile(fresh)
+      if (fresh) {
+        console.log('[ResidentProfile] ensureLoaded returned fresh details ✓')
+        debugProfileAt('after-ensureLoaded', fresh)
+        setProfile(fresh)
+      } else {
+        console.warn('[ResidentProfile] ensureLoaded returned null — using initial/cached if any')
+      }
       setLoading(false)
     })()
-    return () => {
-      live = false
-    }
+    return () => { live = false }
   }, [role, ensureLoaded])
+
+  // Log every time profile changes
+  useEffect(() => {
+    if (profile) debugProfileAt('render-profile', profile)
+  }, [profile])
 
   const fullName = useMemo(() => {
     const fn = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix]
@@ -151,9 +207,7 @@ export default function ResidentProfile() {
       profile?.purok_sitio_name,
       profile?.barangay_name,
       profile?.city_name,
-    ]
-      .filter(Boolean)
-      .join(', ')
+    ].filter(Boolean).join(', ')
     return parts || '—'
   }, [profile])
 
@@ -194,12 +248,8 @@ export default function ResidentProfile() {
       {
         primaryText: 'Sign out',
         onPrimary: async () => {
-          try {
-            await AsyncStorage.removeItem(UNLOCKED_SESSION_KEY)
-          } catch {}
-          try {
-            await supabase.auth.signOut()
-          } finally {
+          try { await AsyncStorage.removeItem(UNLOCKED_SESSION_KEY) } catch {}
+          try { await supabase.auth.signOut() } finally {
             clearAll()
             router.dismissAll()
             router.replace('/(auth)/phone')
@@ -217,9 +267,7 @@ export default function ResidentProfile() {
       'warn',
       {
         primaryText: 'Switch',
-        onPrimary: async () => {
-          router.replace('/(auth)/choose-account')
-        },
+        onPrimary: async () => { router.replace('/(auth)/choose-account') },
         secondaryText: 'Cancel',
       }
     )
@@ -248,9 +296,7 @@ export default function ResidentProfile() {
               <ThemedImage
                 src={
                   profile?.profile_picture
-                    ? {
-                        uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png',
-                      }
+                    ? { uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png' }
                     : require('@/assets/images/default-image.jpg')
                 }
                 size={50}
@@ -258,22 +304,12 @@ export default function ResidentProfile() {
             </View>
 
             <Spacer height={10} />
-            <ThemedText style={styles.name} title>
-              {fullName}
-            </ThemedText>
+            <ThemedText style={styles.name} title>{fullName}</ThemedText>
 
             <View style={styles.badgesRow}>
-              <ThemedChip
-                label={roleLabel} // ✅ shows Staff / Business Owner / Resident
-                filled
-                style={[styles.badge, isStaff && styles.staffBadge]}
-              />
+              <ThemedChip label={roleLabel} filled style={[styles.badge, isStaff && styles.staffBadge]} />
               {!isStaff && (
-                <ThemedChip
-                  label={`ID: ${profile?.person_id ?? '—'}`}
-                  filled={false}
-                  style={styles.badge}
-                />
+                <ThemedChip label={`ID: ${profile?.person_id ?? '—'}`} filled={false} style={styles.badge} />
               )}
               {isStaff && (
                 <ThemedChip
@@ -297,101 +333,50 @@ export default function ResidentProfile() {
           <InfoRow label="Civil Status:" value={profile?.civil_status ?? '—'} />
           <InfoRow label="Nationality:" value={profile?.nationality ?? '—'} />
 
-          {/* If current role is staff: swap Religion row -> Staff Position */}
           {!isStaff ? (
             <InfoRow label="Religion:" value={profile?.religion ?? '—'} />
           ) : (
             <>
-              <InfoRow
-                label="Position:"
-                value="HEALTH WORKER"
-                // value={profile?.role_name || staffProfile?.position || currentRole || '—'}
-              />
+              <InfoRow label="Position:" value="HEALTH WORKER" />
             </>
           )}
         </ThemedCard>
 
         <Spacer height={18} />
 
-        {/* Staff-only: Tools grid for faster actions */}
         {isStaff && (
           <>
             <ThemedCard style={[styles.cardPad, styles.shadow]}>
-              <ThemedText style={styles.sectionTitle} title>
-                Tools
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Tools</ThemedText>
               <Spacer height={8} />
               <View style={[styles.toolsGrid, { alignContent: 'center' }]}>
-                <Pressable
-                  style={styles.tool}
-                  onPress={() =>
-                    openModal('Verify IDs', 'Open the identity verification queue.', 'info', {
-                      primaryText: 'Close',
-                    })
-                  }
-                >
-                  <View style={styles.toolIconWrap}>
-                    <Ionicons name="id-card-outline" size={22} color={ACCENT} />
-                  </View>
+                <Pressable style={styles.tool} onPress={() => {}}>
+                  <View style={styles.toolIconWrap}><Ionicons name="id-card-outline" size={22} color={ACCENT} /></View>
                   <ThemedText style={styles.toolLabel}>Verify IDs</ThemedText>
                 </Pressable>
-
-                <Pressable
-                  style={styles.tool}
-                  onPress={() =>
-                    openModal('Residents', 'Manage residents & profiles.', 'info', {
-                      primaryText: 'Close',
-                    })
-                  }
-                >
-                  <View style={styles.toolIconWrap}>
-                    <Ionicons name="people-outline" size={22} color={ACCENT} />
-                  </View>
+                <Pressable style={styles.tool} onPress={() => {}}>
+                  <View style={styles.toolIconWrap}><Ionicons name="people-outline" size={22} color={ACCENT} /></View>
                   <ThemedText style={styles.toolLabel}>Residents</ThemedText>
                 </Pressable>
-
-                <Pressable
-                  style={styles.tool}
-                  onPress={() =>
-                    openModal('Households', 'View & update household records.', 'info', {
-                      primaryText: 'Close',
-                    })
-                  }
-                >
-                  <View style={styles.toolIconWrap}>
-                    <Ionicons name="home-outline" size={22} color={ACCENT} />
-                  </View>
+                <Pressable style={styles.tool} onPress={() => {}}>
+                  <View style={styles.toolIconWrap}><Ionicons name="home-outline" size={22} color={ACCENT} /></View>
                   <ThemedText style={styles.toolLabel}>Households</ThemedText>
                 </Pressable>
-
-                <Pressable
-                  style={styles.tool}
-                  onPress={() =>
-                    openModal('Doc Requests', 'Process document requests.', 'info', {
-                      primaryText: 'Close',
-                    })
-                  }
-                >
-                  <View style={styles.toolIconWrap}>
-                    <Ionicons name="document-text-outline" size={22} color={ACCENT} />
-                  </View>
+                <Pressable style={styles.tool} onPress={() => {}}>
+                  <View style={styles.toolIconWrap}><Ionicons name="document-text-outline" size={22} color={ACCENT} /></View>
                   <ThemedText style={styles.toolLabel}>Doc Requests</ThemedText>
                 </Pressable>
               </View>
             </ThemedCard>
-
             <Spacer height={18} />
           </>
         )}
 
-        {/* Resident & Business Owner share the same details for now */}
         {!isStaff && (
           <>
             {/* SOCIOECONOMIC */}
             <ThemedCard style={styles.cardPad}>
-              <ThemedText style={styles.sectionTitle} title>
-                Socioeconomic
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Socioeconomic</ThemedText>
               <Spacer height={6} />
               <ThemedDivider />
               <Spacer height={2} />
@@ -407,9 +392,7 @@ export default function ResidentProfile() {
 
             {/* ADDRESS */}
             <ThemedCard style={styles.cardPad}>
-              <ThemedText style={styles.sectionTitle} title>
-                Address
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Address</ThemedText>
               <Spacer height={6} />
               <ThemedDivider />
               <Spacer height={2} />
@@ -423,9 +406,7 @@ export default function ResidentProfile() {
 
             {/* HOUSEHOLD & FAMILY */}
             <ThemedCard style={styles.cardPad}>
-              <ThemedText style={styles.sectionTitle} title>
-                Household Information
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Household Information</ThemedText>
               <Spacer height={6} />
               <ThemedDivider />
               <Spacer height={2} />
@@ -438,9 +419,7 @@ export default function ResidentProfile() {
                     profile?.household_head_middle_name,
                     profile?.household_head_last_name,
                     profile?.household_head_suffix,
-                  ]
-                    .filter(Boolean)
-                    .join(' ') || '—'
+                  ].filter(Boolean).join(' ') || '—'
                 }
               />
               <InfoRow label="Household Number:" value={profile?.household_num ?? '—'} />
@@ -451,9 +430,7 @@ export default function ResidentProfile() {
               <ThemedDivider />
               <Spacer height={10} />
 
-              <ThemedText style={styles.sectionTitle} title>
-                Family Information
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Family Information</ThemedText>
               <Spacer height={6} />
               <ThemedDivider />
               <Spacer height={2} />
@@ -466,9 +443,7 @@ export default function ResidentProfile() {
                     profile?.family_head_middle_name,
                     profile?.family_head_last_name,
                     profile?.family_head_suffix,
-                  ]
-                    .filter(Boolean)
-                    .join(' ') || '—'
+                  ].filter(Boolean).join(' ') || '—'
                 }
               />
               <InfoRow label="Family Number:" value={profile?.family_num ?? '—'} />
@@ -482,9 +457,7 @@ export default function ResidentProfile() {
               <ThemedDivider />
               <Spacer height={10} />
 
-              <ThemedText style={styles.sectionTitle} title>
-                Family Members
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Family Members</ThemedText>
               <Spacer height={6} />
 
               <View style={styles.chipsWrap}>
@@ -498,9 +471,7 @@ export default function ResidentProfile() {
 
             {/* OTHER SERVICES */}
             <ThemedCard style={styles.cardPad}>
-              <ThemedText style={styles.sectionTitle} title>
-                Other Services
-              </ThemedText>
+              <ThemedText style={styles.sectionTitle} title>Other Services</ThemedText>
               <Spacer height={6} />
               <ThemedDivider />
               <Spacer height={2} />
@@ -535,7 +506,6 @@ export default function ResidentProfile() {
         <Spacer height={24} />
       </ThemedKeyboardAwareScrollView>
 
-      {/* Shared NiceModal (single instance) */}
       <NiceModal
         visible={modalOpen}
         title={modalTitle}
@@ -543,14 +513,8 @@ export default function ResidentProfile() {
         variant={modalVariant}
         primaryText={modalPrimaryText}
         secondaryText={modalSecondaryText}
-        onPrimary={() => {
-          modalPrimary?.()
-          setModalOpen(false)
-        }}
-        onSecondary={() => {
-          modalSecondary?.()
-          setModalOpen(false)
-        }}
+        onPrimary={() => { modalPrimary?.(); setModalOpen(false) }}
+        onSecondary={() => { modalSecondary?.(); setModalOpen(false) }}
         onClose={() => setModalOpen(false)}
       />
     </ThemedView>
@@ -558,137 +522,25 @@ export default function ResidentProfile() {
 }
 
 const styles = StyleSheet.create({
-  cardPad: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: '#fff',
-  },
-  shadow: {
-    // soft card shadow
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  avatarRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    borderWidth: 3,
-    borderColor: ACCENT,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-    justifyContent: 'center',
-  },
-  badge: {
-    marginRight: 6,
-    marginBottom: 6,
-  },
-  staffBadge: {
-    // darker fill looks good with your maroon
-    backgroundColor: ACCENT,
-  },
-  staffIdBadge: {
-    borderColor: ACCENT,
-  },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 8,
-    gap: 12,
-  },
-  label: {
-    flexShrink: 0,
-    width: '48%',
-    fontWeight: '600',
-    opacity: 0.8,
-  },
-  value: {
-    flex: 1,
-    textAlign: 'right',
-    lineHeight: 20,
-  },
-
-  // Tools grid (staff)
-  toolsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 10,
-    rowGap: 12,
-    justifyContent: 'space-between',
-  },
-  // center the content inside each tile
-  tool: {
-    width: '48%',
-    minHeight: 96,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fafafa',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-
-  toolIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#561C24',
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 6,
-    backgroundColor: '#fff',
-  },
-
-  toolLabel: {
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  memberChip: {
-    marginRight: 6,
-    marginBottom: 6,
-  },
-
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
+  cardPad: { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#fff' },
+  shadow: { elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
+  name: { fontSize: 18, fontWeight: '700', textAlign: 'center', letterSpacing: 0.3 },
+  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, justifyContent: 'center' },
+  badge: { marginRight: 6, marginBottom: 6 },
+  staffBadge: { backgroundColor: ACCENT },
+  staffIdBadge: { borderColor: ACCENT },
+  sectionTitle: { fontSize: 16, fontWeight: '700' },
+  row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 12 },
+  label: { flexShrink: 0, width: '48%', fontWeight: '600', opacity: 0.8 },
+  value: { flex: 1, textAlign: 'right', lineHeight: 20 },
+  toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 12, justifyContent: 'space-between' },
+  tool: { width: '48%', minHeight: 96, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1, borderColor: '#eee', backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  toolIconWrap: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#561C24', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 6, backgroundColor: '#fff' },
+  toolLabel: { fontWeight: '700', textAlign: 'center' },
+  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  memberChip: { marginRight: 6, marginBottom: 6 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
   linkTitle: { fontSize: 16, fontWeight: '700' },
   linkSub: { color: 'gray', flexWrap: 'wrap' },
-
   actionsPad: { paddingHorizontal: 15 },
 })

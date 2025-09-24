@@ -90,7 +90,7 @@ export default function ChooseAccount() {
       list.push({
         label: 'Login as Business Owner',
         type: 'business',
-        subtitle: 'Manage your business profile',
+        subtitle: 'BUSINESS OWNER',
         icon: 'briefcase',
       })
     }
@@ -99,7 +99,7 @@ export default function ChooseAccount() {
       list.push({
         label: 'Login as Staff',
         type: 'staff',
-        subtitle: `Staff ID: ${details?.staff_id ?? store.staffId}`,
+        subtitle: `STAFF ID: ${details?.staff_id ?? store.staffId}`,
         icon: 'shield-checkmark',
       })
     }

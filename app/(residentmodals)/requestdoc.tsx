@@ -585,7 +585,7 @@ export default function RequestDoc() {
       <ThemedAppBar title="Request a Document" showNotif={false} showProfile={false} />
 
       {/* Progress */}
-      <View style={styles.stepper}>
+      {/* <View style={styles.stepper}>
         {['Requester', 'Who is this for?', 'Document', 'Purpose & copies'].map((s, i) => (
           <View key={s} style={styles.stepItem}>
             <View style={styles.stepDot} />
@@ -593,17 +593,17 @@ export default function RequestDoc() {
             {i < 3 && <View style={styles.stepLine} />}
           </View>
         ))}
-      </View>
+      </View> */}
 
       <ThemedKeyboardAwareScrollView
         contentContainerStyle={{ paddingBottom: SUBMIT_BAR_HEIGHT + 28 }}
         enableOnAndroid extraScrollHeight={24} keyboardShouldPersistTaps="handled"
       >
         {/* Summary chip */}
-        <View style={styles.summaryChip}>
+        {/* <View style={styles.summaryChip}>
           <Ionicons name="document-text-outline" size={16} color={BRAND} />
           <ThemedText style={{ marginLeft: 6 }} weight="700">{summaryText}</ThemedText>
-        </View>
+        </View> */}
 
         {/* Requester */}
         <ThemedCard style={{ marginTop: 10 }}>
@@ -632,7 +632,7 @@ export default function RequestDoc() {
                   <Row label="Birthdate" value={me.birth_date || '—'} />
                   <Row label="Email" value={me.email || '—'} />
                   <Row label="Address" value={me.address || '—'} multiline />
-                  <Row label="Gov’t Program" value={me.government_program || '—'} />
+                  {/* <Row label="Gov’t Program" value={me.government_program || '—'} /> */}
                   <Row label="Resident ID" value={me.person_id} />
                 </>
               )}
@@ -763,9 +763,7 @@ export default function RequestDoc() {
               </View>
             )
           ) : (
-            <View style={styles.bannerNeutral}>
-              <Ionicons name="help-buoy-outline" size={18} color="#334155" />
-              <ThemedText style={styles.bannerText}>Select a purpose to see waiver guidance.</ThemedText>
+            <View>
             </View>
           )}
         </ThemedCard>
