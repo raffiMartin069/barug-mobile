@@ -1,6 +1,5 @@
 import { Redirect } from "expo-router";
 
 export default function Index() {
-  // return <Redirect href="/phone" />;
-  return <Redirect href="/(bhwmodals)/(household)/quarterlysched" />;
+  return <Redirect href="/phone" />;
 }
