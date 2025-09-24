@@ -19,10 +19,8 @@ export const useMemberRemoval = () => {
                 p_performed_by: 1,
                 p_reason: reason
             };
-            console.log("Reason: " + reason)
             const result = await service.execute(data);
             setLoading(false);
-            console.log("Member removal result:", result);
             return result;
         } catch (err) {
             if (err instanceof MemberRemovalException || err instanceof PolicyException) {

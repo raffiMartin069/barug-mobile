@@ -12,7 +12,7 @@ export class HouseholdListService {
     }
 
     async execute() {
-        const households = await this.householdRepository.getActiveHousehold();
+        const households = await this.householdRepository.GetActiveHousehold();
         const fullHouseholdData = [];
         if (!households) {
             return [];
