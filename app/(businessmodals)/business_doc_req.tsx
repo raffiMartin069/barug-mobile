@@ -1,4 +1,4 @@
-// app/(businessmodals)/bussiness_doc_req.tsx
+// app/(businessmodals)/business_doc_req.tsx
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
@@ -32,6 +32,7 @@ import {
   type DocType,
   type Purpose,
   type BusinessLite,
+  hasBusinessClearanceForYear, // <- must exist in services
 } from '@/services/documentRequest'
 
 /* ---------------- Types ---------------- */
@@ -50,6 +51,8 @@ type PersonMinimal = {
 const SUBMIT_BAR_HEIGHT = 88
 const BRAND = '#310101'
 const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE' // must match DB seed
+const CTC_DOC_NAME = 'CERTIFIED TRUE COPY'             // must match DB seed
+const CURRENT_YEAR = new Date().getFullYear()
 const ICONS = {
   success: 'checkmark-circle',
   error: 'alert-circle',
@@ -126,7 +129,7 @@ export default function BusinessDocRequest() {
   useEffect(() => {
     let live = true
     ;(async () => {
-      const fresh = await roleStore.ensureLoaded('resident') // keep using resident payload
+      const fresh = await roleStore.ensureLoaded('resident')
       if (!live) return
       const details = fresh ?? cached
       setMe(details ? mapToPersonMinimal(details) : null)
@@ -136,15 +139,15 @@ export default function BusinessDocRequest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleStore.ensureLoaded])
 
-  // lookups (fixed doc type)
-  const [docTypes, setDocTypes] = useState<DocType[]>([])
-  const [documentTypeId, setDocumentTypeId] = useState<number | null>(null)
+  // lookups (both doc types)
+  const [businessDocTypeId, setBusinessDocTypeId] = useState<number | null>(null)
+  const [ctcDocTypeId, setCtcDocTypeId] = useState<number | null>(null)
 
-  const [purposes, setPurposes] = useState<Purpose[]>([])
-  const [purposeId, setPurposeId] = useState<number | null>(null)
-
+  // business & purposes
   const [businesses, setBusinesses] = useState<BusinessLite[]>([])
   const [businessId, setBusinessId] = useState<number | null>(null)
+  const [purposes, setPurposes] = useState<Purpose[]>([])
+  const [purposeId, setPurposeId] = useState<number | null>(null)
 
   // qty/notes
   const [quantity, setQuantity] = useState<number>(1)
@@ -160,16 +163,22 @@ export default function BusinessDocRequest() {
   const showModal = (opts: Partial<typeof modal>) => setModal(p => ({ ...p, visible: true, ...opts }))
   const hideModal = () => setModal(p => ({ ...p, visible: false }))
 
-  // Load doc types & auto-pick Business Clearance
+  // gating: per-business clearance status map
+  const [statusByBiz, setStatusByBiz] = useState<Record<number, { has: boolean, reference_request_id?: number, reference_document_id?: number }>>({})
+  const [ctcMode, setCtcMode] = useState<boolean>(false)
+  const [clearanceRef, setClearanceRef] = useState<{ reference_request_id?: number; reference_document_id?: number; year?: number } | null>(null)
+
+  // Load doc types
   useEffect(() => {
     let live = true
     ;(async () => {
       try {
-        const types = await getDocumentTypes()
+        const types: DocType[] = await getDocumentTypes()
         if (!live) return
-        setDocTypes(types)
-        const chosen = types.find(t => String(t.document_type_name).toUpperCase() === BUSINESS_DOC_NAME)
-        if (chosen) setDocumentTypeId(chosen.document_type_id)
+        const business = types.find(t => String(t.document_type_name).toUpperCase() === BUSINESS_DOC_NAME)
+        const ctc     = types.find(t => String(t.document_type_name).toUpperCase() === CTC_DOC_NAME)
+        if (business) setBusinessDocTypeId(business.document_type_id)
+        if (ctc) setCtcDocTypeId(ctc.document_type_id)
       } catch (e) {
         console.log('[getDocumentTypes] failed:', e)
       }
@@ -177,37 +186,36 @@ export default function BusinessDocRequest() {
     return () => { live = false }
   }, [])
 
-  // Load purposes for the fixed doc type
-  useEffect(() => {
-    let live = true
-    ;(async () => {
-      setPurposes([])
-      setPurposeId(null)
-      if (!documentTypeId) return
-      try {
-        const p = await getPurposesByDocumentType(documentTypeId)
-        if (!live) return
-        setPurposes(p)
-      } catch (e) {
-        console.log('[getPurposesByDocumentType] failed:', e)
-      }
-    })()
-    return () => { live = false }
-  }, [documentTypeId])
-
-  // Load businesses owned by requester
+  // Load businesses owned by requester, then pre-check each for CURRENT_YEAR
   useEffect(() => {
     let live = true
     ;(async () => {
       setBusinesses([])
       setBusinessId(null)
+      setStatusByBiz({})
       const pid = Number(me?.person_id || 0)
       if (!pid) return
       try {
         const list = await getBusinessesOwnedByPerson(pid)
         if (!live) return
         setBusinesses(list)
-        if (list.length === 1) setBusinessId(list[0].business_id) // auto-select single business
+
+        // Pre-check each business (parallel)
+        const entries = await Promise.all(
+          list.map(async (b) => {
+            try {
+              const res = await hasBusinessClearanceForYear(b.business_id, CURRENT_YEAR)
+              return [b.business_id, { has: !!res?.has, reference_request_id: res?.reference_request_id, reference_document_id: res?.reference_document_id }] as const
+            } catch {
+              return [b.business_id, { has: false }] as const
+            }
+          })
+        )
+        if (!live) return
+        setStatusByBiz(Object.fromEntries(entries))
+
+        // Auto-select single business if only one
+        if (list.length === 1) setBusinessId(list[0].business_id)
       } catch (e) {
         console.log('[getBusinessesOwnedByPerson] failed:', e)
       }
@@ -215,13 +223,69 @@ export default function BusinessDocRequest() {
     return () => { live = false }
   }, [me?.person_id])
 
-  // derived
-  const selectedPurpose = useMemo(
-    () => purposes.find(p => p.document_purpose_id === (purposeId ?? -1)),
-    [purposes, purposeId]
-  )
+  // When business changes, flip mode based on the map (fallback to single check)
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      setPurposeId(null)
+      setCtcMode(false)
+      setClearanceRef(null)
+      if (!businessId) return
 
-  // purpose dropdown: show "Purpose Label • ₱fee" (like the generic screen)
+      const cached = statusByBiz[businessId]
+      if (cached) {
+        setCtcMode(!!cached.has)
+        if (cached.has) setClearanceRef({ ...cached, year: CURRENT_YEAR })
+        return
+      }
+
+      // Fallback check (should rarely happen)
+      try {
+        const res = await hasBusinessClearanceForYear(businessId, CURRENT_YEAR)
+        if (!live) return
+        const has = !!res?.has
+        setCtcMode(has)
+        if (has) setClearanceRef({ reference_request_id: res?.reference_request_id, reference_document_id: res?.reference_document_id, year: CURRENT_YEAR })
+        setStatusByBiz(prev => ({ ...prev, [businessId]: { has, reference_request_id: res?.reference_request_id, reference_document_id: res?.reference_document_id } }))
+      } catch {
+        if (!live) return
+        setCtcMode(false)
+        setStatusByBiz(prev => ({ ...prev, [businessId]: { has: false } }))
+      }
+    })()
+    return () => { live = false }
+  }, [businessId, statusByBiz])
+
+  // Effective doc type
+  const effectiveDocTypeId = ctcMode ? ctcDocTypeId : businessDocTypeId
+
+  // Load purposes for effective doc type
+  useEffect(() => {
+    let live = true
+    ;(async () => {
+      setPurposes([])
+      setPurposeId(null)
+      if (!effectiveDocTypeId) return
+      try {
+        const p = await getPurposesByDocumentType(effectiveDocTypeId)
+        if (!live) return
+        setPurposes(p)
+      } catch (e) {
+        console.log('[getPurposesByDocumentType] failed:', e)
+      }
+    })()
+    return () => { live = false }
+  }, [effectiveDocTypeId])
+
+  // Dropdown items with badges
+  const businessItems = useMemo(() => {
+    return businesses.map((b) => {
+      const s = statusByBiz[b.business_id]
+      const suffix = s?.has ? ` • CTC only (${CURRENT_YEAR})` : ' • New Clearance'
+      return { label: `${b.business_name}${suffix}`, value: b.business_id }
+    })
+  }, [businesses, statusByBiz])
+
   const purposeItems = useMemo(
     () => purposes.map(p => ({
       label: `${p.purpose_label}  •  ${peso((p as any).current_amount || 0)}`,
@@ -230,21 +294,28 @@ export default function BusinessDocRequest() {
     [purposes]
   )
 
-  const businessItems = useMemo(
-    () => businesses.map(b => ({ label: b.business_name, value: b.business_id })),
-    [businesses]
+  // Fee math
+  const selectedPurpose = useMemo(
+    () => purposes.find(p => p.document_purpose_id === (purposeId ?? -1)),
+    [purposes, purposeId]
   )
-
   const unit = Number((selectedPurpose as any)?.current_amount || 0)
   const qty = Math.max(1, Number(quantity || 1))
-  const netUnit = Math.max(0, unit - (exemptUnit || 0))
-  const netTotal = netUnit * qty
+  const [exemptDisplay, netUnit, netTotal] = useMemo(() => {
+    const net = Math.max(0, unit - (exemptUnit || 0))
+    return [
+      exemptUnit > 0 ? `Base ${peso(unit)} − Waiver ${peso(exemptUnit)} = ${peso(net)}` : (selectedPurpose ? `Base ${peso(unit)} × ${qty}` : undefined),
+      net,
+      net * qty,
+    ] as const
+  }, [unit, qty, exemptUnit, selectedPurpose])
+
   const estimatedDisplay = useMemo(
     () => checkingWaiver ? 'Checking…' : peso(netTotal),
     [netTotal, checkingWaiver]
   )
 
-  // Server waiver check (kept for parity)
+  // Server waiver check
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -269,22 +340,23 @@ export default function BusinessDocRequest() {
 
   // validation
   const inlineError = useMemo(() => {
-    if (!documentTypeId) return 'Business Clearance document type is not available.'
-    if (!purposeId) return 'Please select a purpose.'
+    if (!effectiveDocTypeId) return ctcMode ? 'Certified True Copy document type is not available.' : 'Business Clearance document type is not available.'
     if (!businessId) return 'Please choose your business.'
+    if (!purposeId) return 'Please select a purpose.'
     if (!quantity || quantity < 1) return 'Quantity must be at least 1.'
     return ''
-  }, [documentTypeId, purposeId, businessId, quantity])
+  }, [effectiveDocTypeId, purposeId, businessId, quantity, ctcMode])
 
+  const pageTitle = ctcMode ? 'CTC — Business Clearance' : 'Business Clearance'
   const summaryText = useMemo(() => {
-    const doc = BUSINESS_DOC_NAME
+    const doc = ctcMode ? 'CTC — Business Clearance' : BUSINESS_DOC_NAME
     const purp = selectedPurpose?.purpose_label
-    const amount =
-      netUnit === 0
-        ? '₱0.00'
-        : `${peso(netUnit)} × ${qty} = ${peso(netTotal)}`
-    return purp ? `${doc} • ${purp} • ${amount}` : `${doc}`
-  }, [selectedPurpose, netUnit, netTotal, qty])
+    const base = netUnit === 0 ? '₱0.00' : `${peso(netUnit)} × ${qty} = ${peso(netTotal)}`
+    if (ctcMode) {
+      return purp ? `${doc} • ${CURRENT_YEAR} • ${base}` : `${doc} • ${CURRENT_YEAR}`
+    }
+    return purp ? `${doc} • ${purp} • ${base}` : `${doc}`
+  }, [selectedPurpose, netUnit, netTotal, qty, ctcMode])
 
   const niceName = (p?: PersonMinimal | null) =>
     p ? [p.first_name, p.middle_name, p.last_name, p.suffix].filter(Boolean).join(' ') : '—'
@@ -293,7 +365,7 @@ export default function BusinessDocRequest() {
   const handleSubmit = async () => {
     const err = inlineError
     if (err) {
-      showModal({ icon: 'error', title: 'Missing info', message: err, primaryText: 'OK' })
+      setModal({ visible: true, icon: 'error', title: 'Missing info', message: err, primaryText: 'OK' })
       return
     }
     try {
@@ -302,7 +374,7 @@ export default function BusinessDocRequest() {
       const purp = selectedPurpose
       if (!requesterId || !purp) throw new Error('Could not resolve IDs or purpose.')
 
-      const payload = {
+      const payload: any = {
         requested_by: requesterId,
         on_behalf_of: null,
         is_on_behalf: false,
@@ -312,38 +384,49 @@ export default function BusinessDocRequest() {
           document_purpose_id: purp.document_purpose_id,
           quantity: qty,
           offense_no: (purp as any).default_offense_no ?? null,
-          details: {
-            purpose_code: (purp as any).purpose_code,
-          },
+          details: ctcMode
+            ? {
+                ctc_of: BUSINESS_DOC_NAME,
+                business_id: businessId,
+                year: CURRENT_YEAR,
+                reference_request_id: clearanceRef?.reference_request_id ?? null,
+                reference_document_id: clearanceRef?.reference_document_id ?? null,
+              }
+            : {
+                purpose_code: (purp as any).purpose_code,
+              },
         }],
       }
 
-      const newId = await createDocumentRequest(payload as any)
+      const newId = await createDocumentRequest(payload)
       setSubmitting(false)
-      showModal({
+      setModal({
+        visible: true,
         icon: 'success',
         title: 'Request submitted',
-        message: 'We’ll notify you when the Treasurer reviews your request.',
+        message: ctcMode
+          ? 'Your CTC request was submitted. We’ll notify you when the Treasurer reviews it.'
+          : 'We’ll notify you when the Treasurer reviews your request.',
         primaryText: 'View Receipt',
         onPrimary: () => {
-          hideModal()
+          setModal(m => ({ ...m, visible: false }))
           router.replace({ pathname: '/(residentmodals)/receipt', params: { id: String(newId) } })
         },
       })
     } catch (e: any) {
       setSubmitting(false)
-      showModal({ icon: 'error', title: 'Submission failed', message: e?.message ?? 'Unable to submit request right now.' })
+      setModal({ visible: true, icon: 'error', title: 'Submission failed', message: e?.message ?? 'Unable to submit request right now.' })
     }
   }
 
   /* ---------------- Render ---------------- */
   return (
     <ThemedView safe>
-      <ThemedAppBar title="Business Clearance" showNotif={false} showProfile={false} />
+      <ThemedAppBar title={pageTitle} showNotif={false} showProfile={false} />
 
       {/* Progress */}
       <View style={styles.stepper}>
-        {['Requester', 'Business', 'Purpose & Copies'].map((s, i) => (
+        {['Requester', 'Business', ctcMode ? 'CTC & Copies' : 'Purpose & Copies'].map((s, i) => (
           <View key={s} style={styles.stepItem}>
             <View style={styles.stepDot} />
             <ThemedText small muted numberOfLines={1} style={{ maxWidth: 98 }}>{s}</ThemedText>
@@ -361,6 +444,17 @@ export default function BusinessDocRequest() {
           <Ionicons name="document-text-outline" size={16} color={BRAND} />
           <ThemedText style={{ marginLeft: 6 }} weight="700">{summaryText}</ThemedText>
         </View>
+
+        {/* Gate banner when CTC-only */}
+        {ctcMode && (
+          <View style={styles.banner}>
+            <Ionicons name="warning-outline" size={18} color="#92400E" />
+            <ThemedText style={styles.bannerText} small>
+              This business already has an approved Business Clearance for {CURRENT_YEAR}.
+              You can only request a <ThemedText weight="800">Certified True Copy</ThemedText> this year.
+            </ThemedText>
+          </View>
+        )}
 
         {/* Requester */}
         <ThemedCard style={{ marginTop: 10 }}>
@@ -414,34 +508,24 @@ export default function BusinessDocRequest() {
           )}
         </ThemedCard>
 
-        {/* Purpose & Copies — purpose dropdown "like this" (from generic screen) */}
-        <Spacer height={12} />
+        {/* Purpose or CTC */}
+        <Spacer height={50} />
         <ThemedCard>
-          <RowTitle icon="document-text-outline" title="Business Information" />
+          <RowTitle icon="document-text-outline" title={ctcMode ? 'CTC Information' : 'Business Information'} />
           <Spacer height={8} />
 
           <ThemedDropdown
             items={purposeItems}
             value={purposeId}
             setValue={(v: number) => setPurposeId(v)}
-            placeholder={documentTypeId ? 'Select Purpose' : 'Loading document…'}
+            placeholder={!effectiveDocTypeId ? 'Loading document…' : (ctcMode ? 'Select CTC purpose' : 'Select Purpose')}
             order={1}
           />
-          {!!documentTypeId && !purposeItems.length && <ThemedText small muted>Loading purposes…</ThemedText>}
+          {!!effectiveDocTypeId && !purposeItems.length && <ThemedText small muted>Loading purposes…</ThemedText>}
           {(!purposeId) && <ThemedText small style={styles.errorText}>Please select a purpose.</ThemedText>}
 
           <Spacer height={12} />
-          <FeeRow
-            title="Estimated Fee"
-            value={estimatedDisplay}
-            sub={
-              selectedPurpose
-                ? (exemptUnit > 0
-                    ? `Base ${peso(unit)} − Waiver ${peso(exemptUnit)} = ${peso(netUnit)} • Qty ${qty}`
-                    : `Base ${peso(unit)} × ${qty}`)
-                : undefined
-            }
-          />
+          <FeeRow title="Estimated Fee" value={estimatedDisplay} sub={exemptDisplay} />
 
           <Spacer height={12} />
           <ThemedText weight="600">Copies</ThemedText>
@@ -454,7 +538,7 @@ export default function BusinessDocRequest() {
           <ThemedTextInput
             value={purposeNotes}
             onChangeText={setPurposeNotes}
-            placeholder="E.g., renewal before end of month"
+            placeholder={ctcMode ? 'E.g., need certified copy for agency filing' : 'E.g., renewal before end of month'}
             multiline
           />
 
@@ -471,7 +555,7 @@ export default function BusinessDocRequest() {
           <ThemedText weight="800" style={{ fontSize: 18 }}>{estimatedDisplay}</ThemedText>
         </View>
         <ThemedButton onPress={handleSubmit} disabled={!!inlineError || submitting} loading={submitting}>
-          <ThemedText btn>Submit Request</ThemedText>
+          <ThemedText btn>{ctcMode ? 'Submit CTC Request' : 'Submit Request'}</ThemedText>
         </ThemedButton>
       </View>
 
@@ -516,6 +600,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center'
   },
 
+  banner: {
+    marginHorizontal: 16, marginTop: 10,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    backgroundColor: '#FFFBEB',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8
+  },
+  bannerText: { color: '#92400E', flex: 1 },
+
   hintText: { marginTop: 6, color: '#6b7280' },
   errorText: { color: '#C0392B', marginTop: 6 },
 
@@ -534,10 +631,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderColor: '#e5e7eb',
     backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-
-  iconPill: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(49,1,1,0.08)', alignItems: 'center', justifyContent: 'center' },
-
-  feeRowText: { fontSize: 16 },
 
   // modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
