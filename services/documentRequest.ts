@@ -61,7 +61,7 @@ export async function getPurposesByDocumentType(
     return (v2.data as any[]).map(normalizePurposeV2)
   }
 
-  // Fallback to v1 (no flags) – we’ll fill flags as false
+  // Fallback to v1 (no flags) – fill flags as false
   const v1 = await supabase
     .rpc('get_purposes_by_document_type', { p_document_type_id: documentTypeId })
   if (v1.error) throw v1.error
@@ -163,10 +163,6 @@ export async function attachAuthorizationLetter(opts: {
 
 /* ========= Waiver preview helpers ========= */
 
-/**
- * Ask Postgres how much should be waived PER UNIT for this person & fee item.
- * (Uses your compute_exemption_amount(p_person_id, p_fee_item_id, p_details))
- */
 export async function computeExemptionAmount(
   personId: number,
   feeItemId: number,
@@ -181,7 +177,7 @@ export async function computeExemptionAmount(
   return Number(data ?? 0)
 }
 
-/** Utility: compute a pretty preview text and final totals for a selected purpose. */
+/** Utility: compute preview text and totals for a selected purpose. */
 export async function previewTotalsForPerson(opts: {
   personId: number
   purpose: PurposeWithFeeFlags
@@ -193,7 +189,7 @@ export async function previewTotalsForPerson(opts: {
   net_unit: number
   quantity: number
   total_due: number
-  label: string // e.g., "₱0.00 (waived – senior)" or "₱80 × 1"
+  label: string
 }> {
   const unit_amount = Number(opts.purpose.current_amount || 0)
   const exempt_unit = opts.purpose.fee_item_id > 0
@@ -201,21 +197,13 @@ export async function previewTotalsForPerson(opts: {
     : 0
   const net_unit = Math.max(0, unit_amount - Number(exempt_unit || 0))
   const total_due = net_unit * Math.max(1, Number(opts.quantity || 1))
-
-  // quick human label
-  const label =
-    net_unit === 0
-      ? `₱0.00 (waived)`
-      : `₱${net_unit.toLocaleString()} × ${Math.max(1, Number(opts.quantity || 1))}`
-
+  const label = net_unit === 0
+    ? `₱0.00 (waived)`
+    : `₱${net_unit.toLocaleString()} × ${Math.max(1, Number(opts.quantity || 1))}`
   return { unit_amount, exempt_unit, net_unit, quantity: Math.max(1, Number(opts.quantity || 1)), total_due, label }
 }
 
-/* ========= Formatting ========= */
-
-export const peso = (n: number | null | undefined) => `₱${Number(n || 0).toLocaleString()}`
-
-/* ========= Lists & detail views (unchanged) ========= */
+/* ========= Lists & detail ========= */
 
 export type DocRequestDetailRow = {
   doc_request_id: number
@@ -243,7 +231,6 @@ type ListOptions = { status?: string; search?: string; limit?: number; offset?: 
 export async function fetchMyDocRequests(personId: number, opts: ListOptions = {}): Promise<DocRequestListItem[]> {
   const { status, search, limit = 50, offset = 0 } = opts
 
-  // headers
   let q = supabase
     .from('v_doc_request_detail')
     .select('*')
@@ -264,7 +251,6 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
 
   const ids = hdrs.map(h => h.doc_request_id)
 
-  // detail lines → gather document types per request
   const { data: lines, error: lineErr } = await supabase
     .from('v_doc_request_detail_lines')
     .select('doc_request_id, document_type_name, purpose_code')
@@ -281,114 +267,81 @@ export async function fetchMyDocRequests(personId: number, opts: ListOptions = {
   return hdrs.map(h => ({ ...h, doc_types: Array.from(mapTypes.get(h.doc_request_id) ?? []) }))
 }
 
-/* ========= Payments ========= */
+/* ========= Business clearance gating ========= */
 
-export type DocRequestLineDetail = {
-  doc_request_line_id: number
-  doc_request_id: number
-  fee_code: string
-  fee_name: string
-  document_type_name: string | null
-  purpose_code: string | null
-  quantity: number
-  base_amount: number
-  waived_amount: number
-  surcharge_amount: number
-  line_total: number
-  details: any
-}
+export type YearClearanceStatus =
+  | 'NONE'
+  | 'REQUESTED'
+  | 'ISSUED'
+  | 'REJECTED'
+  | 'CANCELLED'
 
-export type DocRequestPaymentSummary = {
-  doc_request_id: number
-  or_count: number
-  total_paid: number
-  latest_or_number: string | null
-  latest_or_time: string | Date | null
-}
-
-export type TimelineEvent = {
-  common_log_id: number
-  occurred_at: string | Date
-  action: string
-  table_affected: string
-  record_affected_id: number
-  details: any
-  user_type_name: 'STAFF' | 'RESIDENT' | 'SYSTEM' | string
-  performer_id: number
-  staff_name: string | null
-  resident_name: string | null
-}
-
-export async function fetchDocRequestDetailBundle(docRequestId: number): Promise<{
-  header: DocRequestDetailRow
-  lines: DocRequestLineDetail[]
-  payments: DocRequestPaymentSummary | null
-  timeline: TimelineEvent[]
-}> {
-  const { data: hdr, error: he } = await supabase
-    .from('v_doc_request_detail')
-    .select('*')
-    .eq('doc_request_id', docRequestId)
-    .maybeSingle()
-  if (he) throw he
-  if (!hdr) throw new Error('Request not found')
-
-  const { data: lines, error: le } = await supabase
-    .from('v_doc_request_detail_lines')
-    .select('*')
-    .eq('doc_request_id', docRequestId)
-    .order('doc_request_line_id', { ascending: true })
-  if (le) throw le
-
-  const { data: pay, error: pe } = await supabase
-    .from('v_doc_request_payments')
-    .select('*')
-    .eq('doc_request_id', docRequestId)
-    .maybeSingle()
-  if (pe) throw pe
-
-  const [t1, t2] = await Promise.all([
-    supabase
-      .from('v_document_timeline')
-      .select('*')
-      .eq('table_affected', 'doc_request_hdr')
-      .eq('record_affected_id', docRequestId),
-    supabase
-      .from('v_document_timeline')
-      .select('*')
-      .eq('details->>doc_request_id', String(docRequestId)),
-  ])
-  if (t1.error) throw t1.error
-  if (t2.error) throw t2.error
-
-  const tl = [...(t1.data ?? []), ...(t2.data ?? [])] as TimelineEvent[]
-  tl.sort((a, b) => new Date(b.occurred_at as any).getTime() - new Date(a.occurred_at as any).getTime())
-
-  return {
-    header: hdr as DocRequestDetailRow,
-    lines: (lines ?? []) as DocRequestLineDetail[],
-    payments: (pay ?? null) as DocRequestPaymentSummary | null,
-    timeline: tl,
-  }
-}
-
-export async function getPaymentMethodMap(): Promise<Record<number, string>> {
-  try {
-    const { data, error } = await supabase.from('payment_method').select('payment_method_id, method_name')
-    if (error) throw error
-    const map: Record<number, string> = {}
-    for (const r of data ?? []) map[(r as any).payment_method_id] = (r as any).method_name
-    return map
-  } catch {
-    return {}
-  }
-}
-
-export async function getResidentFullProfile(personId: number) {
-  const { data, error } = await supabase.rpc('get_specific_resident_full_profile', {
-    p_person_id: personId,
+/** Your existing year check (keep for in-progress detection) */
+export async function checkBusinessClearanceForYear(
+  businessId: number,
+  year: number
+): Promise<{ status: YearClearanceStatus; doc_request_id?: number | null; last_status_id?: number | null; last_changed_at?: string | null }> {
+  const { data, error } = await supabase.rpc('check_business_clearance_for_year', {
+    p_business_id: businessId,
+    p_year: year,
   })
   if (error) throw error
-  // This RPC returns an array; take the first row
-  return (Array.isArray(data) ? data[0] : data) || null
+  const row = Array.isArray(data) ? data[0] : data
+  return {
+    status: (row?.status ?? 'NONE') as YearClearanceStatus,
+    doc_request_id: row?.doc_request_id ?? null,
+    last_status_id: row?.last_status_id ?? null,
+    last_changed_at: row?.last_changed_at ?? null,
+  }
 }
+
+/** NEW: date-based validity check (handles cross-year) */
+export async function checkBusinessClearanceEffectiveOn(
+  businessId: number,
+  at: Date = new Date()
+): Promise<{
+  has: boolean
+  reference_request_id: number | null
+  request_code: string | null
+  issued_on: string | null
+  valid_until: string | null
+  basis_year: number | null
+}> {
+  const { data, error } = await supabase.rpc('check_business_clearance_effective_on', {
+    p_business_id: businessId,
+    p_at: at.toISOString(),
+  })
+  if (error) throw error
+  const row = Array.isArray(data) ? data[0] : data
+  return {
+    has: !!row?.has,
+    reference_request_id: row?.reference_request_id ?? null,
+    request_code: row?.request_code ?? null,
+    issued_on: row?.issued_on ?? null,
+    valid_until: row?.valid_until ?? null,
+    basis_year: row?.basis_year ?? null,
+  }
+}
+
+/** Map backend status to UI mode */
+export type ClearanceUIMode = 'BC' | 'CTC' | 'BLOCKED'
+export function resolveClearanceMode(s: YearClearanceStatus): ClearanceUIMode {
+  if (s === 'ISSUED') return 'CTC'
+  if (s === 'REQUESTED') return 'BLOCKED'
+  return 'BC'
+}
+
+/** Light header to show request_code & release time in CTC reference box */
+export async function getDocRequestHeaderLite(docRequestId: number): Promise<{ request_code: string | null; released_at: string | null }> {
+  const { data, error } = await supabase
+    .from('v_doc_request_detail')
+    .select('request_code, released_at')
+    .eq('doc_request_id', docRequestId)
+    .maybeSingle()
+  if (error) throw error
+  return { request_code: data?.request_code ?? null, released_at: data?.released_at ?? null }
+}
+
+/* ========= Formatting ========= */
+
+export const peso = (n: number | null | undefined) => `₱${Number(n || 0).toLocaleString()}`

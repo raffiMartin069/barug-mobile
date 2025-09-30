@@ -1,13 +1,6 @@
-// app/(businessmodals)/business_doc_req.tsx
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  StyleSheet,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 
 import Spacer from '@/components/Spacer'
@@ -30,12 +23,14 @@ import {
   computeExemptionAmount,
   peso,
   type DocType,
-  type Purpose,
+  type PurposeWithFeeFlags as Purpose,
   type BusinessLite,
-  hasBusinessClearanceForYear, // <- must exist in services
+  checkBusinessClearanceForYear,
+  resolveClearanceMode,
+  getDocRequestHeaderLite,
+  checkBusinessClearanceEffectiveOn,
 } from '@/services/documentRequest'
 
-/* ---------------- Types ---------------- */
 type PersonMinimal = {
   person_id: number
   first_name?: string
@@ -47,19 +42,13 @@ type PersonMinimal = {
   address?: string | null
 }
 
-/* ---------------- Consts ---------------- */
 const SUBMIT_BAR_HEIGHT = 88
 const BRAND = '#310101'
-const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE' // must match DB seed
-const CTC_DOC_NAME = 'CERTIFIED TRUE COPY'             // must match DB seed
+const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE'
+const CTC_DOC_NAME = 'CERTIFIED TRUE COPY'
 const CURRENT_YEAR = new Date().getFullYear()
-const ICONS = {
-  success: 'checkmark-circle',
-  error: 'alert-circle',
-  info: 'information-circle',
-} as const
+const ICONS = { success: 'checkmark-circle', error: 'alert-circle', info: 'information-circle' } as const
 
-/* ---------------- Small UI bits ---------------- */
 function RowTitle({ icon, title }: { icon: any; title: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -95,7 +84,6 @@ function QuantityPicker({ value, onChange }: { value: number; onChange: (n: numb
   )
 }
 
-/* ---------------- Helpers ---------------- */
 function mapToPersonMinimal(details: any): PersonMinimal | null {
   if (!details) return null
   return {
@@ -115,11 +103,9 @@ function mapToPersonMinimal(details: any): PersonMinimal | null {
   }
 }
 
-/* ---------------- Screen ---------------- */
 export default function BusinessDocRequest() {
   const router = useRouter()
 
-  // requester (SELF only)
   const roleStore = useAccountRole()
   const role = roleStore.currentRole ?? 'resident'
   const cached = roleStore.getProfile(role)
@@ -139,36 +125,35 @@ export default function BusinessDocRequest() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleStore.ensureLoaded])
 
-  // lookups (both doc types)
   const [businessDocTypeId, setBusinessDocTypeId] = useState<number | null>(null)
   const [ctcDocTypeId, setCtcDocTypeId] = useState<number | null>(null)
 
-  // business & purposes
   const [businesses, setBusinesses] = useState<BusinessLite[]>([])
   const [businessId, setBusinessId] = useState<number | null>(null)
   const [purposes, setPurposes] = useState<Purpose[]>([])
   const [purposeId, setPurposeId] = useState<number | null>(null)
 
-  // qty/notes
   const [quantity, setQuantity] = useState<number>(1)
   const [purposeNotes, setPurposeNotes] = useState<string>('')
 
-  // fee/waiver
   const [checkingWaiver, setCheckingWaiver] = useState<boolean>(false)
   const [exemptUnit, setExemptUnit] = useState<number>(0)
 
-  // ui state
   const [submitting, setSubmitting] = useState(false)
   const [modal, setModal] = useState<{ visible: boolean; icon?: keyof typeof ICONS; title?: string; message?: string; primaryText?: string; onPrimary?: () => void }>({ visible: false })
   const showModal = (opts: Partial<typeof modal>) => setModal(p => ({ ...p, visible: true, ...opts }))
   const hideModal = () => setModal(p => ({ ...p, visible: false }))
 
-  // gating: per-business clearance status map
-  const [statusByBiz, setStatusByBiz] = useState<Record<number, { has: boolean, reference_request_id?: number, reference_document_id?: number }>>({})
+  const [statusByBiz, setStatusByBiz] = useState<Record<number, {
+    status: 'NONE' | 'REQUESTED' | 'ISSUED' | 'REJECTED' | 'CANCELLED',
+    doc_request_id?: number | null,
+    request_code?: string | null,
+    released_at?: string | null
+  }>>({})
   const [ctcMode, setCtcMode] = useState<boolean>(false)
-  const [clearanceRef, setClearanceRef] = useState<{ reference_request_id?: number; reference_document_id?: number; year?: number } | null>(null)
+  const [blocked, setBlocked] = useState<boolean>(false)
+  const [clearanceRef, setClearanceRef] = useState<{ reference_request_id?: number | null; request_code?: string | null; year?: number } | null>(null)
 
-  // Load doc types
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -179,14 +164,11 @@ export default function BusinessDocRequest() {
         const ctc     = types.find(t => String(t.document_type_name).toUpperCase() === CTC_DOC_NAME)
         if (business) setBusinessDocTypeId(business.document_type_id)
         if (ctc) setCtcDocTypeId(ctc.document_type_id)
-      } catch (e) {
-        console.log('[getDocumentTypes] failed:', e)
-      }
+      } catch (e) {}
     })()
     return () => { live = false }
   }, [])
 
-  // Load businesses owned by requester, then pre-check each for CURRENT_YEAR
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -200,66 +182,65 @@ export default function BusinessDocRequest() {
         if (!live) return
         setBusinesses(list)
 
-        // Pre-check each business (parallel)
         const entries = await Promise.all(
           list.map(async (b) => {
             try {
-              const res = await hasBusinessClearanceForYear(b.business_id, CURRENT_YEAR)
-              return [b.business_id, { has: !!res?.has, reference_request_id: res?.reference_request_id, reference_document_id: res?.reference_document_id }] as const
+              // 1) Active (date-based) validity – cross-year safe
+              const active = await checkBusinessClearanceEffectiveOn(b.business_id, new Date())
+              if (active.has) {
+                return [b.business_id, {
+                  status: 'ISSUED' as const,
+                  doc_request_id: active.reference_request_id,
+                  request_code: active.request_code,
+                  released_at: active.issued_on,
+                }] as const
+              }
+
+              // 2) Otherwise, “in progress” this year?
+              const byYear = await checkBusinessClearanceForYear(b.business_id, CURRENT_YEAR)
+              if (byYear.status === 'REQUESTED') {
+                return [b.business_id, { status: 'REQUESTED' as const }] as const
+              }
+
+              // 3) Nothing active or pending
+              return [b.business_id, { status: 'NONE' as const }] as const
             } catch {
-              return [b.business_id, { has: false }] as const
+              return [b.business_id, { status: 'NONE' as const }] as const
             }
           })
         )
         if (!live) return
         setStatusByBiz(Object.fromEntries(entries))
 
-        // Auto-select single business if only one
         if (list.length === 1) setBusinessId(list[0].business_id)
-      } catch (e) {
-        console.log('[getBusinessesOwnedByPerson] failed:', e)
-      }
+      } catch {}
     })()
     return () => { live = false }
   }, [me?.person_id])
 
-  // When business changes, flip mode based on the map (fallback to single check)
   useEffect(() => {
-    let live = true
-    ;(async () => {
-      setPurposeId(null)
-      setCtcMode(false)
-      setClearanceRef(null)
-      if (!businessId) return
+    setPurposeId(null)
+    setCtcMode(false)
+    setBlocked(false)
+    setClearanceRef(null)
+    if (!businessId) return
 
-      const cached = statusByBiz[businessId]
-      if (cached) {
-        setCtcMode(!!cached.has)
-        if (cached.has) setClearanceRef({ ...cached, year: CURRENT_YEAR })
-        return
-      }
-
-      // Fallback check (should rarely happen)
-      try {
-        const res = await hasBusinessClearanceForYear(businessId, CURRENT_YEAR)
-        if (!live) return
-        const has = !!res?.has
-        setCtcMode(has)
-        if (has) setClearanceRef({ reference_request_id: res?.reference_request_id, reference_document_id: res?.reference_document_id, year: CURRENT_YEAR })
-        setStatusByBiz(prev => ({ ...prev, [businessId]: { has, reference_request_id: res?.reference_request_id, reference_document_id: res?.reference_document_id } }))
-      } catch {
-        if (!live) return
-        setCtcMode(false)
-        setStatusByBiz(prev => ({ ...prev, [businessId]: { has: false } }))
-      }
-    })()
-    return () => { live = false }
+    const cached = statusByBiz[businessId]
+    if (cached) {
+      const mode = resolveClearanceMode(cached.status)
+      setCtcMode(mode === 'CTC')      // we map 'ISSUED' → 'CTC'
+      setBlocked(mode === 'BLOCKED')  // we map 'REQUESTED' → 'BLOCKED'
+      setClearanceRef(
+        mode === 'CTC'
+          ? { reference_request_id: cached.doc_request_id ?? null, request_code: cached.request_code ?? null, year: CURRENT_YEAR }
+          : null
+      )
+      return
+    }
   }, [businessId, statusByBiz])
 
-  // Effective doc type
   const effectiveDocTypeId = ctcMode ? ctcDocTypeId : businessDocTypeId
 
-  // Load purposes for effective doc type
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -270,18 +251,18 @@ export default function BusinessDocRequest() {
         const p = await getPurposesByDocumentType(effectiveDocTypeId)
         if (!live) return
         setPurposes(p)
-      } catch (e) {
-        console.log('[getPurposesByDocumentType] failed:', e)
-      }
+      } catch {}
     })()
     return () => { live = false }
   }, [effectiveDocTypeId])
 
-  // Dropdown items with badges
   const businessItems = useMemo(() => {
     return businesses.map((b) => {
       const s = statusByBiz[b.business_id]
-      const suffix = s?.has ? ` • CTC only (${CURRENT_YEAR})` : ' • New Clearance'
+      const suffix =
+        s?.status === 'ISSUED'    ? ` • CTC only (${CURRENT_YEAR})`
+      : s?.status === 'REQUESTED' ? ` • In progress (${CURRENT_YEAR})`
+                                 : ' • New Clearance'
       return { label: `${b.business_name}${suffix}`, value: b.business_id }
     })
   }, [businesses, statusByBiz])
@@ -294,7 +275,6 @@ export default function BusinessDocRequest() {
     [purposes]
   )
 
-  // Fee math
   const selectedPurpose = useMemo(
     () => purposes.find(p => p.document_purpose_id === (purposeId ?? -1)),
     [purposes, purposeId]
@@ -315,7 +295,6 @@ export default function BusinessDocRequest() {
     [netTotal, checkingWaiver]
   )
 
-  // Server waiver check
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -338,14 +317,15 @@ export default function BusinessDocRequest() {
     return () => { live = false }
   }, [me?.person_id, selectedPurpose?.document_purpose_id])
 
-  // validation
   const inlineError = useMemo(() => {
+    if (blocked) return 'Your Business Clearance is still in progress.'
     if (!effectiveDocTypeId) return ctcMode ? 'Certified True Copy document type is not available.' : 'Business Clearance document type is not available.'
     if (!businessId) return 'Please choose your business.'
     if (!purposeId) return 'Please select a purpose.'
     if (!quantity || quantity < 1) return 'Quantity must be at least 1.'
+    if (ctcMode && (!clearanceRef?.reference_request_id || !clearanceRef?.year)) return 'We could not find your original clearance for this year.'
     return ''
-  }, [effectiveDocTypeId, purposeId, businessId, quantity, ctcMode])
+  }, [blocked, effectiveDocTypeId, purposeId, businessId, quantity, ctcMode, clearanceRef?.reference_request_id, clearanceRef?.year])
 
   const pageTitle = ctcMode ? 'CTC — Business Clearance' : 'Business Clearance'
   const summaryText = useMemo(() => {
@@ -361,7 +341,6 @@ export default function BusinessDocRequest() {
   const niceName = (p?: PersonMinimal | null) =>
     p ? [p.first_name, p.middle_name, p.last_name, p.suffix].filter(Boolean).join(' ') : '—'
 
-  // submit
   const handleSubmit = async () => {
     const err = inlineError
     if (err) {
@@ -390,7 +369,7 @@ export default function BusinessDocRequest() {
                 business_id: businessId,
                 year: CURRENT_YEAR,
                 reference_request_id: clearanceRef?.reference_request_id ?? null,
-                reference_document_id: clearanceRef?.reference_document_id ?? null,
+                reference_document_id: null,
               }
             : {
                 purpose_code: (purp as any).purpose_code,
@@ -419,12 +398,10 @@ export default function BusinessDocRequest() {
     }
   }
 
-  /* ---------------- Render ---------------- */
   return (
     <ThemedView safe>
       <ThemedAppBar title={pageTitle} showNotif={false} showProfile={false} />
 
-      {/* Progress */}
       <View style={styles.stepper}>
         {['Requester', 'Business', ctcMode ? 'CTC & Copies' : 'Purpose & Copies'].map((s, i) => (
           <View key={s} style={styles.stepItem}>
@@ -439,24 +416,55 @@ export default function BusinessDocRequest() {
         contentContainerStyle={{ paddingBottom: SUBMIT_BAR_HEIGHT + 28 }}
         enableOnAndroid extraScrollHeight={24} keyboardShouldPersistTaps="handled"
       >
-        {/* Summary chip */}
         <View style={styles.summaryChip}>
           <Ionicons name="document-text-outline" size={16} color={BRAND} />
           <ThemedText style={{ marginLeft: 6 }} weight="700">{summaryText}</ThemedText>
         </View>
 
-        {/* Gate banner when CTC-only */}
-        {ctcMode && (
+        {blocked ? (
           <View style={styles.banner}>
-            <Ionicons name="warning-outline" size={18} color="#92400E" />
+            <Ionicons name="pause-circle-outline" size={18} color="#92400E" />
             <ThemedText style={styles.bannerText} small>
-              This business already has an approved Business Clearance for {CURRENT_YEAR}.
-              You can only request a <ThemedText weight="800">Certified True Copy</ThemedText> this year.
+              You already have a Business Clearance request in progress for {CURRENT_YEAR}. Please wait for it to be issued.
             </ThemedText>
           </View>
+        ) : ctcMode && (
+          <>
+            <View style={styles.banner}>
+              <Ionicons name="warning-outline" size={18} color="#92400E" />
+              <ThemedText style={styles.bannerText} small>
+                This business already has an issued Business Clearance (still valid).
+                You can only request a <ThemedText weight="800">Certified True Copy</ThemedText>.
+              </ThemedText>
+            </View>
+
+            {!!clearanceRef?.reference_request_id && (
+              <ThemedCard style={{ marginHorizontal: 16, marginTop: 10 }}>
+                <RowTitle icon="pricetag-outline" title="Reference Clearance" />
+                <Spacer height={8} />
+                <View style={styles.detailsWrap}>
+                  <View style={styles.row}>
+                    <ThemedText muted style={styles.rowLabel}>Request Code</ThemedText>
+                    <ThemedText style={styles.rowValue}>{statusByBiz[businessId!]?.request_code || '—'}</ThemedText>
+                  </View>
+                  <View style={styles.row}>
+                    <ThemedText muted style={styles.rowLabel}>Issued On</ThemedText>
+                    <ThemedText style={styles.rowValue}>
+                      {statusByBiz[businessId!]?.released_at
+                        ? new Date(statusByBiz[businessId!].released_at!).toLocaleString()
+                        : '—'}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.row}>
+                    <ThemedText muted style={styles.rowLabel}>Doc Request ID</ThemedText>
+                    <ThemedText style={styles.rowValue}>{clearanceRef.reference_request_id}</ThemedText>
+                  </View>
+                </View>
+              </ThemedCard>
+            )}
+          </>
         )}
 
-        {/* Requester */}
         <ThemedCard style={{ marginTop: 10 }}>
           <View style={styles.cardHeaderRow}>
             <RowTitle icon="person-outline" title="Requester (Business Owner)" />
@@ -470,9 +478,9 @@ export default function BusinessDocRequest() {
             </View>
           ) : me ? (
             <View style={styles.detailsWrap}>
-              <View style={styles.row}>
+              <View className="row">
                 <ThemedText muted style={styles.rowLabel}>Name</ThemedText>
-                <ThemedText style={styles.rowValue}>{niceName(me)}</ThemedText>
+                <ThemedText style={styles.rowValue}>{[me.first_name, me.middle_name, me.last_name, me.suffix].filter(Boolean).join(' ')}</ThemedText>
               </View>
               <View style={styles.row}>
                 <ThemedText muted style={styles.rowLabel}>Mobile</ThemedText>
@@ -488,7 +496,6 @@ export default function BusinessDocRequest() {
           )}
         </ThemedCard>
 
-        {/* Business */}
         <Spacer height={12} />
         <ThemedCard>
           <RowTitle icon="briefcase-outline" title="Business" />
@@ -508,7 +515,6 @@ export default function BusinessDocRequest() {
           )}
         </ThemedCard>
 
-        {/* Purpose or CTC */}
         <Spacer height={50} />
         <ThemedCard>
           <RowTitle icon="document-text-outline" title={ctcMode ? 'CTC Information' : 'Business Information'} />
@@ -518,7 +524,7 @@ export default function BusinessDocRequest() {
             items={purposeItems}
             value={purposeId}
             setValue={(v: number) => setPurposeId(v)}
-            placeholder={!effectiveDocTypeId ? 'Loading document…' : (ctcMode ? 'Select CTC purpose' : 'Select Purpose')}
+            placeholder={!effectiveDocTypeId ? 'Loading document…' : (ctcMode ? 'Select CTC purpose' : 'Select Business Nature')}
             order={1}
           />
           {!!effectiveDocTypeId && !purposeItems.length && <ThemedText small muted>Loading purposes…</ThemedText>}
@@ -547,7 +553,6 @@ export default function BusinessDocRequest() {
         </ThemedCard>
       </ThemedKeyboardAwareScrollView>
 
-      {/* sticky footer */}
       <View style={styles.fadeTop} />
       <View style={styles.submitBar}>
         <View>
@@ -559,7 +564,6 @@ export default function BusinessDocRequest() {
         </ThemedButton>
       </View>
 
-      {/* modal */}
       <Modal visible={modal.visible} transparent animationType="fade" onRequestClose={hideModal}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -578,7 +582,6 @@ export default function BusinessDocRequest() {
   )
 }
 
-/* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: '800' },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -632,7 +635,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
 
-  // modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   modalCard: { width: '100%', maxWidth: 380, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
   iconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
