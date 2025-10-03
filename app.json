@@ -1,5 +1,8 @@
 {
   "expo": {
+    "extra": {
+      "API_BASE_URL": "https://9af613487aa0.ngrok-free.app"
+    },
     "name": "barug",
     "slug": "barug",
     "version": "1.0.0",
@@ -33,7 +36,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

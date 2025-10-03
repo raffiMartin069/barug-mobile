@@ -15,6 +15,9 @@ import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
+import * as WebBrowser from 'expo-web-browser'
+import * as ExpoLinking from 'expo-linking'
+import Constants from 'expo-constants'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -46,6 +49,9 @@ import {
   type Purpose,
   type BusinessLite,
 } from '@/services/documentRequest'
+
+// NEW: tiny client for PayMongo endpoints
+import { startDocCheckout, confirmDocPayment } from '@/services/payments'
 
 /* ---------------- Types ---------------- */
 type PersonMinimal = {
@@ -115,25 +121,16 @@ const programSet = (arr?: string[] | null) =>
 
 function mapToPersonMinimal(details: any): PersonMinimal {
   const fullName = details?.full_name ?? details?.details?.full_name ?? null
-
-  const first_name =
-    details?.first_name ?? details?.details?.first_name ?? (fullName || '')
-
-  const middle_name =
-    details?.middle_name ?? details?.details?.middle_name ?? null
-
-  const last_name =
-    details?.last_name ?? details?.details?.last_name ?? ''
-
+  const first_name = details?.first_name ?? details?.details?.first_name ?? (fullName || '')
+  const middle_name = details?.middle_name ?? details?.details?.middle_name ?? null
+  const last_name = details?.last_name ?? details?.details?.last_name ?? ''
   const composedAddress = [
     details?.haddress ?? details?.street_name ?? details?.street,
     details?.purok_sitio_name ?? details?.purok_sitio,
     details?.barangay_name ?? details?.barangay,
     details?.city_name ?? details?.city,
   ].filter(Boolean).join(', ')
-  const address =
-    composedAddress || details?.address || details?.details?.address || undefined
-
+  const address = composedAddress || details?.address || details?.details?.address || undefined
   const mobile_number =
     details?.mobile_num ??
     details?.mobile_number ??
@@ -142,15 +139,12 @@ function mapToPersonMinimal(details: any): PersonMinimal {
     details?.contact_number ??
     details?.details?.mobile_num ??
     null
-
   const rawEmp =
     details?.employment_status ?? details?.details?.employment_status ?? null
-
   const inferredStudent =
     (typeof details?.is_student === 'boolean' ? details.is_student
       : (typeof details?.details?.is_student === 'boolean' ? details.details.is_student
         : (String(rawEmp || '').toUpperCase() === 'STUDENT')))
-
   const govProgName =
     details?.gov_mem_prog_name ??
     details?.gov_program ??
@@ -159,17 +153,12 @@ function mapToPersonMinimal(details: any): PersonMinimal {
     details?.gov_mem_prog ??
     details?.details?.gov_mem_prog_name ??
     (typeof details?.gov_mem_prog_id === 'number' ? `ID: ${details.gov_mem_prog_id}` : null)
-
   const government_programs: string[] | null =
-    details?.government_programs ??
-    details?.details?.government_programs ??
-    null
+    details?.government_programs ?? details?.details?.government_programs ?? null
 
   return {
     person_id: Number(details?.person_id ?? details?.details?.person_id ?? 0),
-    first_name,
-    middle_name,
-    last_name,
+    first_name, middle_name, last_name,
     suffix: details?.suffix ?? details?.details?.suffix ?? null,
     sex: details?.sex ?? details?.details?.sex ?? null,
     birth_date: details?.birthdate ?? details?.details?.birthdate ?? null,
@@ -204,7 +193,6 @@ function StatChip({ label, tone = 'neutral' as 'neutral' | 'ok' | 'warn' }) {
   )
 }
 
-/** Client-side hint (for banner chips only) */
 function computeWaiverApplies(subject: PersonMinimal | null, purpose?: PurposeWithFeeFlags | null) {
   if (!subject || !purpose) return { applies: false, reasons: [] as string[] }
   const age = computeAge(subject.birth_date)
@@ -306,6 +294,31 @@ function AttachmentPicker({
 export default function RequestDoc() {
   const router = useRouter()
 
+  // NEW: pay choice
+  const [payChoice, setPayChoice] = useState<'ONLINE' | 'CASH'>('ONLINE')
+
+  // deep-link handler: confirm + go to receipt
+  useEffect(() => {
+    async function handleUrl(url: string) {
+      try {
+        const parsed = ExpoLinking.parse(url)
+        const path = (parsed.path || '').toLowerCase()
+        const qp = (parsed.queryParams || {}) as Record<string, any>
+        const docId = Number(qp.doc_id || qp.id || 0)
+        if (path.includes('payments') && path.includes('success') && docId > 0) {
+          // ask server to finalize (idempotent; DEV can bypass with ?dev=1)
+          try { await confirmDocPayment(docId, { dev: true }) } catch {}
+          router.replace({ pathname: '/(residentmodals)/receipt', params: { id: String(docId) } })
+        }
+      } catch { /* ignore */ }
+    }
+    // foreground events
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url))
+    // cold start
+    Linking.getInitialURL().then(u => { if (u) handleUrl(u) })
+    return () => sub.remove()
+  }, [router])
+
   // target
   const [forWhom, setForWhom] = useState<'SELF' | 'OTHER'>('SELF')
   const [otherPerson, setOtherPerson] = useState<{ id: number | null; display: string | null }>({ id: null, display: null })
@@ -361,7 +374,6 @@ export default function RequestDoc() {
   const showModal = (opts: Partial<typeof modal>) => setModal(p => ({ ...p, visible: true, ...opts }))
   const hideModal = () => setModal(p => ({ ...p, visible: false }))
 
-  /* ---------- NEW: helper to detect business doc type ----------- */
   const isBusinessDocTypeName = (name?: string | null) => {
     const n = String(name || '').toUpperCase().trim()
     return n === BUSINESS_DOC_NAME || n.includes('BUSINESS CLEARANCE') || n.includes('BARANGAY BUSINESS')
@@ -374,7 +386,6 @@ export default function RequestDoc() {
       try {
         const types = await getDocumentTypes()
         if (!live) return
-        // EXCLUDE Barangay Business Clearance for residents
         setDocTypes((types || []).filter(t => !isBusinessDocTypeName(t.document_type_name)))
       } catch (e) { console.log('[getDocumentTypes] failed:', e) }
     })()
@@ -411,14 +422,12 @@ export default function RequestDoc() {
     return () => { live = false }
   }, [documentTypeId, docTypes, me?.person_id])
 
-  // derived
   const selectedPurpose = useMemo(
     () => purposes.find(p => p.document_purpose_id === (purposeId ?? -1)),
     [purposes, purposeId]
   )
   const offenseNo = selectedPurpose?.default_offense_no ?? null
 
-  // DEFENSIVE: also filter when mapping to dropdown items
   const documentItems = useMemo(
     () =>
       docTypes
@@ -433,13 +442,11 @@ export default function RequestDoc() {
     () => businesses.map(b => ({ label: b.business_name, value: b.business_id })), [businesses]
   )
 
-  // Subject (SELF or OTHER)
   const subject: PersonMinimal | null = useMemo(() => {
     if (forWhom === 'SELF') return me
     return otherPersonFull ? mapToPersonMinimal(otherPersonFull as any) : null
   }, [forWhom, me, otherPersonFull])
 
-  // Heuristic banner info
   const waiverHint = useMemo(() => computeWaiverApplies(subject, selectedPurpose), [subject, selectedPurpose])
 
   // SERVER: check waiver per-unit
@@ -514,7 +521,10 @@ export default function RequestDoc() {
     if (forWhom === 'OTHER' && authLetter?.uri) {
       try {
         const fileName = authLetter.name || `auth_${Date.now()}${guessExt(authLetter.type)}`
-        const { path } = await uploadAuthLetter(authLetter.uri!, fileName, { personId: Number(me?.person_id) || undefined, upsert: true })
+        const { path } = await uploadAuthLetter(authLetter.uri!, fileName, {
+          personId: Number(me?.person_id) || undefined,
+          upsert: true,
+        })
         authUploadPath = path
       } catch {
         setSubmitting(false)
@@ -547,10 +557,30 @@ export default function RequestDoc() {
 
       const newId = await createDocumentRequest(payload as any)
 
-      if (forWhom === 'OTHER' && authUploadPath) {
-        await attachAuthorizationLetter({ doc_request_id: newId, file_path: authUploadPath })
+      // → ONLINE: start PayMongo, then deep-link back
+      if (payChoice === 'ONLINE') {
+        const base = String((Constants.expoConfig?.extra as any)?.API_BASE_URL || '').replace(/\/+$/, '')
+        const successUrl = `${base}/payments/success?doc_id=${newId}`
+        const cancelUrl  = `${base}/payments/success?canceled=1`
+
+        try {
+          const { checkout_url } = await startDocCheckout(newId, {
+            success_url: successUrl,
+            cancel_url:  cancelUrl,
+            amount:      netTotal, // server may ignore; okay
+          })
+          setSubmitting(false)
+          // Open the hosted checkout; when it finishes, our success page will deep-link back
+          await WebBrowser.openBrowserAsync(checkout_url)
+          return
+        } catch (e: any) {
+          setSubmitting(false)
+          showModal({ icon: 'error', title: 'Payment setup failed', message: e?.message || 'Could not start online payment.' })
+          return
+        }
       }
 
+      // → CASH AT BARANGAY: normal success
       setSubmitting(false)
       showModal({
         icon: 'success',
@@ -584,27 +614,10 @@ export default function RequestDoc() {
     <ThemedView safe>
       <ThemedAppBar title="Request a Document" showNotif={false} showProfile={false} />
 
-      {/* Progress */}
-      {/* <View style={styles.stepper}>
-        {['Requester', 'Who is this for?', 'Document', 'Purpose & copies'].map((s, i) => (
-          <View key={s} style={styles.stepItem}>
-            <View style={styles.stepDot} />
-            <ThemedText small muted numberOfLines={1} style={{ maxWidth: 98 }}>{s}</ThemedText>
-            {i < 3 && <View style={styles.stepLine} />}
-          </View>
-        ))}
-      </View> */}
-
       <ThemedKeyboardAwareScrollView
         contentContainerStyle={{ paddingBottom: SUBMIT_BAR_HEIGHT + 28 }}
         enableOnAndroid extraScrollHeight={24} keyboardShouldPersistTaps="handled"
       >
-        {/* Summary chip */}
-        {/* <View style={styles.summaryChip}>
-          <Ionicons name="document-text-outline" size={16} color={BRAND} />
-          <ThemedText style={{ marginLeft: 6 }} weight="700">{summaryText}</ThemedText>
-        </View> */}
-
         {/* Requester */}
         <ThemedCard style={{ marginTop: 10 }}>
           <View style={styles.cardHeaderRow}>
@@ -632,7 +645,6 @@ export default function RequestDoc() {
                   <Row label="Birthdate" value={me.birth_date || '—'} />
                   <Row label="Email" value={me.email || '—'} />
                   <Row label="Address" value={me.address || '—'} multiline />
-                  {/* <Row label="Gov’t Program" value={me.government_program || '—'} /> */}
                   <Row label="Resident ID" value={me.person_id} />
                 </>
               )}
@@ -714,13 +726,8 @@ export default function RequestDoc() {
             <RowTitle icon="id-card-outline" title="Subject Details" />
             {subject && (
               <View style={{ flexDirection: 'row', gap: 6 }}>
-                {/* SHOW ONLY WHEN TRUE */}
-                {isSenior(computeAge(subject?.birth_date)) && (
-                  <StatChip label="Senior (60+)" tone="ok" />
-                )}
-                {subject?.is_student && (
-                  <StatChip label="Student" tone="ok" />
-                )}
+                {isSenior(computeAge(subject?.birth_date)) && <StatChip label="Senior (60+)" tone="ok" />}
+                {subject?.is_student && <StatChip label="Student" tone="ok" />}
               </View>
             )}
           </View>
@@ -762,10 +769,7 @@ export default function RequestDoc() {
                 <ThemedText style={styles.bannerText}>No automatic waiver detected for this purpose.</ThemedText>
               </View>
             )
-          ) : (
-            <View>
-            </View>
-          )}
+          ) : <View /> }
         </ThemedCard>
 
         {/* Document & Purpose */}
@@ -811,6 +815,19 @@ export default function RequestDoc() {
             }
           />
 
+          {/* NEW: Payment choice */}
+          <Spacer height={14} />
+          <ThemedText weight="600">How would you like to pay?</ThemedText>
+          <Spacer height={6} />
+          <ThemedRadioButton
+            options={[
+              { label: 'Pay now via GCash (recommended)', value: 'ONLINE' },
+              { label: 'Pay at the barangay', value: 'CASH' },
+            ]}
+            value={payChoice}
+            onChange={setPayChoice as any}
+          />
+
           <Spacer height={12} />
           <ThemedText weight="600">Copies</ThemedText>
           <Spacer height={6} />
@@ -826,7 +843,7 @@ export default function RequestDoc() {
             multiline
           />
 
-          {/* Business picker (won't appear since doc type is excluded, but kept for safety if reused elsewhere) */}
+          {/* Safety: Business picker (won’t show because business doc is filtered out) */}
           {docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name === BUSINESS_DOC_NAME && (
             <>
               <Spacer height={12} />
@@ -912,18 +929,6 @@ const styles = StyleSheet.create({
   rowLabel: { width: 120, color: '#6b7280' },
   rowValue: { flex: 1 },
 
-  stepper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 6, paddingBottom: 4 },
-  stepItem: { flexDirection: 'row', alignItems: 'center' },
-  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: BRAND, marginRight: 6 },
-  stepLine: { width: 28, height: 2, backgroundColor: 'rgba(49,1,1,0.25)', marginHorizontal: 8, borderRadius: 1 },
-
-  summaryChip: {
-    marginHorizontal: 16, marginTop: 6, marginBottom: 2,
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: '#eee', backgroundColor: '#fafafa',
-    flexDirection: 'row', alignItems: 'center'
-  },
-
   hintText: { marginTop: 6, color: '#6b7280' },
   errorText: { color: '#C0392B', marginTop: 6 },
 
@@ -948,23 +953,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
 
-  // Chips / banners
   chip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 9999, borderWidth: 1 },
   chipOk: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
   chipWarn: { backgroundColor: '#fff7ed', borderColor: '#fdba74' },
   chipNeutral: { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
 
-  bannerOk: {
-    borderWidth: 1, borderColor: '#86efac', backgroundColor: '#f0fdf4',
-    borderRadius: 12, padding: 10, marginTop: 4,
-  },
-  bannerNeutral: {
-    borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc',
-    borderRadius: 12, padding: 10, marginTop: 4,
-  },
+  bannerOk: { borderWidth: 1, borderColor: '#86efac', backgroundColor: '#f0fdf4', borderRadius: 12, padding: 10, marginTop: 4 },
+  bannerNeutral: { borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', borderRadius: 12, padding: 10, marginTop: 4 },
   bannerText: { marginLeft: 6 },
 
-  // modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   modalCard: { width: '100%', maxWidth: 380, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
   iconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },

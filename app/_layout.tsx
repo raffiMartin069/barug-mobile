@@ -5,8 +5,10 @@ import React, { useEffect } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
 import { NiceModalProvider } from '../hooks/NiceModalProvider'
 import { useRouteGuard } from '../hooks/useRouteGuard'
+import useDeepLinks from '../hooks/useDeepLinks'
 
 export default function RootLayout() {
+  useDeepLinks()  // <- listen for barug://receipt?id=...
   const { ready, authed, mpinSet, session } = useRouteGuard()
 
   const shortUid = session?.user?.id ? String(session.user.id).slice(0, 8) : '—'
