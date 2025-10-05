@@ -1,7 +1,7 @@
 {
   "expo": {
     "extra": {
-      "API_BASE_URL": "https://9af613487aa0.ngrok-free.app"
+      "API_BASE_URL": "https://00310643c783.ngrok-free.app"
     },
     "name": "barug",
     "slug": "barug",
@@ -15,6 +15,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.myorg.barugapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

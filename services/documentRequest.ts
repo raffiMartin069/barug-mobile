@@ -434,3 +434,104 @@ export async function getResidentFullProfile(personId: number) {
   // This RPC returns an array; take the first row
   return (Array.isArray(data) ? data[0] : data) || null
 }
+
+
+// ────────────────────────────────────────────────────────────
+// Business Clearance helpers (add to services/documentRequest.ts)
+// ────────────────────────────────────────────────────────────
+
+/** Map doc status → UI mode */
+export type ClearanceStatus = 'NONE' | 'REQUESTED' | 'ISSUED' | 'REJECTED' | 'CANCELLED'
+export type ClearanceMode = 'NORMAL' | 'CTC' | 'BLOCKED'
+
+export function resolveClearanceMode(status: ClearanceStatus): ClearanceMode {
+  // ISSUED  → only CTC allowed
+  // REQUESTED → block new requests until the current one finishes
+  if (status === 'ISSUED') return 'CTC'
+  if (status === 'REQUESTED') return 'BLOCKED'
+  return 'NORMAL'
+}
+
+/** Minimal header (used by receipts / references) */
+export async function getDocRequestHeaderLite(docRequestId: number): Promise<{
+  doc_request_id: number
+  request_code: string | null
+  status: string
+  created_at: string | Date
+  released_at?: string | Date | null
+}> {
+  // Prefer a view if you have it; otherwise fallback is still safe
+  const { data, error } = await supabase
+    .from('v_doc_request_detail')
+    .select('*')
+    .eq('doc_request_id', docRequestId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) throw new Error('Request not found')
+
+  return {
+    doc_request_id: Number((data as any).doc_request_id),
+    request_code: (data as any).request_code ?? null,
+    status: String((data as any).status || ''),
+    created_at: (data as any).created_at,
+    released_at: (data as any).released_at ?? (data as any).issued_on ?? null,
+  }
+}
+
+/**
+ * Is there an *effective* (still-valid) Business Clearance on a given date?
+ * Tries RPC `check_business_clearance_effective_on(p_business_id, p_when)`.
+ * Fallback returns { has:false } so the UI continues to work during demos.
+ */
+export async function checkBusinessClearanceEffectiveOn(
+  businessId: number,
+  when: Date | string
+): Promise<{ has: boolean; reference_request_id?: number | null; request_code?: string | null; issued_on?: string | null }> {
+  try {
+    const { data, error } = await supabase.rpc('check_business_clearance_effective_on', {
+      p_business_id: businessId,
+      p_when: typeof when === 'string' ? when : when.toISOString(),
+    })
+    if (error) throw error
+    const row = (Array.isArray(data) ? data[0] : data) || null
+    if (!row) return { has: false }
+    return {
+      has: !!row.has,
+      reference_request_id: row.reference_request_id ?? null,
+      request_code: row.request_code ?? null,
+      issued_on: row.issued_on ?? null,
+    }
+  } catch {
+    // Fallback during setup/demos
+    return { has: false }
+  }
+}
+
+/**
+ * Do we already have a request for this business for the given year?
+ * Expects RPC `check_business_clearance_for_year(p_business_id, p_year)`.
+ * Returns a normalized status; safe fallback is 'NONE'.
+ */
+export async function checkBusinessClearanceForYear(
+  businessId: number,
+  year: number
+): Promise<{ status: ClearanceStatus; doc_request_id?: number | null; request_code?: string | null }> {
+  try {
+    const { data, error } = await supabase.rpc('check_business_clearance_for_year', {
+      p_business_id: businessId,
+      p_year: year,
+    })
+    if (error) throw error
+    const row = (Array.isArray(data) ? data[0] : data) || null
+    if (!row) return { status: 'NONE' }
+    const status = String(row.status || 'NONE').toUpperCase() as ClearanceStatus
+    return {
+      status: (['NONE','REQUESTED','ISSUED','REJECTED','CANCELLED'].includes(status) ? status : 'NONE'),
+      doc_request_id: row.doc_request_id ?? null,
+      request_code: row.request_code ?? null,
+    }
+  } catch {
+    return { status: 'NONE' }
+  }
+}

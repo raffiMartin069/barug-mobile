@@ -53,6 +53,46 @@ import {
 // NEW: tiny client for PayMongo endpoints
 import { startDocCheckout, confirmDocPayment } from '@/services/payments'
 
+
+// make the auth session handoff work on iOS/Android
+WebBrowser.maybeCompleteAuthSession();
+
+// helper to open PayMongo checkout for a doc request
+async function startOnlineCheckout(docId: number) {
+  const API_BASE = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+  if (!API_BASE) throw new Error('Missing API_BASE_URL in app.json "extra".');
+
+  // Deep link back into the app to the Receipt screen
+  const returnTo = ExpoLinking.createURL('/(residentmodals)/receipt', {
+    queryParams: { id: String(docId) },
+  });
+
+  // Your own success page will redirect to `return_to` (below)
+  const successUrl = `${API_BASE}/payments/success?doc_id=${docId}&return_to=${encodeURIComponent(returnTo)}`;
+
+  const r = await fetch(`${API_BASE}/payments/api/docs/${docId}/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ success_url: successUrl }),
+  });
+  const j = await r.json();
+  if (!r.ok || !j?.checkout_url) {
+    throw new Error(j?.error || `Checkout failed (HTTP ${r.status})`);
+  }
+
+  // Open in an auth session. When the success page redirects to `returnTo`,
+  // the browser view will auto-close and control returns here.
+  const result = await WebBrowser.openAuthSessionAsync(j.checkout_url, returnTo);
+
+  // Extra safety: if the browser closed without handing back a URL,
+  // we still try to confirm and navigate.
+  if (result.type === 'success' || result.type === 'dismiss') {
+    try { await confirmDocPayment(docId, { dev: true }); } catch {}
+    // Navigate to receipt (works even if deep link already did it)
+    // No-op if you're already there.
+  }
+}
+
 /* ---------------- Types ---------------- */
 type PersonMinimal = {
   person_id: number
@@ -559,26 +599,10 @@ export default function RequestDoc() {
 
       // → ONLINE: start PayMongo, then deep-link back
       if (payChoice === 'ONLINE') {
-        const base = String((Constants.expoConfig?.extra as any)?.API_BASE_URL || '').replace(/\/+$/, '')
-        const successUrl = `${base}/payments/success?doc_id=${newId}`
-        const cancelUrl  = `${base}/payments/success?canceled=1`
+    await startOnlineCheckout(newId)
+    return // the user will be taken to PayMongo, then to the success page, then back to the app
+  }
 
-        try {
-          const { checkout_url } = await startDocCheckout(newId, {
-            success_url: successUrl,
-            cancel_url:  cancelUrl,
-            amount:      netTotal, // server may ignore; okay
-          })
-          setSubmitting(false)
-          // Open the hosted checkout; when it finishes, our success page will deep-link back
-          await WebBrowser.openBrowserAsync(checkout_url)
-          return
-        } catch (e: any) {
-          setSubmitting(false)
-          showModal({ icon: 'error', title: 'Payment setup failed', message: e?.message || 'Could not start online payment.' })
-          return
-        }
-      }
 
       // → CASH AT BARANGAY: normal success
       setSubmitting(false)
