@@ -1,4 +1,6 @@
 // app/(auth)/enter-mpin.tsx
+// at top
+import { registerMyDevice } from '@/services/push'
 import NiceModal, { ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedText from '@/components/ThemedText'
@@ -206,6 +208,14 @@ const Mpin = () => {
       attemptsRef.current = 0
       setLockedUntil(0)
       setPin('')
+
+      // 👇 NEW: register push device (resident)
+      try {
+        // safest: fetch IDs now (you already called me_profile earlier, but we fetch again)
+        const prof = await supabase.rpc('me_profile');
+        const personId = prof.data?.person_id ?? null;
+        await registerMyDevice({ user_type_id: 1, person_id: personId, staff_id: null });
+      } catch { /* ignore for now */ }
 
       openModal('Unlocked', 'Welcome back!', 'success', {
         onPrimary: () => {

@@ -2,10 +2,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Stack } from 'expo-router'
 import React, { useEffect } from 'react'
-import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, StyleSheet, View, LogBox } from 'react-native'
 import { NiceModalProvider } from '../hooks/NiceModalProvider'
 import { useRouteGuard } from '../hooks/useRouteGuard'
 import useDeepLinks from '../hooks/useDeepLinks'
+
+// 🔔 Notifications: global handler so foreground notifications show an alert
+import * as Notifications from 'expo-notifications'
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+})
+
+// (Optional but helpful) Silence Expo Go SDK 53 push warning so it doesn't redbox
+LogBox.ignoreLogs([
+  'expo-notifications: Android Push notifications (remote notifications) functionality provided by expo-notifications was removed from Expo Go'
+])
 
 export default function RootLayout() {
   useDeepLinks()  // <- listen for barug://receipt?id=...
@@ -13,6 +28,17 @@ export default function RootLayout() {
 
   const shortUid = session?.user?.id ? String(session.user.id).slice(0, 8) : '—'
   const waiting = authed && mpinSet === null
+
+  // ✅ Create the default Android notification channel once
+  useEffect(() => {
+    Notifications.setNotificationChannelAsync('default', {
+      name: 'Default',
+      importance: Notifications.AndroidImportance.MAX,
+      sound: true,
+      vibrationPattern: [0, 250, 250, 250],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+    }).catch(() => {})
+  }, [])
 
   // 🔎 DEV: log all AsyncStorage contents once on mount
   useEffect(() => {
