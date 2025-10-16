@@ -30,6 +30,7 @@ import { Household } from "@/types/householdType";
 import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
+import { transform } from "@babel/core";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
@@ -212,65 +213,16 @@ const HouseholdList = () => {
       await fetchHouseholds()
       return;
     }
-
     if (typeof key === "string") key = key.trim();
-
     try {
       const filteredHouseholdData = await searchService.Execute(key, executionType);
-      console.log("Raw data:", filteredHouseholdData);
-
       const parsedData = filteredHouseholdData.map((item: string) => JSON.parse(item));
-
-      const transformedHouseholds = parsedData.map((data: any) => ({
-        id: data.household.household_id,
-        householdNum: data.household.household_num,
-        householdHead: data.household.household_head_name,
-        houseType: data.household.house_type,
-        houseOwnership: data.household.house_ownership,
-        address: data.household.address,
-        families: data.families.map((fam: any) => ({
-          familyNum: fam.family_num,
-          headName: fam.family_head_name,
-          type: fam.household_type,
-          nhts: fam.nhts_status,
-          indigent: fam.indigent_status,
-          monthlyIncome: fam.monthly_income,
-          sourceIncome: fam.source_of_income,
-          members: fam.members.map((mem: any) => ({
-            id: mem.person_id.toString(),
-            name: mem.full_name,
-            relation: mem.relationship_to_household_head,
-            age: mem.age,
-            sex: mem.sex,
-          })),
-        })),
-      }));
-
+      const transformedHouseholds = HouseholdDataTransformation.TransformFilteredAndSearchHouseholdData(parsedData);
       setHouseholds(transformedHouseholds);
     } catch (error) {
       console.error("Error searching households:", error);
     }
   };
-
-
-
-  // const filteredHouseholds = households.filter((hh) => {
-
-  //   /* 
-  //     This function is used to filter households based on the search input.
-  //     The usual criteria are household number and household head name.
-
-  //     By: raf
-
-  //   */
-  //   if (!search.trim()) return true;
-
-  //   const searchLower = search.toLowerCase().trim();
-  //   const householdNumMatch = hh.householdNum.toLowerCase().includes(searchLower);
-  //   const householdHeadMatch = hh.householdHead.toLowerCase().includes(searchLower);
-
-  //   return householdNumMatch || householdHeadMatch;
-  // });
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
