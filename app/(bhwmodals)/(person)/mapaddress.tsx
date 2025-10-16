@@ -2,13 +2,13 @@
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedMapAddress from '@/components/ThemedMapAddress'
 import ThemedView from '@/components/ThemedView'
-import { useSearchParams } from 'expo-router/build/hooks'
+import { useLocalSearchParams } from 'expo-router'
 import React from 'react'
 
 const MapAddress = () => {
-  const params = useSearchParams()
+  const params = useLocalSearchParams()
   // Default back to ResidentAddress
-  const routeTo = params.get('returnTo') ?? '/residentaddress'
+  const routeTo = params.returnTo ?? '/residentaddress';
 
   return (
     <ThemedView safe>

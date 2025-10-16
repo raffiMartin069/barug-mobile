@@ -6,8 +6,9 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { useUpdateHouseholdInforStore } from '@/store/useUpdateHouseholdInforStore'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
 
 type Option = { label: string; value: string }
@@ -17,7 +18,7 @@ const UpdateHhInfo = () => {
   const params = useLocalSearchParams<{
     id?: string
     householdNum?: string
-    householdHeadName?: string
+    currentHeadName?: string
     address?: string
     houseType?: string
     houseOwnership?: string
@@ -25,12 +26,31 @@ const UpdateHhInfo = () => {
 
   // Context / read-only
   const householdNum = params.householdNum ?? params.id ?? ''
-  const householdHeadName = params.householdHeadName ?? '—'
+  const householdHeadName = params.currentHeadName ?? '—'
 
   // Editable fields (prefill from params if provided)
   const [hAddress, setHAddress] = useState(params.address ?? '')
   const [housetype, setHouseType] = useState<string>(params.houseType ?? '')
   const [houseownership, setHouseOwnership] = useState<string>(params.houseOwnership ?? '')
+
+  const houseNumber = useUpdateHouseholdInforStore((state) => state.householdNumber);
+  const houseHead = useUpdateHouseholdInforStore((state) => state.householdHead);
+  const address = useUpdateHouseholdInforStore((state) => state.address);
+  const houseType = useUpdateHouseholdInforStore((state) => state.houseType);
+  const houseOwnership = useUpdateHouseholdInforStore((state) => state.houseOwnership);
+
+  const setHouseNumber = useUpdateHouseholdInforStore((state) => state.setHouseholdNumber);
+  const setHouseHead = useUpdateHouseholdInforStore((state) => state.setHouseholdHead);
+  const setAddress = useUpdateHouseholdInforStore((state) => state.setAddress);
+  const setHouseTypeStore = useUpdateHouseholdInforStore((state) => state.setHouseType);
+  const setHouseOwnershipStore = useUpdateHouseholdInforStore((state) => state.setHouseOwnership);
+  const clearStore = useUpdateHouseholdInforStore((state) => state.clear);
+
+  useEffect(() => {
+    setHouseNumber(parseInt(householdNum.replace(/\D/g, '')) || 0);
+    setHouseHead(householdHeadName);
+  }, [householdNum, householdHeadName]);
+
 
   // Dropdown options (stub—replace with your data)
   const houseTypeItems: Option[] = useMemo(
@@ -56,7 +76,7 @@ const UpdateHhInfo = () => {
   const handleHomeAddress = () => {
     router.push({
       pathname: '/mapaddress',
-      params: { returnTo: '/homeaddress' }, // keep your existing flow
+      params: { returnTo: '/updatehhinfo' }, // keep your existing flow
     })
   }
 
@@ -85,12 +105,12 @@ const UpdateHhInfo = () => {
         <View>
           {/* --- Context: Household Number & Head (text only) --- */}
           <ThemedText style={styles.label}>Household Number</ThemedText>
-          <ThemedText style={styles.value}>{householdNum || '—'}</ThemedText>
+          <ThemedText style={styles.value}>{houseNumber || '—'}</ThemedText>
 
           <Spacer height={10} />
 
           <ThemedText style={styles.label}>Household Head</ThemedText>
-          <ThemedText style={styles.value}>{householdHeadName}</ThemedText>
+          <ThemedText style={styles.value}>{houseHead || '—'}</ThemedText>
 
           <Spacer height={14} />
 
@@ -99,8 +119,8 @@ const UpdateHhInfo = () => {
           <Pressable onPress={handleHomeAddress}>
             <ThemedTextInput
               placeholder="Home Address"
-              value={hAddress}
-              onChangeText={setHAddress}
+              value={address}
+              onChangeText={setAddress}
               editable={false}
               pointerEvents="none"
             />
@@ -110,8 +130,8 @@ const UpdateHhInfo = () => {
 
           <ThemedDropdown
             items={houseTypeItems}
-            value={housetype}
-            setValue={setHouseType}
+            value={houseType}
+            setValue={setHouseTypeStore}
             placeholder="House Type"
             order={0}
           />
@@ -120,8 +140,8 @@ const UpdateHhInfo = () => {
 
           <ThemedDropdown
             items={houseOwnershipItems}
-            value={houseownership}
-            setValue={setHouseOwnership}
+            value={houseOwnership}
+            setValue={setHouseOwnershipStore}
             placeholder="House Ownership"
             order={1}
           />
