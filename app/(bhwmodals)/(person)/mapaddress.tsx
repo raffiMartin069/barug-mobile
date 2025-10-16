@@ -1,20 +1,23 @@
-// app/.../mapaddress.tsx
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedMapAddress from '@/components/ThemedMapAddress'
 import ThemedView from '@/components/ThemedView'
-import { useLocalSearchParams } from 'expo-router'
+import { useSearchParams } from 'expo-router/build/hooks'
 import React from 'react'
 
 const MapAddress = () => {
-  const params = useLocalSearchParams()
-  // Default back to ResidentAddress
-  const routeTo = params.returnTo ?? '/residentaddress';
+  const params = useSearchParams()
+  const routeTo = params.get('returnTo') || '/homeaddress'
 
   return (
-    <ThemedView safe>
-      <ThemedAppBar title='Map sa mapaddress.tsx' showNotif={false} showProfile={false} />
-      {/* ThemedMapAddress should navigate ONLY when user confirms selection */}
-      <ThemedMapAddress route={routeTo} />
+    <ThemedView safe={true}>
+        <ThemedAppBar
+          title='Map'
+          showNotif={false}
+          showProfile={false}
+        />
+        <ThemedMapAddress
+            route={routeTo}
+        />
     </ThemedView>
   )
 }
