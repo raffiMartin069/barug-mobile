@@ -8,9 +8,12 @@ import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { HouseholdException } from '@/exception/HouseholdException'
+import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
+import { HouseholdRepository } from '@/repository/householdRepository'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useMemo, useState } from 'react'
-import { StyleSheet } from 'react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Alert, StyleSheet } from 'react-native'
 
 type Resident = {
   person_id: string
@@ -63,16 +66,32 @@ const UpdateFamHead = () => {
   // New head selection
   const [searchText, setSearchText] = useState('')
   const [newHeadId, setNewHeadId] = useState<string>('')
+  const [residentList, setResidentList] = useState<Resident[]>([])
 
   // Reason
   const [reason, setReason] = useState<ChangeReason | null>(null)
   const [otherReason, setOtherReason] = useState('')
-
-  const residentItems = useMemo(() => RESIDENTS, [])
+  
+  const residentItems = useMemo(() => residentList, [residentList])
   const reasonItems = useMemo(
     () => CHANGE_REASONS.map(r => ({ label: r, value: r })),
     []
   )
+
+  const repository = new HouseholdRepository()
+
+  const { results, search } = usePersonSearchByKey()
+  
+    useEffect(() => {
+      if (!results || !Array.isArray(results)) return;
+  
+      setResidentList(prev => {
+        const newItems = results.filter(
+          r => !prev.some(p => p.person_id === r.person_id)
+        );
+        return [...prev, ...newItems];
+      });
+    }, [results]);
 
   const canSubmit =
     !!newHeadId &&
@@ -81,15 +100,40 @@ const UpdateFamHead = () => {
     (reason !== 'OTHER' || otherReason.trim().length > 2)
 
   const handleSubmit = () => {
-    // TODO: call your API / mutation:
-    // {
-    //   householdId,
-    //   familyNum,
-    //   newHeadId,
-    //   reason,
-    //   reasonNote: reason === 'OTHER' ? otherReason.trim() : undefined
-    // }
-    router.back()
+    const updateInfo = async() => {
+      try {
+        const finalReason = reason === "OTHER" ? otherReason.trim() : reason!;
+        const familyId = await repository.GetFamilyIdByFamilyNumber(familyNum);
+        if (!familyId) {
+          Alert.alert('Warning', 'Family not found. Please check the family number and try again.');
+          return;
+        }
+        const result = await repository.UpdateFamilyHead(familyId, Number(newHeadId), 0, finalReason);
+        if (!result) {
+          Alert.alert('Error', 'Failed to update family head. Please try again.');
+          return;
+        }
+        Alert.alert(
+          'Success',
+          'Family head updated successfully.',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ],
+          { cancelable: false }
+        );
+      } catch (error) {
+        if (error instanceof HouseholdException) {
+          Alert.alert('Warning', error.message);
+          return;
+        }
+        console.error('Failed to update family head:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
+      }
+    }
+    updateInfo();
   }
 
   return (
@@ -125,6 +169,7 @@ const UpdateFamHead = () => {
             inputValue={searchText}
             onInputValueChange={(t) => {
               setSearchText(t)
+              search(t)
               if (!t) setNewHeadId('')
             }}
             placeholder="Search (Name / Resident ID)"
