@@ -1,9 +1,44 @@
 import { supabase } from "@/constants/supabase";
+import { HouseholdException } from "@/exception/HouseholdException";
 import { MemberRemovalException } from "@/exception/memberRemovalException";
 import { MembershipException } from "@/exception/membershipExcption";
 import { MemberRemovalType } from "@/types/memberRemoval";
 
 export class HouseholdRepository {
+
+    async GetHouseholdIdByHouseholdNumber(householdNum: string) {
+        const { data, error } = await supabase
+            .from("household_info")
+            .select('household_id')
+            .eq('household_num', householdNum)
+            .single()
+        if (!data) {
+            return null;
+        }
+        return data?.household_id || null;
+    }
+
+    async UpdatehouseholdHead(
+        p_household_id: number,
+        p_new_head_person_id: number,
+        p_performed_by: number,
+        p_reason: string) {
+        const func = "change_household_head";
+        const { data, error } = await supabase.rpc(func, {
+            p_household_id,
+            p_new_head_person_id,
+            p_performed_by,
+            p_reason
+        });
+        if (error) {
+            if (error.code && HouseholdException.getErrorCodes().has(String(error.code))) {
+                console.error(`Error calling ${func}:`, error);
+                throw new HouseholdException(error.message);
+            }
+            throw new Error(error.message);
+        }
+        return data || null;
+    }
 
     async GetMemberId(residentId: number) {
         const { data, error } = await supabase
@@ -45,10 +80,10 @@ export class HouseholdRepository {
 
     async GetHouseholdIdByResidentId(id: number) {
         const { data, error } = await supabase
-        .from("household_info")
-        .select('household_id')
-        .eq('household_head_id', id)
-        .single()
+            .from("household_info")
+            .select('household_id')
+            .eq('household_head_id', id)
+            .single()
         if (error) {
             throw new MembershipException("The selected Household Head does not have an existing household yet.");
         }
