@@ -7,6 +7,41 @@ import { HouseholdUpdateType } from "@/types/request/householdUpdateType";
 
 export class HouseholdRepository {
 
+    async GetFamilyIdByFamilyNumber(familyNum: string) {
+        const { data, error } = await supabase
+            .from("family_unit")
+            .select('family_id')
+            .eq('family_num', familyNum)
+            .single()
+        if (!data) {
+            return null;
+        }
+        return data?.family_id || null;
+    }
+
+    async UpdateFamilyHead(
+        p_family_id: number,
+        p_new_head_person_id: number,
+        p_performed_by: number,
+        p_reason: string) {
+        const func = "change_family_head";
+        const { data, error } = await supabase.rpc(func, {
+            p_family_id,
+            p_new_head_person_id,
+            p_performed_by,
+            p_reason
+        });
+        if (error) {
+            if (error.code && HouseholdException.getErrorCodes().has(String(error.code))) {
+                console.error(`Error calling ${func}:`, error);
+                throw new HouseholdException(error.message);
+            }
+            throw new Error(error.message);
+        }
+        return data || null;
+    }
+
+
     async UpdateHouseholdInformation(request: HouseholdUpdateType) {
         const func = "update_hhold_info";
         const { data, error } = await supabase.rpc(func, request);
