@@ -6,6 +6,7 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { useGeolocationStore } from '@/store/geolocationStore'
+import { useDynamicRouteStore } from '@/store/useDynamicRouteStore'
 import { GeolocationType } from '@/types/geolocation'
 import { useRouter } from 'expo-router'
 import { useSearchParams } from 'expo-router/build/hooks'
@@ -37,6 +38,8 @@ const HomeAddress = () => {
     const setLng = useGeolocationStore((state: GeolocationType) => state.setLng)
     const setSitioCode = useGeolocationStore((state: GeolocationType) => state.setPurokSitioCode)
 
+    const returnToPath = useDynamicRouteStore((state) => state.returnTo);
+
     useEffect(() => {
         setHouseNumber(hnum)
         setHomeStreet(streetState)
@@ -58,7 +61,7 @@ const HomeAddress = () => {
 
   const submitAddress = () => {
     router.push({
-        pathname: '/createhousehold',
+        pathname: returnToPath ? returnToPath as typeof router.push.arguments[0]['pathname'] : '/createhousehold',
         params: {
             hnum: hnum,
             street: streetState,

@@ -22,8 +22,10 @@ import { HouseholdRepository } from "@/repository/householdRepository";
 import { HouseholdListService } from "@/services/householdList";
 import { MemberRemovalService } from "@/services/memberRemovalService";
 import { SearchSchedulingService } from "@/services/SearchSchedulingService";
+import { useGeolocationStore } from "@/store/geolocationStore";
 
 import { useHouseMateStore } from "@/store/houseMateStore";
+import { useBasicHouseholdInfoStore } from "@/store/useBasicHouseholdInfoStore";
 
 import { Family } from "@/types/familyTypes";
 import { Household } from "@/types/householdType";
@@ -97,6 +99,11 @@ const HouseholdList = () => {
   }
   const houseEllipsisRef = useRef<View>(null)
   const familyEllipsisRefs = useRef<Record<string, View | null>>({})
+
+  const setHouseholdNumber = useBasicHouseholdInfoStore((state) => state.setHouseholdNumber);
+  const setHouseholdHead = useBasicHouseholdInfoStore((state) => state.setHouseholdHead);
+
+  const clearAddress = useGeolocationStore((state) => state.clear);
 
   const isFocused = useIsFocused();
 
@@ -339,7 +346,6 @@ const HouseholdList = () => {
       </KeyboardAvoidingView>
 
       {/* ---------- Bottom Sheet --------- */}
-      {/* ---------- Bottom Sheet --------- */}
       <ThemedBottomSheet visible={open} onClose={closeSheet}>
         {selectedHousehold && (
           <View style={{ flex: 1 }}>
@@ -374,6 +380,9 @@ const HouseholdList = () => {
                         label: 'Update Household Information',
                         onPress: () => {
                           closeMenuPortal()
+                          setHouseholdNumber(selectedHousehold.householdNum)
+                          setHouseholdHead(selectedHousehold.householdHead)
+                          clearAddress();
                           router.push({
                             pathname: '/updatehhinfo',
                             params: {

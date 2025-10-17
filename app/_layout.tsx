@@ -12,7 +12,7 @@ export default function RootLayout() {
   // const shortUid = session?.user?.id ? String(session.user.id).slice(0, 8) : '—'
   // const waiting = authed && mpinSet === null
 
-  // 🔎 DEV: log all AsyncStorage contents once on mount
+  // // 🔎 DEV: log all AsyncStorage contents once on mount
   // useEffect(() => {
   //   if (!__DEV__) return // don’t do this in production
 

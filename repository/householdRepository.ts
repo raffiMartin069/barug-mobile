@@ -3,8 +3,22 @@ import { HouseholdException } from "@/exception/HouseholdException";
 import { MemberRemovalException } from "@/exception/memberRemovalException";
 import { MembershipException } from "@/exception/membershipExcption";
 import { MemberRemovalType } from "@/types/memberRemoval";
+import { HouseholdUpdateType } from "@/types/request/householdUpdateType";
 
 export class HouseholdRepository {
+
+    async UpdateHouseholdInformation(request: HouseholdUpdateType) {
+        const func = "update_hhold_info";
+        const { data, error } = await supabase.rpc(func, request);
+        if (error) {
+            if (error.code && HouseholdException.getErrorCodes().has(String(error.code))) {
+                console.error(`Error calling ${func}:`, error);
+                throw new HouseholdException(error.message);
+            }
+            throw new Error(error.message);
+        }
+        return data || null;
+    }
 
     async GetHouseholdIdByHouseholdNumber(householdNum: string) {
         const { data, error } = await supabase

@@ -6,9 +6,18 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { houseOwnership } from '@/constants/houseOwnership'
+import { houseType } from '@/constants/houseType'
+import { HouseholdException } from '@/exception/HouseholdException'
+import { HouseholdRepository } from '@/repository/householdRepository'
+import { HouseholdService } from '@/services/HouseholdService'
+import { useGeolocationStore } from '@/store/geolocationStore'
+import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
+import { useDynamicRouteStore } from '@/store/useDynamicRouteStore'
+import { HouseholdUpdateType } from '@/types/request/householdUpdateType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useMemo, useState } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Alert, Pressable, StyleSheet, View } from 'react-native'
 
 type Option = { label: string; value: string }
 
@@ -31,6 +40,25 @@ const UpdateHhInfo = () => {
   const [hAddress, setHAddress] = useState(params.address ?? '')
   const [housetype, setHouseType] = useState<string>(params.houseType ?? '')
   const [houseownership, setHouseOwnership] = useState<string>(params.houseOwnership ?? '')
+
+  const houseHoldNumber = useBasicHouseholdInfoStore((state) => state.householdNumber);
+  const houseHead = useBasicHouseholdInfoStore((state) => state.householdHead);
+
+  const setReturnPath = useDynamicRouteStore((state) => state.setReturnTo);
+  const returnPath = useDynamicRouteStore((state) => state.returnTo);
+
+  const getFullAddress = useGeolocationStore((state) => state.getFullAddress);
+
+
+  const street = useGeolocationStore((state) => state.street);
+  const barangay = useGeolocationStore((state) => state.barangay);
+  const city = useGeolocationStore((state) => state.city);
+  const lat = useGeolocationStore((state) => state.lat);
+  const lng = useGeolocationStore((state) => state.lng);
+  const sitio = useGeolocationStore((state) => state.purokSitio);
+  const purokSitioCode = useGeolocationStore((state) => state.purokSitioCode);
+
+  const householdService = new HouseholdService(new HouseholdRepository());
 
   // Dropdown options (stub—replace with your data)
   const houseTypeItems: Option[] = useMemo(
@@ -60,17 +88,63 @@ const UpdateHhInfo = () => {
     })
   }
 
+  useEffect(() => {
+    if (!getFullAddress()) return;
+    console.log('Auto-updating full address from store:', getFullAddress());
+    setHAddress(getFullAddress());
+  }, [getFullAddress])
+
   const canSubmit = !!hAddress && !!housetype && !!houseownership
 
   const onSubmit = () => {
-    // TODO: call your update mutation:
-    // {
-    //   householdId: params.id ?? householdNum,
-    //   address: hAddress,
-    //   houseType: housetype,
-    //   houseOwnership: houseownership
-    // }
-    router.back()
+    if (!canSubmit) return
+
+    const updateInfo = async () => {
+      try {
+        const updateRequest: HouseholdUpdateType = {
+          p_performed_by: 0,
+          p_household_id: houseHoldNumber ? parseInt(houseHoldNumber) : 0,
+          p_reason: "N/A",
+          p_house_type_id: parseInt(housetype),
+          p_house_ownership_id: parseInt(houseownership),
+          p_city: city,
+          p_barangay: barangay,
+          p_street: street,
+          p_purok_sitio_name: sitio,
+          p_latitude: lat,
+          p_longitude: lng,
+        };
+        console.log("Update Request:", updateRequest);
+        const result = await householdService.ExecuteUpdateHouseholdInformation(updateRequest);
+        console.log("Update result:", result);
+
+        if (!result) {
+          Alert.alert("Error", "Failed to update household information. Please try again.");
+          return;
+        }
+
+        Alert.alert("Success", `Household information updated successfully.`, [
+          {
+            text: "OK",
+            onPress: () => {
+              router.push({
+                pathname: '/householdlist',
+              });
+            },
+          },
+        ]);
+
+      } catch (error) {
+        if (!(error instanceof HouseholdException)) {
+          console.error("Unexpected error:", error);
+          Alert.alert("An unexpected error occurred. Please try again.");
+          return;
+        }
+        Alert.alert("Error", error.message);
+        return;
+      }
+    }
+    updateInfo();
   }
 
   return (
@@ -85,18 +159,21 @@ const UpdateHhInfo = () => {
         <View>
           {/* --- Context: Household Number & Head (text only) --- */}
           <ThemedText style={styles.label}>Household Number</ThemedText>
-          <ThemedText style={styles.value}>{householdNum || '—'}</ThemedText>
+          <ThemedText style={styles.value}>{houseHoldNumber || '—'}</ThemedText>
 
           <Spacer height={10} />
 
           <ThemedText style={styles.label}>Household Head</ThemedText>
-          <ThemedText style={styles.value}>{householdHeadName}</ThemedText>
+          <ThemedText style={styles.value}>{houseHead || '—'}</ThemedText>
 
           <Spacer height={14} />
 
           {/* --- Editable fields (same as CreateHousehold minus head picker) --- */}
           <ThemedText style={styles.label}>Home Address</ThemedText>
-          <Pressable onPress={handleHomeAddress}>
+          <Pressable onPress={() => {
+            setReturnPath("/updatehhinfo");
+            handleHomeAddress()
+          }}>
             <ThemedTextInput
               placeholder="Home Address"
               value={hAddress}
@@ -109,7 +186,7 @@ const UpdateHhInfo = () => {
           <Spacer height={10} />
 
           <ThemedDropdown
-            items={houseTypeItems}
+            items={houseType}
             value={housetype}
             setValue={setHouseType}
             placeholder="House Type"
@@ -119,7 +196,7 @@ const UpdateHhInfo = () => {
           <Spacer height={10} />
 
           <ThemedDropdown
-            items={houseOwnershipItems}
+            items={houseOwnership}
             value={houseownership}
             setValue={setHouseOwnership}
             placeholder="House Ownership"
