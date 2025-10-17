@@ -84,7 +84,7 @@ const UpdateHhInfo = () => {
   const handleHomeAddress = () => {
     router.push({
       pathname: '/mapaddress',
-      params: { returnTo: returnPath }, // keep your existing flow
+      params: { returnTo: '/homeaddress' }, // keep your existing flow
     })
   }
 
@@ -105,7 +105,6 @@ const UpdateHhInfo = () => {
           p_performed_by: 0,
           p_household_id: houseHoldNumber ? parseInt(houseHoldNumber) : 0,
           p_reason: "N/A",
-          p_household_head_id: 0,
           p_house_type_id: parseInt(housetype),
           p_house_ownership_id: parseInt(houseownership),
           p_city: city,
@@ -124,7 +123,7 @@ const UpdateHhInfo = () => {
           return;
         }
 
-        Alert.alert("Success", `Household information updated successfully ${result}.`, [
+        Alert.alert("Success", `Household information updated successfully.`, [
           {
             text: "OK",
             onPress: () => {

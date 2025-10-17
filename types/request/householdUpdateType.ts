@@ -2,7 +2,6 @@ export type HouseholdUpdateType = {
     p_performed_by : number
     p_household_id : number
     p_reason : string | null
-    p_household_head_id : number
     p_house_type_id : number
     p_house_ownership_id : number
     p_city : string
