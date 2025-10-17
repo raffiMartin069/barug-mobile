@@ -523,6 +523,7 @@ const HouseholdList = () => {
                                           id: selectedHousehold.id,
                                           householdNum: selectedHousehold.householdNum,
                                           familyNum: fam.familyNum,
+                                          familyHeadName: fam.headName,
                                         },
                                       })
                                     },
