@@ -1,37 +1,44 @@
 // services/blotterReport.ts
 import { supabase } from '@/constants/supabase';
 
-/** INPUT from the RN screen */
+/** INPUT from the RN screen (includes map fields) */
 export type CreateBlotterReportInput = {
   incidentSubject: string;
   incidentDesc: string;
-  incidentDate: string;     // 'YYYY-MM-DD'
-  incidentTime: string;     // 'HH:mm'
+  incidentDate: string; // 'YYYY-MM-DD'
+  incidentTime: string; // 'HH:mm'
+
+  // If you already have an address row, pass the id; otherwise pass the map fields below and we'll create one.
   incidentAddressId: number | null;
+
+  // MAP fields coming from /mapaddress
+  mapStreet?: string | null;
+  mapPurok?: string | null;      // e.g. 'KANIPAAN (S01)' or 'KANIPAAN'
+  mapBarangay?: string | null;
+  mapCity?: string | null;
+  incidentLat?: number | null;
+  incidentLng?: number | null;
+
   complainantId: number | null;
   respondentIds: number[];
-  evidenceUris?: string[];  // optional: file://… image URIs to upload
+  evidenceUris?: string[]; // optional: file://… image URIs to upload
 };
 
-/** Minimal shape returned after creating a report */
-export type CreatedReport = {
-  blotter_report_id: number;
-};
+export type CreatedReport = { blotter_report_id: number };
 
-/** Utility: convert RN file:// URI to Blob for Supabase Storage */
+/* ---------------- Utilities ---------------- */
+
 async function uriToBlob(uri: string): Promise<Blob> {
   const res = await fetch(uri);
   if (!res.ok) throw new Error(`Failed to read file: ${uri}`);
   return await res.blob();
 }
 
-/** Make a unique-ish folder (timestamp + random suffix) */
 function makeUniqueFolder(prefix = 'blotter-evidence') {
   const rand = Math.random().toString(36).slice(2, 8);
   return `${prefix}/${Date.now()}_${rand}`;
 }
 
-/** Upload attachments to Supabase Storage; returns array of {bucket, path} */
 export async function uploadEvidence(
   uris: string[],
   opts?: { bucket?: string; folder?: string }
@@ -55,97 +62,126 @@ export async function uploadEvidence(
   return out;
 }
 
-/**
- * Create blotter report directly in Supabase.
- * Tries RPC `create_blotter_report(...)` first (same as Django),
- * then falls back to manual inserts if the RPC isn’t available.
- */
-export async function createBlotterReport(input: CreateBlotterReportInput): Promise<CreatedReport> {
-  // 1) Optional: upload evidence and pass as JSONB array of storage paths
-  const evidence = input.evidenceUris?.length
-    ? await uploadEvidence(input.evidenceUris).then(arr => arr.map(x => `${x.bucket}:${x.path}`))
-    : null;
+/* ---------------- Address helpers (mirror your Django flow) ---------------- */
 
-  // 2) Try RPC (recommended; mirrors your Django call)
-  try {
-    const { data, error } = await supabase.rpc('create_blotter_report', {
-      // change arg names here if your SQL function uses different names
-      p_staff_id: null,                                       // mobile filing → no staff
-      p_incident_subject: input.incidentSubject || null,
-      p_incident_desc: input.incidentDesc || null,
-      p_incident_date: input.incidentDate || null,
-      p_incident_time: input.incidentTime || null,
-      p_incident_address_id: input.incidentAddressId ?? null,
-      p_complainant_id: input.complainantId ?? null,
-      p_respondent_ids: input.respondentIds?.length ? input.respondentIds : null,
-      p_evidence: evidence ? JSON.stringify(evidence) : null, // if your SQL expects jsonb
-    });
+// Look up purok_sitio_id by name; accepts "KANIPAAN (S01)" or "KANIPAAN"
+async function resolvePurokSitioId(purokName?: string | null): Promise<number | null> {
+  if (!purokName) return null;
+  const name = (purokName.split(' (', 1)[0] || purokName).trim();
+  if (!name) return null;
 
-    if (error) throw error;
+  const { data, error } = await supabase
+    .from('purok_sitio')
+    .select('purok_sitio_id')
+    .ilike('purok_sitio_name', name)
+    .limit(1)
+    .maybeSingle();
 
-    if (typeof data === 'number') return { blotter_report_id: data };
-    if (data && typeof (data as any).blotter_report_id === 'number') {
-      return { blotter_report_id: (data as any).blotter_report_id };
-    }
-
-    throw new Error('RPC returned no id');
-  } catch {
-    // 3) Fallback: manual inserts (non-transactional in PostgREST)
-    // 3a) Insert header
-    const { data: hdr, error: insErr } = await supabase
-      .from('blotter_report')
-      .insert([
-        {
-          incident_subject: input.incidentSubject || null,
-          incident_desc: input.incidentDesc || null,
-          incident_date: input.incidentDate || null,
-          incident_time: input.incidentTime || null,
-          incident_address_id: input.incidentAddressId ?? null,
-        },
-      ])
-      .select('blotter_report_id')
-      .single();
-
-    if (insErr) throw new Error(insErr.message);
-    const reportId = hdr!.blotter_report_id as number;
-
-    // 3b) Link complainant (optional)
-    if (input.complainantId) {
-      const { error } = await supabase
-        .from('complainant_report')
-        .insert([{ blotter_report_id: reportId, person_id: input.complainantId }]);
-      if (error) throw new Error(`complainant_report: ${error.message}`);
-    }
-
-    // 3c) Link respondents (0..n)
-    if (input.respondentIds?.length) {
-      const rows = input.respondentIds.map((pid) => ({
-        blotter_report_id: reportId,
-        person_id: pid,
-      }));
-      const { error } = await supabase.from('respondent_report').insert(rows);
-      if (error) throw new Error(`respondent_report: ${error.message}`);
-    }
-
-    // 3d) Optional evidence table (uncomment/adjust if you have one)
-    // if (evidence?.length) {
-    //   const rows = evidence.map((path) => ({
-    //     blotter_report_id: reportId,
-    //     storage_path: path,
-    //   }));
-    //   const { error } = await supabase.from('blotter_report_evidence').insert(rows);
-    //   if (error) throw new Error(`evidence: ${error.message}`);
-    // }
-
-    return { blotter_report_id: reportId };
+  if (error) {
+    console.warn('[Svc] resolvePurokSitioId error:', error);
+    return null;
   }
+  return data?.purok_sitio_id ?? null;
 }
 
-/**
- * Resident search (for complainant/respondent pickers).
- * - Works even without a custom RPC.
- * - Matches first/last name, person_code, or simple address bits.
- */
+function up(s?: string | null): string | null {
+  return typeof s === 'string' && s.trim() ? s.trim().toUpperCase() : null;
+}
+
+// Create an addresss row if we have lat/lng (like your web view)
+async function createAddressIfNeeded(input: CreateBlotterReportInput): Promise<number | null> {
+  if (input.incidentAddressId) return input.incidentAddressId;
+  if (input.incidentLat == null || input.incidentLng == null) return null;
+
+  const purokId = await resolvePurokSitioId(input.mapPurok ?? null);
+
+  const row = {
+    latitude: input.incidentLat,
+    longitude: input.incidentLng,
+    street: up(input.mapStreet ?? null),
+    barangay: up(input.mapBarangay ?? null),
+    city: up(input.mapCity ?? null),
+    purok_sitio_id: purokId,
+  };
+
+  console.log('[Svc] createAddressIfNeeded insert row:', row);
+
+  const { data, error } = await supabase
+    .from('addresss') // NOTE: triple 's' per your schema
+    .insert([row])
+    .select('address_id')
+    .single();
+
+  if (error) {
+    console.error('[Svc] createAddressIfNeeded error:', error);
+    throw error;
+  }
+
+  console.log('[Svc] createAddressIfNeeded new address_id:', data?.address_id);
+  return data?.address_id ?? null;
+}
+
+/* ---------------- Main: Create blotter report ---------------- */
+
+export async function createBlotterReport(input: CreateBlotterReportInput): Promise<CreatedReport> {
+  // Normalize respondent IDs
+  const respondentIds = (input.respondentIds || [])
+    .map((n) => Number(n))
+    .filter((n) => Number.isFinite(n));
+
+  // Upload evidence (optional)
+  const evidenceArray = input.evidenceUris?.length
+    ? (await uploadEvidence(input.evidenceUris)).map((x) => `${x.bucket}:${x.path}`)
+    : [];
+
+  // Ensure we have an address_id like your web flow
+  const addressId = await createAddressIfNeeded(input);
+
+  // Log the final payload we intend to send to RPC
+  const debugPayload = {
+    // IMPORTANT: your PostgREST hint says use p_reported_by (NOT p_staff_id)
+    p_reported_by: null, // mobile → no staff
+    p_incident_subject: input.incidentSubject || null,
+    p_incident_desc: input.incidentDesc || null,
+    p_incident_date: input.incidentDate || null,
+    p_incident_time: input.incidentTime || null,
+    p_incident_address_id: addressId ?? null,
+    p_complainant_id: input.complainantId ?? null,
+    p_respondent_ids: respondentIds.length ? respondentIds : null,
+    p_evidence: evidenceArray.length ? evidenceArray : null, // jsonb
+  };
+  console.log('[Svc] RPC payload (create_blotter_report):', JSON.stringify(debugPayload, null, 2));
+
+  // Call the same RPC your Django code implies but with the correct param name
+  let { data, error } = await supabase.rpc('create_blotter_report', debugPayload);
+
+  // If PostgREST complains about array typing, try a text[] style fallback for respondents
+  if (error && /array|int\[\]/i.test(error.message || '')) {
+    console.warn('[Svc] RPC array type error, retrying with text array cast…', error);
+    const textArray = respondentIds.length ? `{${respondentIds.join(',')}}` : null; // '{1,2,3}'
+    const retryPayload = { ...debugPayload, p_respondent_ids: textArray };
+    console.log('[Svc] RPC retry payload:', retryPayload);
+    ({ data, error } = await supabase.rpc('create_blotter_report', retryPayload));
+  }
+
+  console.log('[Svc] RPC result:', { data, error });
+
+  if (error) throw error;
+
+  if (typeof data === 'number') return { blotter_report_id: data };
+  if (data && typeof (data as any).create_blotter_report === 'number') {
+    // Some setups return the function name as key
+    return { blotter_report_id: (data as any).create_blotter_report };
+  }
+  if (data && typeof (data as any).blotter_report_id === 'number') {
+    return { blotter_report_id: (data as any).blotter_report_id };
+  }
+
+  throw new Error('RPC returned no blotter_report_id.');
+}
+
+/* ---------------- Search (unchanged) ---------------- */
+
 export type ResidentLite = {
   person_id: number;
   full_name: string;
@@ -157,7 +193,6 @@ export async function searchResidents(q: string): Promise<ResidentLite[]> {
   const query = (q || '').trim();
   if (query.length < 2) return [];
 
-  // Optional: fast RPC if you have one
   try {
     const { data, error } = await supabase.rpc('person_suggest_mobile', { q: query });
     if (!error && Array.isArray(data)) {
@@ -183,7 +218,6 @@ export async function searchResidents(q: string): Promise<ResidentLite[]> {
     // fall through
   }
 
-  // Generic PostgREST query against `person` (adjust relations if your FKs differ)
   const { data, error } = await supabase
     .from('person')
     .select(

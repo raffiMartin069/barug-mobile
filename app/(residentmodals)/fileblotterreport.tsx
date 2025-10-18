@@ -26,17 +26,19 @@ import ThemedDatePicker from '@/components/ThemedDatePicker';
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
-// NEW: direct-to-Supabase services (no extra deps)
 import {
   createBlotterReport,
   searchResidents,
   type ResidentLite,
 } from '@/services/blotterReport';
 
+// NEW: read the cached resident profile (to get person_id)
+import { useAccountRole } from '@/store/useAccountRole';
+
 /* ---------------- Helpers ---------------- */
 
 const toTitleCase = (str: string) =>
-  str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  (str || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 const pickOne = (v: unknown): string => {
   if (Array.isArray(v)) return v[0] ?? '';
@@ -54,6 +56,28 @@ const accent = '#6d2932';
 export default function FileBlotterReport() {
   const router = useRouter();
 
+  // ---- Get resident (complainant) from RoleStore ----
+  const roleStore = useAccountRole();
+  const cachedProfile = roleStore.getProfile('resident'); // fast, no network
+  const [me, setMe] = useState<any | null>(cachedProfile ?? null);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      if (!cachedProfile) {
+        const fresh = await roleStore.ensureLoaded('resident');
+        if (!live) return;
+        if (fresh) setMe(fresh);
+      }
+      // Debug: show what we have to confirm person_id presence
+      const keys = me ? Object.keys(me) : [];
+      console.log('[RoleStore] resident profile keys:', keys.slice(0, 10), '... total:', keys.length);
+      console.log('[RoleStore] resident person_id:', me?.person_id);
+    })();
+    return () => { live = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- Get address pieces from /mapaddress ----
   const params = useLocalSearchParams<{
     street?: string | string[];
@@ -62,7 +86,12 @@ export default function FileBlotterReport() {
     city?: string | string[];
     lat?: string | string[];
     lng?: string | string[];
+    purok_code?: string | string[];
   }>();
+
+  useEffect(() => {
+    console.log('[Blotter] useLocalSearchParams:', params);
+  }, [params]);
 
   const streetParam = pickOne(params.street);
   const purokParam = toTitleCase(pickOne(params.purok_name));
@@ -91,6 +120,9 @@ export default function FileBlotterReport() {
     if (streetParam || purokParam || brgyParam || cityParam) {
       const full = [streetParam, purokParam, brgyParam, cityParam].filter(Boolean).join(', ');
       setAddress(full);
+      console.log('[Blotter] Composed address:', full);
+    } else {
+      console.log('[Blotter] No address parts found yet');
     }
   }, [streetParam, purokParam, brgyParam, cityParam]);
 
@@ -100,6 +132,9 @@ export default function FileBlotterReport() {
     if (latParam || lngParam) {
       setLat(latParam || '');
       setLng(lngParam || '');
+      console.log('[Blotter] Lat/Lng captured from params:', { lat: latParam, lng: lngParam });
+    } else {
+      console.log('[Blotter] No lat/lng in params');
     }
   }, [params.lat, params.lng]);
 
@@ -124,8 +159,12 @@ export default function FileBlotterReport() {
     const t = setTimeout(async () => {
       try {
         const res = await searchResidents(q);
-        if (alive) setSearchResults(res);
-      } catch {
+        if (alive) {
+          setSearchResults(res);
+          console.log('[Blotter] searchResidents results:', res);
+        }
+      } catch (err) {
+        console.warn('[Blotter] searchResidents error:', err);
         if (alive) setSearchResults([]);
       } finally {
         if (alive) setSearching(false);
@@ -143,12 +182,14 @@ export default function FileBlotterReport() {
       name: p.full_name,
       address: p.address,
     };
+    console.log('[Blotter] addRespondent selected:', entry);
     setRespondents((prev) =>
       prev.find((x) => x.person_id === entry.person_id) ? prev : [...prev, entry]
     );
   };
 
   const removeRespondent = (person_id: number) => {
+    console.log('[Blotter] removeRespondent:', person_id);
     setRespondents((prev) => prev.filter((r) => r.person_id !== person_id));
   };
 
@@ -166,7 +207,9 @@ export default function FileBlotterReport() {
     });
     if (!result.canceled) {
       const uris = result.assets.map((a) => a.uri);
-      setPhotos((prev) => [...prev, ...uris].slice(0, 6));
+      const next = [...photos, ...uris].slice(0, 6);
+      console.log('[Blotter] picked photos:', next);
+      setPhotos(next);
     }
   }
 
@@ -175,8 +218,11 @@ export default function FileBlotterReport() {
   const setDateFromPicker = (next: Date | string | undefined) => {
     if (next instanceof Date && !isNaN(next.getTime())) {
       const pad = (n: number) => String(n).padStart(2, '0');
-      setDate(`${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`);
+      const v = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+      console.log('[Blotter] setDateFromPicker Date:', v);
+      setDate(v);
     } else if (typeof next === 'string') {
+      console.log('[Blotter] setDateFromPicker string:', next);
       setDate(next);
     } else {
       setDate('');
@@ -186,13 +232,18 @@ export default function FileBlotterReport() {
   const setTimeFromPicker = (next: Date | string | undefined) => {
     if (next instanceof Date && !isNaN(next.getTime())) {
       const pad = (n: number) => String(n).padStart(2, '0');
-      setTime(`${pad(next.getHours())}:${pad(next.getMinutes())}`);
+      const v = `${pad(next.getHours())}:${pad(next.getMinutes())}`;
+      console.log('[Blotter] setTimeFromPicker Date:', v);
+      setTime(v);
     } else if (typeof next === 'string') {
       const m = next.match(/^(\d{1,2}):(\d{2})/);
       if (m) {
         const hh = String(m[1]).padStart(2, '0');
-        setTime(`${hh}:${m[2]}`);
+        const v = `${hh}:${m[2]}`;
+        console.log('[Blotter] setTimeFromPicker string parsed:', v);
+        setTime(v);
       } else {
+        console.log('[Blotter] setTimeFromPicker string raw:', next);
         setTime(next);
       }
     } else {
@@ -216,25 +267,47 @@ export default function FileBlotterReport() {
       return;
     }
 
-    const respondent_ids = respondents.map((r) => r.person_id);
+    // 🔑 complainant/reporting person = current resident
+    const complainantId = Number(me?.person_id) || null;
+    console.log('[Blotter] complainantId (from resident profile):', complainantId);
+
+    const payload = {
+      incidentSubject: subject.trim(),
+      incidentDesc: desc.trim(),
+      incidentDate: date,
+      incidentTime: time,
+
+      // If you ever have a chosen address_id from the map picker, pass it here; else keep null:
+      incidentAddressId: null,
+
+      // Send raw map fields + coords so the service can create addresss
+      mapStreet: streetParam || null,
+      mapPurok: purokParam || null,
+      mapBarangay: brgyParam || null,
+      mapCity: cityParam || null,
+      incidentLat: lat ? parseFloat(lat) : null,
+      incidentLng: lng ? parseFloat(lng) : null,
+
+      // Set complainant to the logged-in resident
+      complainantId,
+      // Use the same ID for "reported_by" (service forwards this to RPC)
+      reportedByPersonId: complainantId,
+
+      respondentIds: respondents.map((r) => Number(r.person_id)),
+      evidenceUris: photos,
+    } as const;
+
+    console.log('[Blotter] onSubmit — respondents:', respondents);
+    console.log('[Blotter] onSubmit — payload:', JSON.stringify(payload, null, 2));
 
     setBusy(true);
     try {
-      await createBlotterReport({
-        incidentSubject: subject.trim(),
-        incidentDesc: desc.trim(),
-        incidentDate: date,
-        incidentTime: time,
-        incidentAddressId: null, // text-only here; pass actual address_id if available
-        complainantId: null,     // hook up later if you add complainant picker
-        respondentIds: respondent_ids,
-        evidenceUris: photos,    // upload photos to Supabase Storage
-      });
-
+      await createBlotterReport(payload as any);
       Alert.alert('Submitted', 'Your blotter report was sent successfully.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
+      console.warn('[Blotter] Submit failed:', e);
       const msg =
         e?.data?.detail ||
         e?.data?.error ||
@@ -247,6 +320,7 @@ export default function FileBlotterReport() {
   }
 
   const goPickIncidentAddress = () => {
+    console.log('[Blotter] Navigating to /mapaddress for picking address…');
     router.push({
       pathname: '/mapaddress',
       params: { returnTo: '(residentmodals)/fileblotterreport' },
@@ -361,6 +435,16 @@ export default function FileBlotterReport() {
             />
           </Pressable>
 
+          {/* Show lat/lng (read-only) if present */}
+          {(lat || lng) && (
+            <>
+              <Spacer height={6} />
+              <ThemedText muted>
+                Coordinates: {lat || '—'}, {lng || '—'}
+              </ThemedText>
+            </>
+          )}
+
           <Spacer height={14} />
 
           {/* Respondents */}
@@ -380,11 +464,14 @@ export default function FileBlotterReport() {
           )}
 
           <ThemedSearchSelect<ResidentLite>
-            items={filteredResults}
+            items={searchResults}
             getLabel={(p) => p.full_name}
             getSubLabel={(p) => p.address}
             inputValue={searchText}
-            onInputValueChange={setSearchText}
+            onInputValueChange={(v) => {
+              console.log('[Blotter] search text:', v);
+              setSearchText(v);
+            }}
             placeholder={searching ? 'Searching…' : 'Search resident by name or ID…'}
             emptyText={searchText.length < 2 ? 'Type at least 2 characters' : 'No matches'}
             fillOnSelect={false}

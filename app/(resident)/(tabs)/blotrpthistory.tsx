@@ -1,437 +1,546 @@
-// app/(residentmodals)/(bltrpt)/allactive.tsx
+// app/blotter/file.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
+  Alert,
+  TextInput,
   View,
+  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  StyleSheet,
+  Pressable,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import dayjs from 'dayjs';
 
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedCard from '@/components/ThemedCard';
-import ThemedDivider from '@/components/ThemedDivider';
-import ThemedItemCard from '@/components/ThemedItemCard';
+import ThemedIcon from '@/components/ThemedIcon';
+import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
 import ThemedText from '@/components/ThemedText';
-import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
+import ThemedSearchSelect from '@/components/ThemedSearchSelect';
+import ThemedDatePicker from '@/components/ThemedDatePicker';
 
-// ✅ your Supabase client
-import { supabase } from '@/supabase';
-// ✅ base URL for Django pages (for “Open full timeline”)
-import { API_BASE } from '@/services/config';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-/* ---------------- Types ---------------- */
+// ✅ pull identity from your persisted role/profile store
+import { useAccountRole } from '@/store/useAccountRole';
 
-type DbSettlement = { settlement_status_name: string | null };
-type DbCase = {
-  blotter_case_id: number;
-  blotter_case_name: string | null;
-  blotter_case_num: string | null;
-  date_filed: string | null; // ISO
-  settlement_status?: DbSettlement | null; // via FK select
-};
-
-type DbSubmission = {
-  submission_id: number;
-  status: string | null;
-  submitted_at: string | null;
-  kp_form: { form_code: string | null; form_name: string | null } | null;
-};
-
-type BlotterItem = {
-  id: number;
-  caseTitle: string;
-  caseNo: string;
-  filedAtISO: string | null;
-  filedAtHuman: string;
-  statusName: string; // UPPERCASE
-};
-
-type TimelineEntry = {
-  tsISO: string | null;
-  tsHuman: string;
-  label: string;
-  detail?: string | null;
-};
-
-/* ---------------- UI constants ---------------- */
-
-const STATUS_UI: Record<string, { label: string; bg: string; fg: string }> = {
-  PENDING:   { label: 'Pending',   bg: '#fde68a', fg: '#92400e' },
-  MEDIATION: { label: 'Mediation', bg: '#e0e7ff', fg: '#1e3a8a' },
-  SCHEDULED: { label: 'Scheduled', bg: '#d1fae5', fg: '#065f46' },
-  SETTLED:   { label: 'Settled',   bg: '#bbf7d0', fg: '#166534' },
-  DISMISSED: { label: 'Dismissed', bg: '#fee2e2', fg: '#991b1b' },
-};
-const FALLBACK_STATUS = { label: 'Filed', bg: '#e5e7eb', fg: '#111827' };
+// NEW: direct-to-Supabase services (no extra deps)
+import {
+  createBlotterReport,
+  searchResidents,
+  type ResidentLite,
+} from '@/services/blotterReport';
 
 /* ---------------- Helpers ---------------- */
 
-function fmtDateHuman(iso: string | null | undefined) {
-  if (!iso) return '—';
-  try {
-    const d = new Date(iso);
-    return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: '2-digit' }).format(d);
-  } catch {
-    return iso || '—';
-  }
+const toTitleCase = (str: string) =>
+  str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+
+const pickOne = (v: unknown): string => {
+  if (Array.isArray(v)) return v[0] ?? '';
+  return v != null ? String(v) : '';
+};
+
+type Respondent = {
+  person_id: number;
+  name: string;
+  address?: string | null;
+};
+
+const accent = '#6d2932';
+
+// robust reader in case your store shape changes slightly
+function getPersonIdFromResident(details: any): number {
+  return Number(details?.person_id ?? details?.details?.person_id ?? 0);
 }
 
-/* ---------------- Data fetchers ---------------- */
+export default function FileBlotterReport() {
+  const router = useRouter();
 
-async function fetchActiveCases(limit = 100): Promise<BlotterItem[]> {
-  const { data, error } = await supabase
-    .from<DbCase>('blotter_case')
-    .select(
-      'blotter_case_id, blotter_case_name, blotter_case_num, date_filed, settlement_status:settlement_status_id ( settlement_status_name )'
-    )
-    .order('blotter_case_id', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.warn('[ActiveCases] supabase error:', error);
-    return [];
-  }
-
-  return (data ?? []).map((r) => ({
-    id: r.blotter_case_id,
-    caseTitle: (r.blotter_case_name || '').trim() || '(Untitled Case)',
-    caseNo: (r.blotter_case_num || '').trim() || '—',
-    filedAtISO: r.date_filed,
-    filedAtHuman: fmtDateHuman(r.date_filed),
-    statusName: (r.settlement_status?.settlement_status_name || 'PENDING').trim().toUpperCase(),
-  }));
-}
-
-/** Build a lightweight, inline timeline from Supabase:
- *  - Case filed (date_filed)
- *  - Any submitted KP forms (from blotter_kp_submission JOIN kp_form)
- */
-async function fetchCaseTimeline(caseId: number): Promise<TimelineEntry[]> {
-  const entries: TimelineEntry[] = [];
-
-  // 1) Filed
-  const { data: c, error: errCase } = await supabase
-    .from<DbCase>('blotter_case')
-    .select('date_filed')
-    .eq('blotter_case_id', caseId)
-    .maybeSingle();
-
-  if (!errCase && c?.date_filed) {
-    entries.push({
-      tsISO: c.date_filed,
-      tsHuman: fmtDateHuman(c.date_filed),
-      label: 'Case Filed',
-      detail: null,
-    });
-  }
-
-  // 2) Submitted forms
-  const { data: subs, error: errSubs } = await supabase
-    .from<DbSubmission>('blotter_kp_submission')
-    .select('submission_id, status, submitted_at, kp_form:form_id(form_code, form_name)')
-    .eq('blotter_case_id', caseId)
-    .order('submitted_at', { ascending: true });
-
-  if (!errSubs && Array.isArray(subs)) {
-    for (const s of subs) {
-      if (s.submitted_at) {
-        const code = s.kp_form?.form_code?.toUpperCase() || '';
-        const name = s.kp_form?.form_name || '';
-        const status = (s.status || '').toUpperCase();
-        entries.push({
-          tsISO: s.submitted_at,
-          tsHuman: fmtDateHuman(s.submitted_at),
-          label: code ? `${code} Submitted` : 'Form Submitted',
-          detail: [name, status && `(${status})`].filter(Boolean).join(' '),
-        });
-      }
-    }
-  }
-
-  // Sort by time ascending and return
-  return entries.sort((a, b) => {
-    const ta = a.tsISO ? +new Date(a.tsISO) : 0;
-    const tb = b.tsISO ? +new Date(b.tsISO) : 0;
-    return ta - tb;
-  });
-}
-
-/* ---------------- Filters ---------------- */
-
-const FILTERS = [
-  { key: 'all',        label: 'All' },
-  { key: 'PENDING',    label: 'Pending' },
-  { key: 'MEDIATION',  label: 'Mediation' },
-  { key: 'SCHEDULED',  label: 'Scheduled' },
-  { key: 'SETTLED',    label: 'Settled' },
-  { key: 'DISMISSED',  label: 'Dismissed' },
-] as const;
-type FilterKey = typeof FILTERS[number]['key'] | 'all';
-
-/* ---------------- Component ---------------- */
-
-const AllActive = () => {
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-
-  const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [rows, setRows] = useState<BlotterItem[]>([]);
-
-  // inline timeline state
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [timelineLoading, setTimelineLoading] = useState<Record<number, boolean>>({});
-  const [timelineCache, setTimelineCache] = useState<Record<number, TimelineEntry[]>>({});
-
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchActiveCases(100);
-      setRows(data);
-    } catch (e) {
-      console.warn('[allactive] load error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ---- who am I (needed for complainantId) ----
+  const roleStore = useAccountRole();
+  const [meId, setMeId] = useState<number>(0);
 
   useEffect(() => {
-    (async () => { await load(); })();
+    let alive = true;
+    (async () => {
+      // wait for persisted state, then ensure we have a fresh-ish resident profile
+      await roleStore.waitForHydration();
+      const cached = roleStore.getProfile('resident');
+      const cachedPid = getPersonIdFromResident(cached);
+      if (alive) setMeId(cachedPid || 0);
+
+      const fresh = await roleStore.ensureLoaded('resident').catch(() => null);
+      const pid = getPersonIdFromResident(fresh ?? cached);
+      if (alive) setMeId(pid || 0);
+    })();
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    (async () => { await load(); })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilter]);
+  // ---- Get address pieces from /mapaddress ----
+  const params = useLocalSearchParams<{
+    street?: string | string[];
+    purok_name?: string | string[];
+    brgy?: string | string[];
+    city?: string | string[];
+    lat?: string | string[];
+    lng?: string | string[];
+  }>();
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await load();
-    } finally {
-      setRefreshing(false);
+  const streetParam = pickOne(params.street);
+  const purokParam = toTitleCase(pickOne(params.purok_name));
+  const brgyParam = pickOne(params.brgy);
+  const cityParam = pickOne(params.city);
+
+  // Selected respondents (multi)
+  const [respondents, setRespondents] = useState<Respondent[]>([]);
+
+  // Form state
+  const [subject, setSubject] = useState('');
+  const [desc, setDesc] = useState('');
+
+  // Date & time
+  const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [time, setTime] = useState(dayjs().format('HH:mm'));
+
+  // Incident address (composed)
+  const [address, setAddress] = useState('');
+
+  // lat/lng optional (kept if you later persist map point)
+  const [lat, setLat] = useState<string>('');
+  const [lng, setLng] = useState<string>('');
+
+  useEffect(() => {
+    if (streetParam || purokParam || brgyParam || cityParam) {
+      const full = [streetParam, purokParam, brgyParam, cityParam].filter(Boolean).join(', ');
+      setAddress(full);
+    }
+  }, [streetParam, purokParam, brgyParam, cityParam]);
+
+  useEffect(() => {
+    const latParam = pickOne(params.lat);
+    const lngParam = pickOne(params.lng);
+    if (latParam || lngParam) {
+      setLat(latParam || '');
+      setLng(lngParam || '');
+    }
+  }, [params.lat, params.lng]);
+
+  // Attachments
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  // ---------------- Resident search (Supabase) ----------------
+  const [searchText, setSearchText] = useState('');
+  const [searchResults, setSearchResults] = useState<ResidentLite[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // debounce search
+  useEffect(() => {
+    const q = (searchText || '').trim();
+    if (q.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    let alive = true;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await searchResidents(q);
+        if (alive) setSearchResults(res);
+      } catch {
+        if (alive) setSearchResults([]);
+      } finally {
+        if (alive) setSearching(false);
+      }
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [searchText]);
+
+  const addRespondent = (p: ResidentLite) => {
+    const entry: Respondent = {
+      person_id: Number(p.person_id),
+      name: p.full_name,
+      address: p.address,
+    };
+    setRespondents((prev) =>
+      prev.find((x) => x.person_id === entry.person_id) ? prev : [...prev, entry]
+    );
+  };
+
+  const removeRespondent = (person_id: number) => {
+    setRespondents((prev) => prev.filter((r) => r.person_id !== person_id));
+  };
+
+  async function pickImage() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow photo library access.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: [ImagePicker.MediaType.Images],
+      quality: 0.9,
+      allowsMultipleSelection: true,
+      selectionLimit: 4,
+    });
+    if (!result.canceled) {
+      const uris = result.assets.map((a) => a.uri);
+      setPhotos((prev) => [...prev, ...uris].slice(0, 6));
+    }
+  }
+
+  /* ---------------- Normalizers for pickers ---------------- */
+
+  const setDateFromPicker = (next: Date | string | undefined) => {
+    if (next instanceof Date && !isNaN(next.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setDate(`${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`);
+    } else if (typeof next === 'string') {
+      setDate(next);
+    } else {
+      setDate('');
     }
   };
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
-      const textOk = !q || r.caseTitle.toLowerCase().includes(q) || r.caseNo.toLowerCase().includes(q);
-      const statusOk = activeFilter === 'all' || r.statusName === activeFilter;
-      return textOk && statusOk;
-    });
-  }, [rows, search, activeFilter]);
-
-  const openTimelinePage = (caseId: number) => {
-    const base = API_BASE?.replace(/\/+$/, '') || '';
-    const url = `${base}/lupon_mem/cases/${caseId}/timeline/`;
-    Linking.openURL(url).catch((e) => console.warn('openURL failed:', e));
+  const setTimeFromPicker = (next: Date | string | undefined) => {
+    if (next instanceof Date && !isNaN(next.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setTime(`${pad(next.getHours())}:${pad(next.getMinutes())}`);
+    } else if (typeof next === 'string') {
+      const m = next.match(/^(\d{1,2}):(\d{2})/);
+      if (m) {
+        const hh = String(m[1]).padStart(2, '0');
+        setTime(`${hh}:${m[2]}`);
+      } else {
+        setTime(next);
+      }
+    } else {
+      setTime('');
+    }
   };
 
-  const toggleExpand = async (caseId: number) => {
-    console.log('toggleExpand tapped ->', caseId); // 👈 helps verify the tap
-    const isOpen = !!expanded[caseId];
-    if (isOpen) {
-      setExpanded((p) => ({ ...p, [caseId]: false }));
+  function validate(): string | null {
+    if (!meId) return 'Unable to identify complainant. Please re-login or try again.';
+    if (!subject.trim()) return 'Subject is required.';
+    if (!desc.trim()) return 'Description is required.';
+    if (!address.trim()) return 'Incident location is required.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Date must be YYYY-MM-DD.';
+    if (!/^\d{2}:\d{2}$/.test(time)) return 'Time must be HH:mm (24h).';
+    return null;
+  }
+
+  async function onSubmit() {
+    const err = validate();
+    if (err) {
+      Alert.alert('Fix form', err);
       return;
     }
 
-    setExpanded((p) => ({ ...p, [caseId]: true }));
-    if (!timelineCache[caseId]) {
-      setTimelineLoading((p) => ({ ...p, [caseId]: true }));
-      try {
-        const data = await fetchCaseTimeline(caseId);
-        setTimelineCache((p) => ({ ...p, [caseId]: data }));
-      } catch (e) {
-        console.warn('[timeline] fetch failed', e);
-        setTimelineCache((p) => ({ ...p, [caseId]: [] }));
-      } finally {
-        setTimelineLoading((p) => ({ ...p, [caseId]: false }));
-      }
+    const respondent_ids = respondents.map((r) => r.person_id);
+
+    setBusy(true);
+    try {
+      await createBlotterReport({
+        incidentSubject: subject.trim(),
+        incidentDesc: desc.trim(),
+        incidentDate: date,
+        incidentTime: time,
+        incidentAddressId: null, // text-only here; pass actual address_id if available
+        complainantId: meId,     // ✅ current logged-in resident
+        respondentIds: respondent_ids,
+        evidenceUris: photos,    // upload photos to Supabase Storage
+        // You can also pass lat/lng if your service accepts it later
+      });
+
+      Alert.alert('Submitted', 'Your blotter report was sent successfully.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (e: any) {
+      const msg =
+        e?.data?.detail ||
+        e?.data?.error ||
+        e?.message ||
+        'Please try again.';
+      Alert.alert('Submit failed', msg);
+    } finally {
+      setBusy(false);
     }
+  }
+
+  const goPickIncidentAddress = () => {
+    router.push({
+      pathname: '/mapaddress',
+      params: { returnTo: '(residentmodals)/fileblotterreport' },
+    });
   };
 
-  return (
-    <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
-      <ThemedAppBar title="Active Blotter Reports" />
-      <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: undefined })}>
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 50 }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          <Spacer />
+  const filteredResults = useMemo(() => {
+    const q = (searchText || '').toLowerCase();
+    if (!q) return searchResults;
+    return searchResults.filter((p) =>
+      p.full_name.toLowerCase().includes(q) ||
+      (p.person_code || '').toLowerCase().includes(q) ||
+      (p.address || '').toLowerCase().includes(q)
+    );
+  }, [searchText, searchResults]);
 
-          {/* Search + filter chips */}
-          <View style={{ paddingHorizontal: 40 }}>
-            <ThemedTextInput
-              placeholder="Search case no., title..."
-              value={search}
-              onChangeText={setSearch}
-            />
-            <Spacer height={10} />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.chipRow}>
-                {FILTERS.map((f) => {
-                  const selected = f.key === activeFilter;
-                  return (
-                    <TouchableOpacity
-                      key={f.key}
-                      activeOpacity={0.7}
-                      onPress={() => setActiveFilter(f.key)}
-                      style={[styles.chip, selected && styles.chipSelected]}
-                    >
-                      <ThemedText style={[styles.chipText, selected && styles.chipTextSelected]}>
-                        {f.label}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  );
-                })}
+  const submitDisabled = busy || !meId;
+
+  return (
+    <ThemedView safe style={{ flex: 1 }}>
+      <ThemedAppBar title="File a Blotter Report" showNotif={false} showProfile={false} />
+
+      <ThemedKeyboardAwareScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        {/* Header */}
+        <ThemedCard>
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.row}>
+                <ThemedIcon name="document-text-outline" bgColor={accent} size={20} containerSize={28} />
+                <ThemedText style={styles.title}>Blotter Report</ThemedText>
               </View>
-            </ScrollView>
+              <ThemedText muted style={{ marginTop: 4 }}>
+                Please review your information before submitting.
+              </ThemedText>
+            </View>
+          </View>
+        </ThemedCard>
+
+        <Spacer height={16} />
+
+        {/* Important Note */}
+        <ThemedCard>
+          <View style={[styles.row, { marginBottom: 6 }]}>
+            <ThemedIcon name="information-circle-outline" bgColor="#310101" size={20} containerSize={28} />
+            <ThemedText style={styles.noteTitle}>Important Note</ThemedText>
+          </View>
+          <ThemedText style={{ lineHeight: 20 }}>
+            By submitting this blotter report, you affirm that all information provided is true and accurate to the
+            best of your knowledge. False reporting may lead to legal consequences.
+          </ThemedText>
+
+          <Spacer height={10} />
+          <Bullet icon="checkmark-circle-outline" text="Make sure names, time, and location are accurate." />
+          <Bullet icon="shield-checkmark-outline" text="Attach supporting photos/videos if available." />
+          <Bullet icon="chatbubbles-outline" text="A barangay officer may contact you for clarification." />
+        </ThemedCard>
+
+        <Spacer height={16} />
+
+        {/* Form */}
+        <ThemedCard>
+          <Label>Subject</Label>
+          <TextField value={subject} onChangeText={setSubject} placeholder="e.g., Loud altercation" />
+
+          <Spacer height={10} />
+
+          <Label>Description</Label>
+          <TextField
+            value={desc}
+            onChangeText={setDesc}
+            placeholder="What happened?"
+            multiline
+            style={{ minHeight: 100, textAlignVertical: 'top' }}
+          />
+
+          <Spacer height={10} />
+
+          {/* Date / Time */}
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Label>Date</Label>
+              <ThemedDatePicker
+                value={date ? new Date(date) : undefined}
+                mode="date"
+                onChange={setDateFromPicker}
+                placeholder="YYYY-MM-DD"
+                maximumDate={new Date()}
+              />
+            </View>
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Label>Time</Label>
+              <ThemedDatePicker
+                value={time ? dayjs(`2000-01-01T${time}:00`).toDate() : undefined}
+                mode="time"
+                onChange={setTimeFromPicker}
+                placeholder="HH:mm"
+              />
+            </View>
           </View>
 
-          <Spacer />
+          <Spacer height={10} />
 
-          <ThemedCard>
-            <View style={styles.headerRow}>
-              <ThemedText style={styles.title}>Active Blotter Reports</ThemedText>
-            </View>
+          {/* Incident Location */}
+          <Label>Incident Location</Label>
+          <Pressable onPress={goPickIncidentAddress}>
+            <TextField
+              placeholder="Tap to pick on map (Street, Purok/Sitio, Barangay, City)"
+              multiline
+              numberOfLines={2}
+              value={address}
+              onChangeText={() => {}}
+              editable={false}
+              pointerEvents="none"
+            />
+          </Pressable>
 
-            <Spacer height={10} />
-            <ThemedDivider />
-            <Spacer height={10} />
+          <Spacer height={14} />
 
-            {loading && (
-              <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-                <ActivityIndicator />
-                <Spacer height={6} />
-                <ThemedText muted>Loading cases…</ThemedText>
-              </View>
-            )}
+          {/* Respondents */}
+          <Label>Respondents</Label>
 
-            {!loading && filtered.length === 0 && (
-              <ThemedText style={styles.empty}>No active blotter reports right now.</ThemedText>
-            )}
-
-            {!loading && filtered.map((item) => {
-              const ui = STATUS_UI[item.statusName] || FALLBACK_STATUS;
-              const isOpen = !!expanded[item.id];
-              const isBusy = !!timelineLoading[item.id];
-              const timeline = timelineCache[item.id] || [];
-
-              return (
-                <View key={item.id} style={{ marginBottom: 12 }}>
-                  {/* Press wrapper so taps actually call toggleExpand */}
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => toggleExpand(item.id)}
-                  >
-                    <ThemedItemCard
-                      title={item.caseTitle}
-                      meta1={`Case #: ${item.caseNo}`}
-                      meta2={`Filed: ${item.filedAtHuman}`}
-                      showPill
-                      pillLabel={ui.label}
-                      pillBgColor={ui.bg}
-                      pillTextColor={ui.fg}
-                      pillSize="sm"
-                    />
+          {respondents.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+              {respondents.map((r) => (
+                <View key={r.person_id} style={styles.chip}>
+                  <ThemedText style={{ fontWeight: '600' }}>{r.name}</ThemedText>
+                  <TouchableOpacity onPress={() => removeRespondent(r.person_id)} style={{ marginLeft: 8 }}>
+                    <ThemedIcon name="close" size={14} containerSize={18} />
                   </TouchableOpacity>
-
-                  {/* Inline timeline */}
-                  {isOpen && (
-                    <View style={styles.timelineWrap}>
-                      <View style={styles.timelineHeader}>
-                        <ThemedText style={{ fontWeight: '700' }}>Timeline</ThemedText>
-                        <TouchableOpacity onPress={() => openTimelinePage(item.id)} activeOpacity={0.8}>
-                          <ThemedText style={styles.link}>Open full timeline ↗</ThemedText>
-                        </TouchableOpacity>
-                      </View>
-
-                      {isBusy && (
-                        <View style={{ paddingVertical: 8, alignItems: 'center' }}>
-                          <ActivityIndicator />
-                          <Spacer height={6} />
-                          <ThemedText muted>Loading timeline…</ThemedText>
-                        </View>
-                      )}
-
-                      {!isBusy && timeline.length === 0 && (
-                        <ThemedText muted style={{ paddingVertical: 6 }}>No events yet.</ThemedText>
-                      )}
-
-                      {!isBusy && timeline.map((ev, idx) => (
-                        <View key={idx} style={styles.eventRow}>
-                          <View style={styles.dot} />
-                          <View style={{ flex: 1 }}>
-                            <ThemedText style={styles.eventLabel}>{ev.label}</ThemedText>
-                            <ThemedText muted style={styles.eventMeta}>{ev.tsHuman}</ThemedText>
-                            {!!ev.detail && <ThemedText style={styles.eventDetail}>{ev.detail}</ThemedText>}
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )}
                 </View>
-              );
-            })}
-          </ThemedCard>
-        </ScrollView>
-      </KeyboardAvoidingView>
+              ))}
+            </View>
+          )}
+
+          <ThemedSearchSelect<ResidentLite>
+            items={filteredResults}
+            getLabel={(p) => p.full_name}
+            getSubLabel={(p) => p.address}
+            inputValue={searchText}
+            onInputValueChange={setSearchText}
+            placeholder={searching ? 'Searching…' : 'Search resident by name or ID…'}
+            emptyText={searchText.length < 2 ? 'Type at least 2 characters' : 'No matches'}
+            fillOnSelect={false}
+            onSelect={(p) => addRespondent(p)}
+          />
+
+          <Spacer height={14} />
+
+          {/* Photos */}
+          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
+            <Label>Attachments</Label>
+            <TouchableOpacity onPress={pickImage} style={styles.addBtn}>
+              <ThemedIcon name="add" size={18} />
+              <ThemedText style={{ marginLeft: 6, fontWeight: '700' }}>Add Photos</ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          {!!photos.length && (
+            <FlatList
+              horizontal
+              data={photos}
+              keyExtractor={(u, i) => u + i}
+              ItemSeparatorComponent={() => <Spacer width={8} />}
+              renderItem={({ item }) => (
+                <View style={styles.thumb}>
+                  <ThemedView style={styles.thumbInner}>
+                    <Image source={{ uri: item }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                  </ThemedView>
+                </View>
+              )}
+            />
+          )}
+
+          <Spacer height={16} />
+
+          <TouchableOpacity
+            onPress={onSubmit}
+            disabled={submitDisabled}
+            style={[styles.submitBtn, submitDisabled && { opacity: 0.7 }]}
+          >
+            {busy ? (
+              <ActivityIndicator />
+            ) : (
+              <ThemedText style={{ color: '#fff', fontWeight: '700' }}>Submit Report</ThemedText>
+            )}
+          </TouchableOpacity>
+        </ThemedCard>
+      </ThemedKeyboardAwareScrollView>
     </ThemedView>
   );
-};
+}
 
-export default AllActive;
+function Bullet({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View style={styles.bulletRow}>
+      <ThemedIcon name={icon} size={16} containerSize={22} />
+      <ThemedText muted style={styles.bulletText}>
+        {text}
+      </ThemedText>
+    </View>
+  );
+}
 
-/* ---------------- Styles ---------------- */
+function Label({ children }: { children: React.ReactNode }) {
+  return <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>{children}</ThemedText>;
+}
+
+function TextField(props: React.ComponentProps<typeof TextInput>) {
+  return (
+    <TextInput
+      {...props}
+      placeholderTextColor="#999"
+      style={[
+        {
+          borderWidth: 1,
+          borderColor: 'rgba(0,0,0,0.12)',
+          borderRadius: 10,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          backgroundColor: '#fff',
+        },
+        props.style,
+      ]}
+    />
+  );
+}
 
 const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 20, fontWeight: '700' },
-  empty: { textAlign: 'center', opacity: 0.6, paddingVertical: 8 },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  title: { paddingLeft: 10, fontSize: 16, fontWeight: '700' },
+  noteTitle: { paddingLeft: 10, fontWeight: '700' },
+  bulletRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  bulletText: { marginLeft: 6, flex: 1 },
 
-  chipRow: { flexDirection: 'row', gap: 8 },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    marginRight: 8,
-    backgroundColor: '#ffffff',
-  },
-  chipSelected: { borderColor: '#310101' },
-  chipText: { fontSize: 12 },
-  chipTextSelected: { color: '#310101', fontWeight: '600' },
-
-  timelineWrap: {
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 10,
-    padding: 10,
+    borderColor: 'rgba(0,0,0,0.12)',
     backgroundColor: '#fff',
   },
-  timelineHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  submitBtn: {
+    backgroundColor: accent,
     alignItems: 'center',
-    marginBottom: 6,
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
   },
-  link: { color: '#1e40af', fontWeight: '600' },
-  eventRow: { flexDirection: 'row', gap: 10, paddingVertical: 6, alignItems: 'flex-start' },
-  dot: { width: 8, height: 8, borderRadius: 999, backgroundColor: '#310101', marginTop: 7 },
-  eventLabel: { fontWeight: '700' },
-  eventMeta: { fontSize: 12, marginTop: 2 },
-  eventDetail: { marginTop: 2 },
+  thumb: { width: 86, height: 86, borderRadius: 8, overflow: 'hidden' },
+  thumbInner: { width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' },
+
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#f6f3f2',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
 });
