@@ -4,8 +4,34 @@ import { MemberRemovalException } from "@/exception/memberRemovalException";
 import { MembershipException } from "@/exception/membershipExcption";
 import { MemberRemovalType } from "@/types/memberRemoval";
 import { HouseholdUpdateType } from "@/types/request/householdUpdateType";
+import { UpdateFamilyInformation } from "@/types/updateFamilyInformationType";
 
 export class HouseholdRepository {
+
+    async UpdateFamilyInformation(request: UpdateFamilyInformation) {
+        const func = "update_fam_info";
+        const { data, error } = await supabase.rpc(func, {
+            p_performed_by: request.p_performed_by,
+            p_family_id: request.p_family_id,
+            p_reason: request.p_reason,
+            p_source_of_income: request.p_source_of_income,
+            p_family_mnthly_icnome_id: request.p_family_mnthly_income_id,
+            p_nhts_status_id: request.p_nhts_status_id,
+            p_indigent_status_id: request.p_indigent_status_id,
+            p_household_type_id: request.p_household_type_id,
+            p_household_id: request.p_household_id,
+            p_family_head_id: request.p_family_head_id,
+            p_rel_to_hhold_head_id: request.p_rel_to_hhold_head_id,
+        });
+        if (error) {
+            if (error.code && HouseholdException.getErrorCodes().has(String(error.code))) {
+                console.error(`Error calling ${func}:`, error);
+                throw new HouseholdException(error.message);
+            }
+            throw new Error(error.message);
+        }
+        return data || null;
+    }
 
     async GetFamilyIdByFamilyNumber(familyNum: string) {
         const { data, error } = await supabase

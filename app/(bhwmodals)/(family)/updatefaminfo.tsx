@@ -8,9 +8,15 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { indigentOptions, nhtsOptions } from '@/constants/formoptions'
+import { HOUSEHOLD_TYPE } from '@/constants/householdType'
+import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
+import { RELATIONSHIP } from '@/constants/relationship'
+import { FamilyRepository } from '@/repository/familyRepository'
+import { HouseholdRepository } from '@/repository/householdRepository'
+import { UpdateFamilyInformation } from '@/types/updateFamilyInformationType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Alert, StyleSheet, View } from 'react-native'
 
 type Option = { label: string; value: string }
 
@@ -32,6 +38,7 @@ const UpdateFamInfo = () => {
   // --- Context (read-only) ---
   const familyNum = params.familyNum ?? params.id ?? ''
   const familyHeadName = params.familyHeadName ?? '—'
+  console.log('UpdateFamInfo params:', params)
 
   // --- Editable fields (prefill if provided) ---
   const [hhheadrel, setHhheadrel] = useState<string>(params.relationshipToHh ?? '')
@@ -79,18 +86,58 @@ const UpdateFamInfo = () => {
   const canSubmit =
     !!hhheadrel && !!hhtype && !!incomesource && !!fammnthlyincome
 
+  const repository = new HouseholdRepository()
+  const familtRepository = new FamilyRepository()
+
   const onSubmit = () => {
-    // TODO: Call your update mutation here:
-    // {
-    //   familyId: params.id ?? familyNum,
-    //   relationshipToHh: hhheadrel,
-    //   householdType: hhtype,
-    //   nhts,
-    //   indigent,
-    //   sourceIncome: incomesource,
-    //   monthlyIncome: fammnthlyincome
-    // }
-    router.back()
+    console.log('Submitting updated family info with values: ' + Number(params.id ?? familyNum))
+    const sendData = async () => {
+
+      try {
+        const familyId = await repository.GetFamilyIdByFamilyNumber(familyNum)
+        if (!familyId) {
+          Alert.alert('Warning', 'Family not found.')
+          return
+        }
+
+        const familyHeadId = await familtRepository.GetFamilyHeadIdByFamilyId(familyId)
+        if (!familyHeadId) {
+          Alert.alert('Warning', 'Family head not found.')
+          return
+        }
+
+        console.log('Fetched familyId:', familyId, 'familyHeadId:', familyHeadId)
+
+        const data: UpdateFamilyInformation = {
+          p_performed_by: 0,
+          p_family_id: familyId,
+          p_reason: 'Update Family Information',
+          p_source_of_income: incomesource,
+          p_family_mnthly_income_id: Number(fammnthlyincome),
+          p_nhts_status_id: nhts === 'yes' ? 1 : 2,
+          p_indigent_status_id: indigent === 'yes' ? 1 : 2,
+          p_household_type_id: Number(hhtype),
+          p_rel_to_hhold_head_id: Number(hhheadrel),
+          p_household_id: Number(params.id),
+          p_family_head_id: familyHeadId,
+        }
+
+        const result = await repository.UpdateFamilyInformation(data)
+        console.log('UpdateFamilyInformation result:', result)
+        Alert.alert('Success', 'Family information updated successfully.', [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ])
+
+      } catch (error) {
+        console.error('Error updating family information:', error)
+        Alert.alert('Error', 'Failed to update family information. Please try again.')
+      }
+    }
+    
+    sendData();
   }
 
   return (
@@ -116,7 +163,7 @@ const UpdateFamInfo = () => {
 
           {/* --- Editable fields (same structure as CreateFamily, without changing Family # / Head) --- */}
           <ThemedDropdown
-            items={relationshipOptions}
+            items={RELATIONSHIP}
             value={hhheadrel}
             setValue={setHhheadrel}
             placeholder="Relationship to Household Head"
@@ -126,7 +173,7 @@ const UpdateFamInfo = () => {
           <Spacer height={10} />
 
           <ThemedDropdown
-            items={householdTypeOptions}
+            items={HOUSEHOLD_TYPE}
             value={hhtype}
             setValue={setHhType}
             placeholder="Household Type"
@@ -166,7 +213,7 @@ const UpdateFamInfo = () => {
           <Spacer height={10} />
 
           <ThemedDropdown
-            items={familyMonthlyIncomeItems}
+            items={MONTHLY_INCOME}
             value={fammnthlyincome}
             setValue={setFamMonthlyIncome}
             placeholder="Family Monthly Income"
