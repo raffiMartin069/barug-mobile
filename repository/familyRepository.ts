@@ -4,6 +4,18 @@ import { FamilyMembershipType } from "@/types/familyMembership";
 
 export class FamilyRepository {
 
+    async GetFamilyHeadIdByFamilyId(family_id: number) {
+        const { data, error } = await supabase
+            .from("family_unit")
+            .select('family_head_id')
+            .eq('family_id', family_id)
+            .single()
+        if (!data) {
+            return null;
+        }
+        return data?.family_head_id || null;
+    }
+
     async insertMember(famData: FamilyMembershipType) {
         const func = "insert_house_member";
         const { data, error } = await supabase.rpc(func, famData);

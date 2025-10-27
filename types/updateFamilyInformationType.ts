@@ -7,5 +7,7 @@ export type UpdateFamilyInformation = {
     p_nhts_status_id: number
     p_indigent_status_id: number
     p_household_type_id: number
+    p_household_id: number
+    p_family_head_id: number
     p_rel_to_hhold_head_id: number
 }

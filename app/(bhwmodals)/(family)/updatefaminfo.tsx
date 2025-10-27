@@ -11,6 +11,7 @@ import { indigentOptions, nhtsOptions } from '@/constants/formoptions'
 import { HOUSEHOLD_TYPE } from '@/constants/householdType'
 import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
 import { RELATIONSHIP } from '@/constants/relationship'
+import { FamilyRepository } from '@/repository/familyRepository'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { UpdateFamilyInformation } from '@/types/updateFamilyInformationType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -37,6 +38,7 @@ const UpdateFamInfo = () => {
   // --- Context (read-only) ---
   const familyNum = params.familyNum ?? params.id ?? ''
   const familyHeadName = params.familyHeadName ?? '—'
+  console.log('UpdateFamInfo params:', params)
 
   // --- Editable fields (prefill if provided) ---
   const [hhheadrel, setHhheadrel] = useState<string>(params.relationshipToHh ?? '')
@@ -85,6 +87,7 @@ const UpdateFamInfo = () => {
     !!hhheadrel && !!hhtype && !!incomesource && !!fammnthlyincome
 
   const repository = new HouseholdRepository()
+  const familtRepository = new FamilyRepository()
 
   const onSubmit = () => {
     console.log('Submitting updated family info with values: ' + Number(params.id ?? familyNum))
@@ -97,6 +100,14 @@ const UpdateFamInfo = () => {
           return
         }
 
+        const familyHeadId = await familtRepository.GetFamilyHeadIdByFamilyId(familyId)
+        if (!familyHeadId) {
+          Alert.alert('Warning', 'Family head not found.')
+          return
+        }
+
+        console.log('Fetched familyId:', familyId, 'familyHeadId:', familyHeadId)
+
         const data: UpdateFamilyInformation = {
           p_performed_by: 0,
           p_family_id: familyId,
@@ -106,7 +117,9 @@ const UpdateFamInfo = () => {
           p_nhts_status_id: nhts === 'yes' ? 1 : 2,
           p_indigent_status_id: indigent === 'yes' ? 1 : 2,
           p_household_type_id: Number(hhtype),
-          p_rel_to_hhold_head_id: Number(hhheadrel)
+          p_rel_to_hhold_head_id: Number(hhheadrel),
+          p_household_id: Number(params.id),
+          p_family_head_id: familyHeadId,
         }
 
         const result = await repository.UpdateFamilyInformation(data)
