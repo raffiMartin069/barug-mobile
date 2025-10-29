@@ -486,12 +486,16 @@ export async function getDocRequestHeaderLite(docRequestId: number): Promise<{
  */
 export async function checkBusinessClearanceEffectiveOn(
   businessId: number,
-  when: Date | string
+  when: Date | string,
+  validMonths?: number | null
 ): Promise<{ has: boolean; reference_request_id?: number | null; request_code?: string | null; issued_on?: string | null }> {
   try {
     const { data, error } = await supabase.rpc('check_business_clearance_effective_on', {
       p_business_id: businessId,
-      p_when: typeof when === 'string' ? when : when.toISOString(),
+      // 👇 use the correct argument name expected by your SQL function
+      p_at: typeof when === 'string' ? when : when.toISOString(),
+      // optional: pass-through if you want to override default “until next Jan 1”
+      p_valid_months: validMonths ?? null,
     })
     if (error) throw error
     const row = (Array.isArray(data) ? data[0] : data) || null
@@ -502,11 +506,12 @@ export async function checkBusinessClearanceEffectiveOn(
       request_code: row.request_code ?? null,
       issued_on: row.issued_on ?? null,
     }
-  } catch {
-    // Fallback during setup/demos
+  } catch (e) {
+    // keep your graceful fallback
     return { has: false }
   }
 }
+
 
 /**
  * Do we already have a request for this business for the given year?

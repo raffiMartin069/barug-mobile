@@ -59,7 +59,9 @@ WebBrowser.maybeCompleteAuthSession();
 
 // helper to open PayMongo checkout for a doc request
 async function startOnlineCheckout(docId: number) {
+  console.log('🌐 Starting online checkout for doc ID:', docId)
   const API_BASE = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+  console.log('🔗 API_BASE:', API_BASE)
   if (!API_BASE) throw new Error('Missing API_BASE_URL in app.json "extra".');
 
   // Deep link back into the app to the Receipt screen
@@ -410,6 +412,7 @@ export default function RequestDoc() {
 
   // ui state
   const [submitting, setSubmitting] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [modal, setModal] = useState<{ visible: boolean; icon?: IconKey; title?: string; message?: string; primaryText?: string; onPrimary?: () => void }>({ visible: false })
   const showModal = (opts: Partial<typeof modal>) => setModal(p => ({ ...p, visible: true, ...opts }))
   const hideModal = () => setModal(p => ({ ...p, visible: false }))
@@ -554,11 +557,31 @@ export default function RequestDoc() {
       showModal({ icon: 'error', title: 'Missing info', message: err, primaryText: 'OK' })
       return
     }
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmSubmit = async () => {
+    console.log('🔄 handleConfirmSubmit called')
+    console.log('📋 Current state:', {
+      payChoice,
+      documentTypeId,
+      purposeId,
+      forWhom,
+      otherPersonId: otherPerson.id,
+      authLetterUri: authLetter?.uri,
+      mePersonId: me?.person_id,
+      selectedPurpose: selectedPurpose?.document_purpose_id
+    })
+    
+    setShowConfirmModal(false)
+    console.log('✅ Modal closed, starting submission...')
 
     setSubmitting(true)
+    console.log('🚀 Submission started, submitting state set to true')
     let authUploadPath: string | null = null
 
     if (forWhom === 'OTHER' && authLetter?.uri) {
+      console.log('📎 Uploading auth letter...')
       try {
         const fileName = authLetter.name || `auth_${Date.now()}${guessExt(authLetter.type)}`
         const { path } = await uploadAuthLetter(authLetter.uri!, fileName, {
@@ -566,7 +589,9 @@ export default function RequestDoc() {
           upsert: true,
         })
         authUploadPath = path
-      } catch {
+        console.log('✅ Auth letter uploaded:', path)
+      } catch (e) {
+        console.log('❌ Auth letter upload failed:', e)
         setSubmitting(false)
         showModal({ icon: 'error', title: 'Upload failed', message: 'Please try uploading the authorization letter again.' })
         return
@@ -576,7 +601,12 @@ export default function RequestDoc() {
     try {
       const requesterId = Number(me?.person_id)
       const subjectId = forWhom === 'SELF' ? requesterId : Number(otherPerson.id)
-      if (!requesterId || !subjectId || !selectedPurpose) throw new Error('Could not resolve IDs or purpose.')
+      console.log('🔍 IDs resolved:', { requesterId, subjectId, selectedPurposeId: selectedPurpose?.document_purpose_id })
+      
+      if (!requesterId || !subjectId || !selectedPurpose) {
+        console.log('❌ Missing required data:', { requesterId, subjectId, selectedPurpose: !!selectedPurpose })
+        throw new Error('Could not resolve IDs or purpose.')
+      }
 
       const payload = {
         requested_by: requesterId,
@@ -595,16 +625,21 @@ export default function RequestDoc() {
         }],
       }
 
+      console.log('📤 Creating document request with payload:', payload)
       const newId = await createDocumentRequest(payload as any)
+      console.log('✅ Document request created with ID:', newId)
 
       // → ONLINE: start PayMongo, then deep-link back
       if (payChoice === 'ONLINE') {
-    await startOnlineCheckout(newId)
-    return // the user will be taken to PayMongo, then to the success page, then back to the app
-  }
+        console.log('💳 Starting online checkout for doc ID:', newId)
+        await startOnlineCheckout(newId)
+        console.log('🔄 Online checkout initiated, returning...')
+        return // the user will be taken to PayMongo, then to the success page, then back to the app
+      }
 
 
       // → CASH AT BARANGAY: normal success
+      console.log('💰 Cash payment selected, showing success modal')
       setSubmitting(false)
       showModal({
         icon: 'success',
@@ -617,6 +652,7 @@ export default function RequestDoc() {
         },
       })
     } catch (e: any) {
+      console.log('❌ Submission failed:', e)
       setSubmitting(false)
       showModal({ icon: 'error', title: 'Submission failed', message: e?.message ?? 'Unable to submit request right now.' })
     }
@@ -745,56 +781,6 @@ export default function RequestDoc() {
 
         {/* Subject Details */}
         <Spacer height={12} />
-        <ThemedCard>
-          <View style={[styles.cardHeaderRow, { marginBottom: 6 }]}>
-            <RowTitle icon="id-card-outline" title="Subject Details" />
-            {subject && (
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {isSenior(computeAge(subject?.birth_date)) && <StatChip label="Senior (60+)" tone="ok" />}
-                {subject?.is_student && <StatChip label="Student" tone="ok" />}
-              </View>
-            )}
-          </View>
-
-          {!subject ? (
-            <ThemedText muted>
-              {forWhom === 'SELF' ? 'Loading…' : 'Pick a person above to see their details.'}
-            </ThemedText>
-          ) : (
-            <View style={styles.detailsWrap}>
-              <Row label="Name" value={niceName(subject)} />
-              <Row label="Mobile" value={subject.mobile_number || '—'} />
-              <Row label="Birthdate" value={subject.birth_date || '—'} />
-              <Row label="Address" value={subject.address || '—'} multiline />
-              {!!subject.government_program && <Row label="Gov’t Program" value={subject.government_program} />}
-              <Row label="Resident ID" value={subject.person_id} />
-            </View>
-          )}
-
-          {/* Waiver guidance */}
-          <Spacer height={10} />
-          {selectedPurpose ? (
-            (waiverHint.applies || (waiverSource === 'server' && exemptUnit > 0)) ? (
-              <View style={styles.bannerOk}>
-                <Ionicons name="pricetag-outline" size={18} color="#065f46" />
-                <ThemedText style={styles.bannerText}>
-                  Likely <ThemedText weight="800">WAIVED</ThemedText> for this document.
-                </ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                  {waiverHint.reasons.map(r => <StatChip key={r} label={r} tone="ok" />)}
-                </View>
-                <ThemedText small muted style={{ marginTop: 6 }}>
-                  Treasurer will validate during review.
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={styles.bannerNeutral}>
-                <Ionicons name="information-circle-outline" size={18} color="#334155" />
-                <ThemedText style={styles.bannerText}>No automatic waiver detected for this purpose.</ThemedText>
-              </View>
-            )
-          ) : <View /> }
-        </ThemedCard>
 
         {/* Document & Purpose */}
         <Spacer height={12} />
@@ -832,30 +818,60 @@ export default function RequestDoc() {
               selectedPurpose
                 ? (waiverSource
                     ? (netUnit === 0
-                        ? `Base ${peso(unit)} × ${qty} − Waiver ${peso(exemptUnit)} × ${qty} = ₱0.00`
-                        : `Base ${peso(unit)} − Waiver ${peso(exemptUnit)} = ${peso(netUnit)} • Qty ${qty}`)
+                        ? `Base ${peso(unit)} × ${qty} − Waiver ${peso(exemptUnit)} × ${qty}`
+                        : `Base ${peso(unit)} − Waiver ${peso(exemptUnit)} = ${peso(netUnit)}`)
                     : `Base ${peso(unit)} × ${qty}`)
                 : undefined
             }
           />
 
-          {/* NEW: Payment choice */}
-          <Spacer height={14} />
-          <ThemedText weight="600">How would you like to pay?</ThemedText>
-          <Spacer height={6} />
-          <ThemedRadioButton
-            options={[
-              { label: 'Pay now via GCash (recommended)', value: 'ONLINE' },
-              { label: 'Pay at the barangay', value: 'CASH' },
-            ]}
-            value={payChoice}
-            onChange={setPayChoice as any}
-          />
+          {/* Payment Method Selection */}
+          <Spacer height={16} />
+          <ThemedText weight="600" style={{ marginBottom: 12 }}>Payment Method</ThemedText>
+          
+          <View style={styles.paymentContainer}>
+            <TouchableOpacity 
+              style={[styles.paymentOption, payChoice === 'ONLINE' && styles.paymentOptionSelected]}
+              onPress={() => setPayChoice('ONLINE')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.paymentIcon}>
+                <Ionicons name="card" size={24} color="#00d632" />
+              </View>
+              <View style={styles.paymentInfo}>
+                <ThemedText weight="700" style={styles.paymentTitle}>GCash</ThemedText>
+                {/* <ThemedText small style={styles.paymentSubtitle}>Instant & secure</ThemedText> */}
+              </View>
+              <View style={styles.recommendedBadge}>
+                <ThemedText small weight="600" style={{ color: '#059669' }}>RECOMMENDED</ThemedText>
+              </View>
+              <View style={[styles.paymentRadio, payChoice === 'ONLINE' && styles.paymentRadioSelected]}>
+                {payChoice === 'ONLINE' && <View style={styles.paymentRadioDot} />}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.paymentOption, payChoice === 'CASH' && styles.paymentOptionSelected]}
+              onPress={() => setPayChoice('CASH')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.paymentIcon}>
+                <Ionicons name="business" size={24} color="#6b7280" />
+              </View>
+              <View style={styles.paymentInfo}>
+                <ThemedText weight="700" style={styles.paymentTitle}>Pay at Office</ThemedText>
+                <ThemedText small style={styles.paymentSubtitle}>Visit barangay hall</ThemedText>
+              </View>
+              <View style={[styles.paymentRadio, payChoice === 'CASH' && styles.paymentRadioSelected]}>
+                {payChoice === 'CASH' && <View style={styles.paymentRadioDot} />}
+              </View>
+            </TouchableOpacity>
+          </View>
 
           <Spacer height={12} />
-          <ThemedText weight="600">Copies</ThemedText>
+          {/* <ThemedText weight="600">Copies</ThemedText>
           <Spacer height={6} />
-          <QuantityPicker value={quantity} onChange={setQuantity} />
+          <QuantityPicker value={quantity} onChange={setQuantity} /> */}
 
           <Spacer height={12} />
           <ThemedText weight="600">Notes to Treasurer/Clerk (optional)</ThemedText>
@@ -901,6 +917,113 @@ export default function RequestDoc() {
         </ThemedButton>
       </View>
 
+      {/* Confirmation Modal */}
+      <Modal visible={showConfirmModal} transparent animationType="fade" onRequestClose={() => setShowConfirmModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.confirmModalCard}>
+            {/* Header with gradient background */}
+            <View style={styles.confirmHeader}>
+              <View style={styles.confirmIconContainer}>
+                <View style={styles.confirmIconWrap}>
+                  <Ionicons name="shield-checkmark" size={32} color="#fff" />
+                </View>
+              </View>
+              <ThemedText style={styles.confirmTitle}>Review & Confirm</ThemedText>
+              <ThemedText style={styles.confirmSubtitle}>Please verify your request details</ThemedText>
+            </View>
+            
+            {/* Details Card */}
+            <View style={styles.confirmDetailsCard}>
+              <View style={styles.detailItem}>
+                <View style={styles.detailIcon}>
+                  <Ionicons name="document-outline" size={18} color="#6366f1" />
+                </View>
+                <View style={styles.detailContent}>
+                  <ThemedText style={styles.detailLabel}>Document Type</ThemedText>
+                  <ThemedText style={styles.detailValue}>{docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name}</ThemedText>
+                </View>
+              </View>
+              
+              <View style={styles.detailItem}>
+                <View style={styles.detailIcon}>
+                  <Ionicons name="flag-outline" size={18} color="#8b5cf6" />
+                </View>
+                <View style={styles.detailContent}>
+                  <ThemedText style={styles.detailLabel}>Purpose</ThemedText>
+                  <ThemedText style={styles.detailValue}>{selectedPurpose?.purpose_label}</ThemedText>
+                </View>
+              </View>
+              
+              <View style={styles.detailItem}>
+                <View style={styles.detailIcon}>
+                  <Ionicons name="person-outline" size={18} color="#06b6d4" />
+                </View>
+                <View style={styles.detailContent}>
+                  <ThemedText style={styles.detailLabel}>Requesting for</ThemedText>
+                  <ThemedText style={styles.detailValue}>{forWhom === 'SELF' ? 'Myself' : otherPerson.display}</ThemedText>
+                </View>
+              </View>
+              
+              <View style={styles.detailItem}>
+                <View style={styles.detailIcon}>
+                  <Ionicons name={payChoice === 'ONLINE' ? 'card-outline' : 'business-outline'} size={18} color={payChoice === 'ONLINE' ? '#10b981' : '#f59e0b'} />
+                </View>
+                <View style={styles.detailContent}>
+                  <ThemedText style={styles.detailLabel}>Payment Method</ThemedText>
+                  <View style={styles.paymentBadgeContainer}>
+                    <View style={[styles.paymentBadge, payChoice === 'ONLINE' ? styles.paymentBadgeOnline : styles.paymentBadgeCash]}>
+                      <ThemedText style={[styles.paymentBadgeText, payChoice === 'ONLINE' ? styles.paymentBadgeTextOnline : styles.paymentBadgeTextCash]}>
+                        {payChoice === 'ONLINE' ? 'GCash' : 'Pay at Office'}
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+            
+            {/* Total Amount Card */}
+            <View style={styles.totalCard}>
+              <View style={styles.totalIconWrap}>
+                <Ionicons name="wallet" size={20} color="#310101" />
+              </View>
+              <View style={styles.totalContent}>
+                <ThemedText style={styles.totalLabel}>Total Amount</ThemedText>
+                <ThemedText style={styles.totalValue}>{estimatedDisplay}</ThemedText>
+              </View>
+            </View>
+            
+            {/* Action Buttons */}
+            <View style={styles.confirmActions}>
+              <Pressable 
+                style={[styles.cancelBtn, submitting && styles.cancelBtnDisabled]} 
+                onPress={() => setShowConfirmModal(false)} 
+                disabled={submitting}
+              >
+                <ThemedText style={[styles.cancelBtnText, submitting && styles.cancelBtnTextDisabled]}>Cancel</ThemedText>
+              </Pressable>
+              
+              <Pressable 
+                style={[styles.proceedBtn, submitting && styles.proceedBtnLoading]} 
+                onPress={handleConfirmSubmit} 
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <ThemedText style={styles.proceedBtnText}>Processing...</ThemedText>
+                  </View>
+                ) : (
+                  <View style={styles.proceedContainer}>
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                    <ThemedText style={styles.proceedBtnText}>Proceed</ThemedText>
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* modal */}
       <Modal visible={modal.visible} transparent animationType="fade" onRequestClose={hideModal}>
         <View style={styles.modalBackdrop}>
@@ -945,6 +1068,227 @@ function QuantityPicker({ value, onChange }: { value: number; onChange: (n: numb
 
 /* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
+  // Confirmation Modal Styles
+  confirmModalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    margin: 20,
+    maxWidth: 380,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 15,
+    overflow: 'hidden',
+  },
+  confirmHeader: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    position: 'relative',
+  },
+  confirmIconContainer: {
+    marginBottom: 16,
+  },
+  confirmIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  confirmTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  confirmSubtitle: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  confirmDetailsCard: {
+    padding: 24,
+    backgroundColor: '#fff',
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  detailIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  detailContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    lineHeight: 22,
+  },
+  paymentBadgeContainer: {
+    marginTop: 2,
+  },
+  paymentBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  paymentBadgeOnline: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#a7f3d0',
+  },
+  paymentBadgeCash: {
+    backgroundColor: '#fef3c7',
+    borderColor: '#fcd34d',
+  },
+  paymentBadgeText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  paymentBadgeTextOnline: {
+    color: '#065f46',
+  },
+  paymentBadgeTextCash: {
+    color: '#92400e',
+  },
+  totalCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    marginHorizontal: 24,
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#310101',
+    shadowColor: '#310101',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  totalIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  totalContent: {
+    flex: 1,
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  totalValue: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#310101',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#f8fafc',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnDisabled: {
+    opacity: 0.5,
+  },
+  cancelBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  cancelBtnTextDisabled: {
+    color: '#94a3b8',
+  },
+  proceedBtn: {
+    flex: 2,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#310101',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#310101',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  proceedBtnLoading: {
+    backgroundColor: '#52525b',
+  },
+  proceedBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+    marginLeft: 8,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  proceedContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: { fontSize: 16, fontWeight: '800' },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center' },
@@ -986,10 +1330,78 @@ const styles = StyleSheet.create({
   bannerNeutral: { borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', borderRadius: 12, padding: 10, marginTop: 4 },
   bannerText: { marginLeft: 6 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   modalCard: { width: '100%', maxWidth: 380, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
   iconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   modalTitle: { textAlign: 'center', marginTop: 4 },
   modalMsg: { textAlign: 'center', opacity: 0.8, marginTop: 6, marginBottom: 14 },
   modalBtn: { marginTop: 4, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, backgroundColor: BRAND },
+
+  paymentContainer: {
+    gap: 10,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  paymentOptionSelected: {
+    borderColor: '#059669',
+    backgroundColor: '#f0fdf4',
+  },
+  paymentIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentTitle: {
+    fontSize: 16,
+    color: '#111827',
+    marginBottom: 2,
+  },
+  paymentSubtitle: {
+    color: '#6b7280',
+  },
+  paymentRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  paymentRadioSelected: {
+    borderColor: '#059669',
+  },
+  paymentRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#059669',
+  },
+  recommendedBadge: {
+    backgroundColor: '#d1fae5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginRight: 8,
+  },
 })

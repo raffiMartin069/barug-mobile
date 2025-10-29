@@ -14,6 +14,7 @@ import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 
 import { useAccountRole } from '@/store/useAccountRole'
+import { supabase } from '@/constants/supabase' // ⬅️ fallback fetch here
 
 import {
   getDocumentTypes,
@@ -27,7 +28,6 @@ import {
   type BusinessLite,
   checkBusinessClearanceForYear,
   resolveClearanceMode,
-  getDocRequestHeaderLite,
   checkBusinessClearanceEffectiveOn,
 } from '@/services/documentRequest'
 
@@ -126,9 +126,10 @@ export default function BusinessDocRequest() {
   }, [roleStore.ensureLoaded])
 
   const [businessDocTypeId, setBusinessDocTypeId] = useState<number | null>(null)
-  const [ctcDocTypeId, setCtcDocTypeId] = useState<number | null>(null)
+  const [ctcDocTypeId,   setCtcDocTypeId]       = useState<number | null>(null)
 
-  const [businesses, setBusinesses] = useState<BusinessLite[]>([])
+  // include business_category_id so we can auto-map to purpose (if RPC provides it)
+  const [businesses, setBusinesses] = useState<(BusinessLite & { business_category_id?: number | null })[]>([])
   const [businessId, setBusinessId] = useState<number | null>(null)
   const [purposes, setPurposes] = useState<Purpose[]>([])
   const [purposeId, setPurposeId] = useState<number | null>(null)
@@ -154,6 +155,9 @@ export default function BusinessDocRequest() {
   const [blocked, setBlocked] = useState<boolean>(false)
   const [clearanceRef, setClearanceRef] = useState<{ reference_request_id?: number | null; request_code?: string | null; year?: number } | null>(null)
 
+  // Fallback cache: business_id -> business_category_id (when RPC didn’t include it)
+  const [bizCatMap, setBizCatMap] = useState<Record<number, number | null>>({})
+
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -164,7 +168,10 @@ export default function BusinessDocRequest() {
         const ctc     = types.find(t => String(t.document_type_name).toUpperCase() === CTC_DOC_NAME)
         if (business) setBusinessDocTypeId(business.document_type_id)
         if (ctc) setCtcDocTypeId(ctc.document_type_id)
-      } catch (e) {}
+        console.debug('[BUS_DOC] Doc types', { businessDocTypeId: business?.document_type_id, ctcDocTypeId: ctc?.document_type_id })
+      } catch (e) {
+        console.warn('[BUS_DOC] getDocumentTypes failed', e)
+      }
     })()
     return () => { live = false }
   }, [])
@@ -178,14 +185,14 @@ export default function BusinessDocRequest() {
       const pid = Number(me?.person_id || 0)
       if (!pid) return
       try {
-        const list = await getBusinessesOwnedByPerson(pid)
+        const list = await getBusinessesOwnedByPerson(pid) as (BusinessLite & { business_category_id?: number | null })[]
         if (!live) return
+        console.debug('[BUS_DOC] Businesses for person', pid, list)
         setBusinesses(list)
 
         const entries = await Promise.all(
           list.map(async (b) => {
             try {
-              // 1) Active (date-based) validity – cross-year safe
               const active = await checkBusinessClearanceEffectiveOn(b.business_id, new Date())
               if (active.has) {
                 return [b.business_id, {
@@ -195,25 +202,26 @@ export default function BusinessDocRequest() {
                   released_at: active.issued_on,
                 }] as const
               }
-
-              // 2) Otherwise, “in progress” this year?
               const byYear = await checkBusinessClearanceForYear(b.business_id, CURRENT_YEAR)
               if (byYear.status === 'REQUESTED') {
                 return [b.business_id, { status: 'REQUESTED' as const }] as const
               }
-
-              // 3) Nothing active or pending
               return [b.business_id, { status: 'NONE' as const }] as const
-            } catch {
+            } catch (e) {
+              console.warn('[BUS_DOC] Status check failed for business', b.business_id, e)
               return [b.business_id, { status: 'NONE' as const }] as const
             }
           })
         )
         if (!live) return
-        setStatusByBiz(Object.fromEntries(entries))
+        const map = Object.fromEntries(entries)
+        console.debug('[BUS_DOC] statusByBiz', map)
+        setStatusByBiz(map)
 
         if (list.length === 1) setBusinessId(list[0].business_id)
-      } catch {}
+      } catch (e) {
+        console.warn('[BUS_DOC] getBusinessesOwnedByPerson failed', e)
+      }
     })()
     return () => { live = false }
   }, [me?.person_id])
@@ -226,16 +234,16 @@ export default function BusinessDocRequest() {
     if (!businessId) return
 
     const cached = statusByBiz[businessId]
+    console.debug('[BUS_DOC] business change', { businessId, cached })
     if (cached) {
       const mode = resolveClearanceMode(cached.status)
-      setCtcMode(mode === 'CTC')      // we map 'ISSUED' → 'CTC'
-      setBlocked(mode === 'BLOCKED')  // we map 'REQUESTED' → 'BLOCKED'
+      setCtcMode(mode === 'CTC')
+      setBlocked(mode === 'BLOCKED')
       setClearanceRef(
         mode === 'CTC'
           ? { reference_request_id: cached.doc_request_id ?? null, request_code: cached.request_code ?? null, year: CURRENT_YEAR }
           : null
       )
-      return
     }
   }, [businessId, statusByBiz])
 
@@ -250,11 +258,70 @@ export default function BusinessDocRequest() {
       try {
         const p = await getPurposesByDocumentType(effectiveDocTypeId)
         if (!live) return
+        console.debug('[BUS_DOC] purposes loaded for docType', effectiveDocTypeId, p)
         setPurposes(p)
-      } catch {}
+      } catch (e) {
+        console.warn('[BUS_DOC] getPurposesByDocumentType failed for', effectiveDocTypeId, e)
+      }
     })()
     return () => { live = false }
   }, [effectiveDocTypeId])
+
+  // Fallback fetch: if selected business has no business_category_id from RPC, read it from public.business
+  useEffect(() => {
+    (async () => {
+      if (!businessId || ctcMode) return
+      const fromList = businesses.find(b => b.business_id === businessId)?.business_category_id
+      const fromCache = bizCatMap[businessId]
+      if (fromList || fromList === 0 || fromCache || fromCache === 0) return // already have value (even 0)
+
+      console.debug('[BUS_DOC] fetching business_category_id (fallback) from DB', { businessId })
+      const { data, error } = await supabase
+        .from('business')
+        .select('business_category_id')
+        .eq('business_id', businessId)
+        .maybeSingle()
+
+      if (error) {
+        console.warn('[BUS_DOC] fallback fetch business_category_id failed', { businessId, error })
+        return
+      }
+      setBizCatMap(m => ({ ...m, [businessId]: (data?.business_category_id ?? null) as any }))
+      console.debug('[BUS_DOC] fallback fetched business_category_id', { businessId, business_category_id: data?.business_category_id })
+    })()
+  }, [businessId, businesses, ctcMode, bizCatMap])
+
+  // AUTO-SELECT: Business Nature from business_category_id (== document_purpose_id)
+  useEffect(() => {
+    if (ctcMode) return
+    if (!businessId) return
+    if (!purposes.length) return
+    if (purposeId) return
+
+    const fromList = businesses.find(b => b.business_id === businessId)?.business_category_id
+    const fromCache = bizCatMap[businessId]
+    const catId = Number((fromList ?? fromCache) || 0)
+
+    console.debug('[BUS_DOC] auto-select attempt', {
+      businessId,
+      catId,
+      purposeCount: purposes.length,
+      source: fromList != null ? 'rpc_list' : (fromCache != null ? 'fallback_cache' : 'none')
+    })
+
+    if (!catId) {
+      console.debug('[BUS_DOC] no business_category_id available for selected business')
+      return
+    }
+
+    const match = purposes.find(p => p.document_purpose_id === catId)
+    if (match) {
+      console.debug('[BUS_DOC] auto-select SUCCESS', { setPurposeIdTo: match.document_purpose_id, label: match.purpose_label })
+      setPurposeId(match.document_purpose_id)
+    } else {
+      console.warn('[BUS_DOC] auto-select FAILED (no purpose matches business_category_id)', { catId })
+    }
+  }, [ctcMode, businessId, purposes, purposeId, businesses, bizCatMap])
 
   const businessItems = useMemo(() => {
     return businesses.map((b) => {
@@ -279,6 +346,18 @@ export default function BusinessDocRequest() {
     () => purposes.find(p => p.document_purpose_id === (purposeId ?? -1)),
     [purposes, purposeId]
   )
+
+  // Visible “Business Nature” preview under the dropdown (uses RPC value or fallback cache)
+  const detectedNatureLabel = useMemo(() => {
+    if (!businessId) return null
+    const fromList = businesses.find(b => b.business_id === businessId)?.business_category_id
+    const fromCache = bizCatMap[businessId]
+    const catId = Number((fromList ?? fromCache) || 0)
+    if (!catId) return null
+    const match = purposes.find(p => p.document_purpose_id === catId)
+    return match?.purpose_label || null
+  }, [businessId, businesses, purposes, bizCatMap])
+
   const unit = Number((selectedPurpose as any)?.current_amount || 0)
   const qty = Math.max(1, Number(quantity || 1))
   const [exemptDisplay, netUnit, netTotal] = useMemo(() => {
@@ -338,9 +417,6 @@ export default function BusinessDocRequest() {
     return purp ? `${doc} • ${purp} • ${base}` : `${doc}`
   }, [selectedPurpose, netUnit, netTotal, qty, ctcMode])
 
-  const niceName = (p?: PersonMinimal | null) =>
-    p ? [p.first_name, p.middle_name, p.last_name, p.suffix].filter(Boolean).join(' ') : '—'
-
   const handleSubmit = async () => {
     const err = inlineError
     if (err) {
@@ -377,6 +453,8 @@ export default function BusinessDocRequest() {
         }],
       }
 
+      console.debug('[BUS_DOC] submit payload', payload)
+
       const newId = await createDocumentRequest(payload)
       setSubmitting(false)
       setModal({
@@ -394,6 +472,7 @@ export default function BusinessDocRequest() {
       })
     } catch (e: any) {
       setSubmitting(false)
+      console.warn('[BUS_DOC] submit failed', e)
       setModal({ visible: true, icon: 'error', title: 'Submission failed', message: e?.message ?? 'Unable to submit request right now.' })
     }
   }
@@ -429,40 +508,13 @@ export default function BusinessDocRequest() {
             </ThemedText>
           </View>
         ) : ctcMode && (
-          <>
-            <View style={styles.banner}>
-              <Ionicons name="warning-outline" size={18} color="#92400E" />
-              <ThemedText style={styles.bannerText} small>
-                This business already has an issued Business Clearance (still valid).
-                You can only request a <ThemedText weight="800">Certified True Copy</ThemedText>.
-              </ThemedText>
-            </View>
-
-            {!!clearanceRef?.reference_request_id && (
-              <ThemedCard style={{ marginHorizontal: 16, marginTop: 10 }}>
-                <RowTitle icon="pricetag-outline" title="Reference Clearance" />
-                <Spacer height={8} />
-                <View style={styles.detailsWrap}>
-                  <View style={styles.row}>
-                    <ThemedText muted style={styles.rowLabel}>Request Code</ThemedText>
-                    <ThemedText style={styles.rowValue}>{statusByBiz[businessId!]?.request_code || '—'}</ThemedText>
-                  </View>
-                  <View style={styles.row}>
-                    <ThemedText muted style={styles.rowLabel}>Issued On</ThemedText>
-                    <ThemedText style={styles.rowValue}>
-                      {statusByBiz[businessId!]?.released_at
-                        ? new Date(statusByBiz[businessId!].released_at!).toLocaleString()
-                        : '—'}
-                    </ThemedText>
-                  </View>
-                  <View style={styles.row}>
-                    <ThemedText muted style={styles.rowLabel}>Doc Request ID</ThemedText>
-                    <ThemedText style={styles.rowValue}>{clearanceRef.reference_request_id}</ThemedText>
-                  </View>
-                </View>
-              </ThemedCard>
-            )}
-          </>
+          <View style={styles.banner}>
+            <Ionicons name="warning-outline" size={18} color="#92400E" />
+            <ThemedText style={styles.bannerText} small>
+              This business already has an issued Business Clearance (still valid).
+              You can only request a <ThemedText weight="800">Certified True Copy</ThemedText>.
+            </ThemedText>
+          </View>
         )}
 
         <ThemedCard style={{ marginTop: 10 }}>
@@ -529,6 +581,19 @@ export default function BusinessDocRequest() {
           />
           {!!effectiveDocTypeId && !purposeItems.length && <ThemedText small muted>Loading purposes…</ThemedText>}
           {(!purposeId) && <ThemedText small style={styles.errorText}>Please select a purpose.</ThemedText>}
+
+          {/* Visible detected nature from Business Profile (RPC or fallback) */}
+          {!!detectedNatureLabel && !ctcMode && (
+            <>
+              <Spacer height={10} />
+              <View style={styles.detectedChip}>
+                <Ionicons name="pricetag-outline" size={14} color={BRAND} />
+                <ThemedText small style={{ marginLeft: 6 }}>
+                  Business Nature (from Business Profile): <ThemedText small weight="800">{detectedNatureLabel}</ThemedText>
+                </ThemedText>
+              </View>
+            </>
+          )}
 
           <Spacer height={12} />
           <FeeRow title="Estimated Fee" value={estimatedDisplay} sub={exemptDisplay} />
@@ -626,6 +691,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 12,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: '#fafafa',
+  },
+
+  detectedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+    backgroundColor: '#fafafa'
   },
 
   fadeTop: { position: 'absolute', left: 0, right: 0, bottom: SUBMIT_BAR_HEIGHT, height: 14, backgroundColor: 'transparent' },

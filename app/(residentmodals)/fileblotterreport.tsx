@@ -6,12 +6,9 @@ import {
   View,
   TouchableOpacity,
   ActivityIndicator,
-  FlatList,
-  Image,
   StyleSheet,
   Pressable,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import dayjs from 'dayjs';
 
 import Spacer from '@/components/Spacer';
@@ -51,7 +48,21 @@ type Respondent = {
   address?: string | null;
 };
 
-const accent = '#6d2932';
+const accent = '#dc2626';
+const wash = '#fafafa';
+const ink = '#111827';
+const line = '#e5e7eb';
+const primary = '#1e40af';
+const success = '#059669';
+const warning = '#d97706';
+
+type Errors = {
+  subject?: string | null;
+  desc?: string | null;
+  address?: string | null;
+  date?: string | null;
+  time?: string | null;
+};
 
 export default function FileBlotterReport() {
   const router = useRouter();
@@ -69,13 +80,11 @@ export default function FileBlotterReport() {
         if (!live) return;
         if (fresh) setMe(fresh);
       }
-      // Debug: show what we have to confirm person_id presence
-      const keys = me ? Object.keys(me) : [];
-      console.log('[RoleStore] resident profile keys:', keys.slice(0, 10), '... total:', keys.length);
-      console.log('[RoleStore] resident person_id:', me?.person_id);
     })();
-    return () => { live = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---- Get address pieces from /mapaddress ----
@@ -88,10 +97,6 @@ export default function FileBlotterReport() {
     lng?: string | string[];
     purok_code?: string | string[];
   }>();
-
-  useEffect(() => {
-    console.log('[Blotter] useLocalSearchParams:', params);
-  }, [params]);
 
   const streetParam = pickOne(params.street);
   const purokParam = toTitleCase(pickOne(params.purok_name));
@@ -116,13 +121,13 @@ export default function FileBlotterReport() {
   const [lat, setLat] = useState<string>('');
   const [lng, setLng] = useState<string>('');
 
+  // Validation
+  const [errors, setErrors] = useState<Errors>({});
+
   useEffect(() => {
     if (streetParam || purokParam || brgyParam || cityParam) {
       const full = [streetParam, purokParam, brgyParam, cityParam].filter(Boolean).join(', ');
       setAddress(full);
-      console.log('[Blotter] Composed address:', full);
-    } else {
-      console.log('[Blotter] No address parts found yet');
     }
   }, [streetParam, purokParam, brgyParam, cityParam]);
 
@@ -132,14 +137,9 @@ export default function FileBlotterReport() {
     if (latParam || lngParam) {
       setLat(latParam || '');
       setLng(lngParam || '');
-      console.log('[Blotter] Lat/Lng captured from params:', { lat: latParam, lng: lngParam });
-    } else {
-      console.log('[Blotter] No lat/lng in params');
     }
   }, [params.lat, params.lng]);
 
-  // Attachments
-  const [photos, setPhotos] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
   // ---------------- Resident search (Supabase) ----------------
@@ -161,10 +161,8 @@ export default function FileBlotterReport() {
         const res = await searchResidents(q);
         if (alive) {
           setSearchResults(res);
-          console.log('[Blotter] searchResidents results:', res);
         }
-      } catch (err) {
-        console.warn('[Blotter] searchResidents error:', err);
+      } catch {
         if (alive) setSearchResults([]);
       } finally {
         if (alive) setSearching(false);
@@ -182,36 +180,14 @@ export default function FileBlotterReport() {
       name: p.full_name,
       address: p.address,
     };
-    console.log('[Blotter] addRespondent selected:', entry);
     setRespondents((prev) =>
       prev.find((x) => x.person_id === entry.person_id) ? prev : [...prev, entry]
     );
   };
 
   const removeRespondent = (person_id: number) => {
-    console.log('[Blotter] removeRespondent:', person_id);
     setRespondents((prev) => prev.filter((r) => r.person_id !== person_id));
   };
-
-  async function pickImage() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow photo library access.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
-      quality: 0.9,
-      allowsMultipleSelection: true,
-      selectionLimit: 4,
-    });
-    if (!result.canceled) {
-      const uris = result.assets.map((a) => a.uri);
-      const next = [...photos, ...uris].slice(0, 6);
-      console.log('[Blotter] picked photos:', next);
-      setPhotos(next);
-    }
-  }
 
   /* ---------------- Normalizers for pickers ---------------- */
 
@@ -219,11 +195,11 @@ export default function FileBlotterReport() {
     if (next instanceof Date && !isNaN(next.getTime())) {
       const pad = (n: number) => String(n).padStart(2, '0');
       const v = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
-      console.log('[Blotter] setDateFromPicker Date:', v);
       setDate(v);
+      setErrors((e) => ({ ...e, date: null }));
     } else if (typeof next === 'string') {
-      console.log('[Blotter] setDateFromPicker string:', next);
       setDate(next);
+      setErrors((e) => ({ ...e, date: null }));
     } else {
       setDate('');
     }
@@ -233,17 +209,16 @@ export default function FileBlotterReport() {
     if (next instanceof Date && !isNaN(next.getTime())) {
       const pad = (n: number) => String(n).padStart(2, '0');
       const v = `${pad(next.getHours())}:${pad(next.getMinutes())}`;
-      console.log('[Blotter] setTimeFromPicker Date:', v);
       setTime(v);
+      setErrors((e) => ({ ...e, time: null }));
     } else if (typeof next === 'string') {
       const m = next.match(/^(\d{1,2}):(\d{2})/);
       if (m) {
         const hh = String(m[1]).padStart(2, '0');
         const v = `${hh}:${m[2]}`;
-        console.log('[Blotter] setTimeFromPicker string parsed:', v);
         setTime(v);
+        setErrors((e) => ({ ...e, time: null }));
       } else {
-        console.log('[Blotter] setTimeFromPicker string raw:', next);
         setTime(next);
       }
     } else {
@@ -252,12 +227,16 @@ export default function FileBlotterReport() {
   };
 
   function validate(): string | null {
-    if (!subject.trim()) return 'Subject is required.';
-    if (!desc.trim()) return 'Description is required.';
-    if (!address.trim()) return 'Incident location is required.';
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Date must be YYYY-MM-DD.';
-    if (!/^\d{2}:\d{2}$/.test(time)) return 'Time must be HH:mm (24h).';
-    return null;
+    const next: Errors = {};
+    if (!subject.trim()) next.subject = 'Subject is required.';
+    if (!desc.trim()) next.desc = 'Description is required.';
+    if (!address.trim()) next.address = 'Incident location is required.';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) next.date = 'Use YYYY-MM-DD.';
+    if (!/^\d{2}:\d{2}$/.test(time)) next.time = 'Use HH:mm (24h).';
+
+    setErrors(next);
+    const firstError = Object.values(next).find(Boolean) as string | undefined;
+    return firstError || null;
   }
 
   async function onSubmit() {
@@ -269,7 +248,6 @@ export default function FileBlotterReport() {
 
     // 🔑 complainant/reporting person = current resident
     const complainantId = Number(me?.person_id) || null;
-    console.log('[Blotter] complainantId (from resident profile):', complainantId);
 
     const payload = {
       incidentSubject: subject.trim(),
@@ -294,11 +272,8 @@ export default function FileBlotterReport() {
       reportedByPersonId: complainantId,
 
       respondentIds: respondents.map((r) => Number(r.person_id)),
-      evidenceUris: photos,
+      evidenceUris: [], // attachments disabled by design
     } as const;
-
-    console.log('[Blotter] onSubmit — respondents:', respondents);
-    console.log('[Blotter] onSubmit — payload:', JSON.stringify(payload, null, 2));
 
     setBusy(true);
     try {
@@ -307,7 +282,6 @@ export default function FileBlotterReport() {
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      console.warn('[Blotter] Submit failed:', e);
       const msg =
         e?.data?.detail ||
         e?.data?.error ||
@@ -320,7 +294,6 @@ export default function FileBlotterReport() {
   }
 
   const goPickIncidentAddress = () => {
-    console.log('[Blotter] Navigating to /mapaddress for picking address…');
     router.push({
       pathname: '/mapaddress',
       params: { returnTo: '(residentmodals)/fileblotterreport' },
@@ -337,69 +310,100 @@ export default function FileBlotterReport() {
     );
   }, [searchText, searchResults]);
 
+  const fillNowDate = () => {
+    setDate(dayjs().format('YYYY-MM-DD'));
+    setErrors((e) => ({ ...e, date: null }));
+  };
+  const fillNowTime = () => {
+    setTime(dayjs().format('HH:mm'));
+    setErrors((e) => ({ ...e, time: null }));
+  };
+
+  const complainantName =
+    me?.full_name || me?.display_name || me?.name || 'You';
+
   return (
-    <ThemedView safe style={{ flex: 1 }}>
+    <ThemedView safe style={{ flex: 1, backgroundColor: wash }}>
       <ThemedAppBar title="File a Blotter Report" showNotif={false} showProfile={false} />
 
       <ThemedKeyboardAwareScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-        {/* Header */}
-        <ThemedCard>
-          <View style={styles.rowBetween}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.row}>
-                <ThemedIcon name="document-text-outline" bgColor={accent} size={20} containerSize={28} />
-                <ThemedText style={styles.title}>Blotter Report</ThemedText>
-              </View>
-              <ThemedText muted style={{ marginTop: 4 }}>
-                Please review your information before submitting.
-              </ThemedText>
-            </View>
+        {/* Progress / Stepper */}
+        <ThemedCard style={styles.progressCard}>
+          <View style={styles.progressHeader}>
+            <ThemedIcon name="clipboard-outline" size={20} containerSize={28} bgColor={primary} />
+            <ThemedText style={styles.progressTitle}>Filing Progress</ThemedText>
+          </View>
+          <View style={styles.stepperRow}>
+            <Step icon="person" text="Details" active completed />
+            <StepConnector active={!!address} />
+            <Step icon="location" text="Location" active={!!address} completed={!!address} />
+            <StepConnector active={respondents.length > 0} />
+            <Step icon="people" text="Respondents" active={respondents.length > 0} completed={respondents.length > 0} />
+            <StepConnector active={false} />
+            <Step icon="send" text="Submit" active={false} />
           </View>
         </ThemedCard>
 
         <Spacer height={16} />
 
         {/* Important Note */}
-        <ThemedCard>
-          <View style={[styles.row, { marginBottom: 6 }]}>
-            <ThemedIcon name="information-circle-outline" bgColor="#310101" size={20} containerSize={28} />
-            <ThemedText style={styles.noteTitle}>Important Note</ThemedText>
-          </View>
-          <ThemedText style={{ lineHeight: 20 }}>
-            By submitting this blotter report, you affirm that all information provided is true and accurate to the
-            best of your knowledge. False reporting may lead to legal consequences.
+        <ThemedCard style={styles.card}>
+          <SectionHeader icon="information-circle-outline" title="Before you submit" />
+          <ThemedText muted style={{ marginTop: 4 }}>
+            You’re filing as <ThemedText style={{ fontWeight: '700', color: ink }}>{complainantName}</ThemedText>.
+            Ensure details are accurate. False reporting may lead to legal consequences.
           </ThemedText>
 
           <Spacer height={10} />
-          <Bullet icon="checkmark-circle-outline" text="Make sure names, time, and location are accurate." />
-          <Bullet icon="shield-checkmark-outline" text="Attach supporting photos/videos if available." />
+          <Bullet icon="checkmark-circle-outline" text="Provide a clear subject and a concise description." />
+          <Bullet icon="shield-checkmark-outline" text="Use the map picker to set an exact location." />
           <Bullet icon="chatbubbles-outline" text="A barangay officer may contact you for clarification." />
         </ThemedCard>
 
         <Spacer height={16} />
 
-        {/* Form */}
-        <ThemedCard>
-          <Label>Subject</Label>
-          <TextField value={subject} onChangeText={setSubject} placeholder="e.g., Loud altercation" />
+        {/* Incident Details */}
+        <ThemedCard style={styles.card}>
+          <SectionHeader icon="document-text-outline" title="Incident details" />
+
+          <Label required>Subject</Label>
+          <TextField
+            value={subject}
+            onChangeText={(v) => {
+              setSubject(v);
+              if (errors.subject) setErrors((e) => ({ ...e, subject: null }));
+            }}
+            placeholder="e.g., Loud altercation"
+            error={!!errors.subject}
+          />
+          {!!errors.subject && <FieldError text={errors.subject!} />}
 
           <Spacer height={10} />
 
-          <Label>Description</Label>
+          <Label required>Description</Label>
           <TextField
             value={desc}
-            onChangeText={setDesc}
+            onChangeText={(v) => {
+              setDesc(v);
+              if (errors.desc) setErrors((e) => ({ ...e, desc: null }));
+            }}
             placeholder="What happened?"
             multiline
-            style={{ minHeight: 100, textAlignVertical: 'top' }}
+            style={{ minHeight: 110, textAlignVertical: 'top' }}
+            error={!!errors.desc}
           />
+          <View style={styles.hintRow}>
+            <ThemedText muted style={{ fontSize: 12 }}>{desc.length}/1000</ThemedText>
+            <ThemedText muted style={{ fontSize: 12 }}>Be specific and factual.</ThemedText>
+          </View>
+          {!!errors.desc && <FieldError text={errors.desc!} />}
 
-          <Spacer height={10} />
+          <Spacer height={12} />
 
           {/* Date / Time */}
           <View style={styles.rowBetween}>
             <View style={{ flex: 1, marginRight: 8 }}>
-              <Label>Date</Label>
+              <Label required>Date</Label>
               <ThemedDatePicker
                 value={date ? new Date(date) : undefined}
                 mode="date"
@@ -407,35 +411,44 @@ export default function FileBlotterReport() {
                 placeholder="YYYY-MM-DD"
                 maximumDate={new Date()}
               />
+              {!!errors.date && <FieldError text={errors.date!} />}
+              <QuickBtn icon="time-outline" label="Now" onPress={fillNowDate} />
             </View>
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <Label>Time</Label>
+              <Label required>Time</Label>
               <ThemedDatePicker
                 value={time ? dayjs(`2000-01-01T${time}:00`).toDate() : undefined}
                 mode="time"
                 onChange={setTimeFromPicker}
                 placeholder="HH:mm"
               />
+              {!!errors.time && <FieldError text={errors.time!} />}
+              <QuickBtn icon="flash-outline" label="Now" onPress={fillNowTime} />
             </View>
           </View>
+        </ThemedCard>
 
-          <Spacer height={10} />
+        <Spacer height={16} />
 
-          {/* Incident Location */}
-          <Label>Incident Location</Label>
-          <Pressable onPress={goPickIncidentAddress}>
+        {/* Incident Location */}
+        <ThemedCard style={styles.card}>
+          <SectionHeader icon="location-outline" title="Incident location" />
+
+          <Label required>Pick on map</Label>
+          <Pressable onPress={goPickIncidentAddress} style={{ borderRadius: 12 }}>
             <TextField
-              placeholder="Tap to pick on map (Street, Purok/Sitio, Barangay, City)"
+              placeholder="Tap to pick (Street, Purok/Sitio, Barangay, City)"
               multiline
               numberOfLines={2}
               value={address}
               onChangeText={() => {}}
               editable={false}
               pointerEvents="none"
+              error={!!errors.address}
             />
           </Pressable>
+          {!!errors.address && <FieldError text={errors.address!} />}
 
-          {/* Show lat/lng (read-only) if present */}
           {(lat || lng) && (
             <>
               <Spacer height={6} />
@@ -445,80 +458,105 @@ export default function FileBlotterReport() {
             </>
           )}
 
-          <Spacer height={14} />
+          <Spacer height={8} />
+          <View style={styles.tipBox}>
+            <ThemedIcon name="map-outline" size={16} containerSize={22} />
+            <ThemedText muted style={{ marginLeft: 8, flex: 1 }}>
+              Use landmarks and the exact purok/sitio for faster response.
+            </ThemedText>
+          </View>
+        </ThemedCard>
 
-          {/* Respondents */}
-          <Label>Respondents</Label>
+        <Spacer height={16} />
+
+        {/* Respondents */}
+        <ThemedCard style={styles.card}>
+          <SectionHeader icon="people-outline" title="Respondents (optional)" />
 
           {respondents.length > 0 && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
-              {respondents.map((r) => (
-                <View key={r.person_id} style={styles.chip}>
-                  <ThemedText style={{ fontWeight: '600' }}>{r.name}</ThemedText>
-                  <TouchableOpacity onPress={() => removeRespondent(r.person_id)} style={{ marginLeft: 8 }}>
-                    <ThemedIcon name="close" size={14} containerSize={18} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
+            <>
+              <View style={styles.selectedHeader}>
+                <ThemedText style={{ fontWeight: '700' }}>
+                  Selected ({respondents.length})
+                </ThemedText>
+                <TouchableOpacity
+                  onPress={() => setRespondents([])}
+                  style={styles.linkBtn}
+                >
+                  <ThemedText style={{ fontWeight: '700', color: accent }}>Clear</ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                {respondents.map((r) => (
+                  <View key={r.person_id} style={styles.chip}>
+                    <ThemedText style={{ fontWeight: '600' }}>{r.name}</ThemedText>
+                    <TouchableOpacity onPress={() => removeRespondent(r.person_id)} style={{ marginLeft: 8 }}>
+                      <ThemedIcon name="close" size={14} containerSize={18} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+              <Spacer height={8} />
+            </>
           )}
 
           <ThemedSearchSelect<ResidentLite>
-            items={searchResults}
+            items={filteredResults}
             getLabel={(p) => p.full_name}
             getSubLabel={(p) => p.address}
             inputValue={searchText}
-            onInputValueChange={(v) => {
-              console.log('[Blotter] search text:', v);
-              setSearchText(v);
-            }}
+            onInputValueChange={(v) => setSearchText(v)}
             placeholder={searching ? 'Searching…' : 'Search resident by name or ID…'}
             emptyText={searchText.length < 2 ? 'Type at least 2 characters' : 'No matches'}
             fillOnSelect={false}
             onSelect={(p) => addRespondent(p)}
           />
+          <View style={styles.hintRow}>
+            <ThemedText muted style={{ fontSize: 12 }}>
+              Can’t find someone? You may leave this blank.
+            </ThemedText>
+          </View>
+        </ThemedCard>
 
-          <Spacer height={14} />
+        <Spacer height={20} />
 
-          {/* Photos */}
-          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
-            <Label>Attachments</Label>
-            <TouchableOpacity onPress={pickImage} style={styles.addBtn}>
-              <ThemedIcon name="add" size={18} />
-              <ThemedText style={{ marginLeft: 6, fontWeight: '700' }}>Add Photos</ThemedText>
+        {/* Submit */}
+        <ThemedCard style={[styles.card, styles.submitCard]}>
+          <View style={styles.submitRow}>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={{ fontWeight: '800', fontSize: 16, color: ink }}>
+                Ready to submit?
+              </ThemedText>
+              <ThemedText muted>
+                You can’t attach files here. You may be asked for supporting documents later.
+              </ThemedText>
+            </View>
+
+            <TouchableOpacity
+              onPress={onSubmit}
+              disabled={busy}
+              style={[styles.submitBtn, busy && { opacity: 0.7 }]}
+            >
+              {busy ? (
+                <ActivityIndicator />
+              ) : (
+                <>
+                  <ThemedIcon name="send-outline" size={18} containerSize={22} />
+                  <ThemedText style={{ color: '#fff', fontWeight: '700', marginLeft: 8 }}>
+                    Submit Report
+                  </ThemedText>
+                </>
+              )}
             </TouchableOpacity>
           </View>
-
-          {!!photos.length && (
-            <FlatList
-              horizontal
-              data={photos}
-              keyExtractor={(u, i) => u + i}
-              ItemSeparatorComponent={() => <Spacer width={8} />}
-              renderItem={({ item }) => (
-                <View style={styles.thumb}>
-                  <ThemedView style={styles.thumbInner}>
-                    <Image source={{ uri: item }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
-                  </ThemedView>
-                </View>
-              )}
-            />
-          )}
-
-          <Spacer height={16} />
-
-          <TouchableOpacity onPress={onSubmit} disabled={busy} style={[styles.submitBtn, busy && { opacity: 0.7 }]}>
-            {busy ? (
-              <ActivityIndicator />
-            ) : (
-              <ThemedText style={{ color: '#fff', fontWeight: '700' }}>Submit Report</ThemedText>
-            )}
-          </TouchableOpacity>
         </ThemedCard>
       </ThemedKeyboardAwareScrollView>
     </ThemedView>
   );
 }
+
+/* ---------------- Small UI helpers ---------------- */
 
 function Bullet({ icon, text }: { icon: string; text: string }) {
   return (
@@ -531,58 +569,474 @@ function Bullet({ icon, text }: { icon: string; text: string }) {
   );
 }
 
-function Label({ children }: { children: React.ReactNode }) {
-  return <ThemedText style={{ fontWeight: '700', marginBottom: 6 }}>{children}</ThemedText>;
+function SectionHeader({ icon, title }: { icon: string; title: string }) {
+  return (
+    <View style={[styles.row, { marginBottom: 8 }]}>
+      <ThemedIcon name={icon} bgColor={accent} size={18} containerSize={26} />
+      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+    </View>
+  );
 }
 
-function TextField(props: React.ComponentProps<typeof TextInput>) {
+function Step({ icon, text, active, completed }: { icon: string; text: string; active?: boolean; completed?: boolean }) {
+  return (
+    <View style={styles.stepContainer}>
+      <View style={[styles.stepIcon, completed ? styles.stepIconCompleted : active ? styles.stepIconActive : styles.stepIconInactive]}>
+        <ThemedIcon
+          name={completed ? 'checkmark' : icon}
+          size={16}
+          containerSize={20}
+          bgColor="transparent"
+        />
+      </View>
+      <ThemedText style={[styles.stepText, (active || completed) ? styles.stepTextActive : styles.stepTextInactive]}>
+        {text}
+      </ThemedText>
+    </View>
+  );
+}
+
+function StepConnector({ active }: { active?: boolean }) {
+  return <View style={[styles.stepConnector, active ? styles.stepConnectorActive : styles.stepConnectorInactive]} />;
+}
+
+function InfoItem({ icon, text, color }: { icon: string; text: string; color: string }) {
+  return (
+    <View style={styles.infoItem}>
+      <View style={[styles.infoItemIcon, { backgroundColor: `${color}15` }]}>
+        <ThemedIcon name={icon} size={16} containerSize={20} bgColor="transparent" />
+      </View>
+      <ThemedText style={styles.infoItemText}>{text}</ThemedText>
+    </View>
+  );
+}
+
+
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+      <ThemedText style={{ fontWeight: '700' }}>{children}</ThemedText>
+      {required && <ThemedText style={{ color: '#ef4444', marginLeft: 6 }}>*</ThemedText>}
+    </View>
+  );
+}
+
+function FieldError({ text }: { text: string }) {
+  return <ThemedText style={{ color: '#d00', marginTop: 6 }}>{text}</ThemedText>;
+}
+
+function QuickBtn({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} style={styles.quickBtn}>
+      <ThemedIcon name={icon} size={14} containerSize={18} />
+      <ThemedText style={{ marginLeft: 6, fontWeight: '700' }}>{label}</ThemedText>
+    </TouchableOpacity>
+  );
+}
+
+function TextField(
+  props: React.ComponentProps<typeof TextInput> & { error?: boolean }
+) {
+  const { error, style, ...rest } = props;
   return (
     <TextInput
-      {...props}
+      {...rest}
       placeholderTextColor="#999"
       style={[
         {
           borderWidth: 1,
-          borderColor: 'rgba(0,0,0,0.12)',
-          borderRadius: 10,
+          borderColor: error ? '#d00' : 'rgba(0,0,0,0.12)',
+          borderRadius: 12,
           paddingHorizontal: 12,
           paddingVertical: 10,
           backgroundColor: '#fff',
         },
-        props.style,
+        style,
       ]}
+      maxLength={rest.multiline ? 1000 : 255}
     />
   );
 }
 
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center' },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { paddingLeft: 10, fontSize: 16, fontWeight: '700' },
-  noteTitle: { paddingLeft: 10, fontWeight: '700' },
-  bulletRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  bulletText: { marginLeft: 6, flex: 1 },
+/* ---------------- Styles ---------------- */
 
-  addBtn: {
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: line,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  progressCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+    backgroundColor: '#fff',
+    shadowColor: primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  progressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ink,
+    marginLeft: 12,
+  },
+  stepContainer: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  stepIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  stepIconCompleted: {
+    backgroundColor: success,
+  },
+  stepIconActive: {
+    backgroundColor: primary,
+  },
+  stepIconInactive: {
+    backgroundColor: '#f1f5f9',
+  },
+  stepText: {
+    fontSize: 11,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  stepTextActive: {
+    color: ink,
+  },
+  stepTextInactive: {
+    color: '#64748b',
+  },
+  stepConnector: {
+    height: 2,
+    flex: 1,
+    marginHorizontal: 8,
+    marginTop: -24,
+  },
+  stepConnectorActive: {
+    backgroundColor: success,
+  },
+  stepConnectorInactive: {
+    backgroundColor: '#e2e8f0',
+  },
+  infoCard: {
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.12)',
+    borderColor: '#dbeafe',
+    backgroundColor: '#f8faff',
+    shadowColor: primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  infoIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#dbeafe',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ink,
+    marginBottom: 2,
+  },
+  infoSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  infoItem: {
+    flex: 1,
+    minWidth: '30%',
+    alignItems: 'center',
+    padding: 12,
     backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  infoItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  infoItemText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    textAlign: 'center',
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+    padding: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: warning,
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#92400e',
+    fontWeight: '600',
+    marginLeft: 8,
+    flex: 1,
+  },
+  detailsCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+    backgroundColor: '#fff',
+    shadowColor: primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  locationCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#d1fae5',
+    backgroundColor: '#fff',
+    shadowColor: success,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  respondentsCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+    backgroundColor: '#fff',
+    shadowColor: warning,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  sectionIconWrap: {
+    marginRight: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ink,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  optionalBadge: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  optionalText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  submitCard: {
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: accent,
+    backgroundColor: '#fff',
+    shadowColor: accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  submitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  submitIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  submitContent: {
+    flex: 1,
+  },
+  submitTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: ink,
+    marginBottom: 2,
+  },
+  submitSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  submitNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 16,
+  },
+  submitNoteText: {
+    fontSize: 13,
+    color: '#64748b',
+    marginLeft: 8,
+    flex: 1,
   },
   submitBtn: {
     backgroundColor: accent,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
+    shadowColor: accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  thumb: { width: 86, height: 86, borderRadius: 8, overflow: 'hidden' },
-  thumbInner: { width: '100%', height: '100%', borderRadius: 8, overflow: 'hidden' },
+  submitBtnLoading: {
+    backgroundColor: '#9ca3af',
+  },
+  submitBtnContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  submitBtnText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
+  sectionTitle: { paddingLeft: 10, fontSize: 15, fontWeight: '800', color: ink },
+
+  /* Stepper */
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 4,
+  },
+
+  /* Bullets */
+  bulletRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  bulletText: { marginLeft: 6, flex: 1 },
+
+  /* Hints */
+  hintRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 6,
+  },
+
+  /* Quick small outline button */
+  quickBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  tipBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f6f3f2',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    borderRadius: 12,
+    padding: 10,
+  },
+
+  /* Respondents */
+  selectedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  linkBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(109,41,50,0.08)',
+  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -592,5 +1046,22 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
+  },
+
+  /* Submit */
+  submitCard: {
+    borderColor: '#ead7da',
+    backgroundColor: '#fff',
+  },
+  submitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  submitBtn: {
+    backgroundColor: accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    minWidth: 160,
   },
 });

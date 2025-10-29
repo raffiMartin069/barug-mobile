@@ -427,13 +427,13 @@ export default function FileBlotterReport() {
           <Spacer height={14} />
 
           {/* Photos */}
-          <View style={[styles.rowBetween, { marginBottom: 10 }]}>
+          {/* <View style={[styles.rowBetween, { marginBottom: 10 }]}>
             <Label>Attachments</Label>
             <TouchableOpacity onPress={pickImage} style={styles.addBtn}>
               <ThemedIcon name="add" size={18} />
               <ThemedText style={{ marginLeft: 6, fontWeight: '700' }}>Add Photos</ThemedText>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           {!!photos.length && (
             <FlatList
