@@ -4,26 +4,35 @@ import ThemedBottomSheet from "@/components/ThemedBottomSheet";
 import ThemedButton from "@/components/ThemedButton";
 import ThemedCard from "@/components/ThemedCard";
 import ThemedChip from "@/components/ThemedChip";
-import ThemedDropdown from "@/components/ThemedDropdown";
+import ThemedDropdown from "@/components/ThemedDropdown_";
 import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
+import ThemedTextInput from "@/components/ThemedTextInput";
 import ThemedView from "@/components/ThemedView";
+import { FILTER_BY_STATUS } from "@/constants/filterByStatus";
+import { FILTER_BY_WEEK } from "@/constants/filterByWeek";
 
 import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
 import { useMemberRemoval } from "@/hooks/useMemberRemoval";
 
 import { FamilyRepository } from "@/repository/familyRepository";
+import { HealthWorkerRepository } from "@/repository/HealthWorkerRepository";
 import { HouseholdRepository } from "@/repository/householdRepository";
 
 import { HouseholdListService } from "@/services/householdList";
 import { MemberRemovalService } from "@/services/memberRemovalService";
+import { SearchSchedulingService } from "@/services/SearchSchedulingService";
+import { useGeolocationStore } from "@/store/geolocationStore";
 
 import { useHouseMateStore } from "@/store/houseMateStore";
+import { useBasicHouseholdInfoStore } from "@/store/useBasicHouseholdInfoStore";
 
 import { Family } from "@/types/familyTypes";
 import { Household } from "@/types/householdType";
 import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
+import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
+import { transform } from "@babel/core";
 
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
@@ -32,10 +41,13 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
+  findNodeHandle,
   KeyboardAvoidingView,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
+  UIManager,
   View,
 } from "react-native";
 
@@ -51,13 +63,47 @@ const REMOVAL_REASONS = [
 
 type RemovalReason = typeof REMOVAL_REASONS[number]
 
+type MenuItem = { label: string; onPress: () => void }
+
+type MenuPortalState = {
+  visible: boolean
+  x: number
+  y: number
+  w: number
+  h: number
+  items: MenuItem[]
+}
+
 const HouseholdList = () => {
   const router = useRouter();
-  
+
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
+  const [search, setSearch] = useState('')
+  const [status, setStatus] = useState()
+  const [weekRange, setWeekRange] = useState()
+  const [menuPortal, setMenuPortal] = useState<MenuPortalState>({ visible: false, x: 0, y: 0, w: 0, h: 0, items: [] })
+  const closeMenuPortal = () => setMenuPortal((m) => ({ ...m, visible: false }))
+  const openMenuAtRef = (ref: any, items: MenuItem[]) => {
+    const node = findNodeHandle(ref)
+    if (!node) return
+    UIManager.measureInWindow(node, (x, y, w, h) => {
+      const MENU_WIDTH = 240
+      const margin = 8
+      const left = Math.min(x + w - MENU_WIDTH, SCREEN_WIDTH - MENU_WIDTH - margin)
+      const top = y + h + 4
+      setMenuPortal({ visible: true, x: left, y: top, w, h, items })
+    })
+  }
+  const houseEllipsisRef = useRef<View>(null)
+  const familyEllipsisRefs = useRef<Record<string, View | null>>({})
+
+  const setHouseholdNumber = useBasicHouseholdInfoStore((state) => state.setHouseholdNumber);
+  const setHouseholdHead = useBasicHouseholdInfoStore((state) => state.setHouseholdHead);
+
+  const clearAddress = useGeolocationStore((state) => state.clear);
 
   const isFocused = useIsFocused();
 
@@ -70,6 +116,8 @@ const HouseholdList = () => {
     if (!isFocused) return;
     fetchHouseholds();
   }, [isFocused]);
+
+
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false);
@@ -106,6 +154,8 @@ const HouseholdList = () => {
   };
 
   const closeSheet = () => setOpen(false);
+
+  const searchService = new SearchSchedulingService(new HealthWorkerRepository());
 
   const onFamiliesScroll = (e: any) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -145,15 +195,47 @@ const HouseholdList = () => {
   const memberRemovalHandler = async (id: string) => {
     const memberId = pendingRemoval?.member.id ? Number(pendingRemoval.member.id.split('-')[0]) : null
     const service = new MemberRemovalService(new HouseholdRepository())
-      const res = await removeMember(memberId, selectedReason, service)
-      if (!res) {
-        Alert.alert('Failed', error ?? 'Unable to remove member. Please try again later.')
-        return;
-      }
-      Alert.alert('Success', 'Member has been removed successfully.')
-      setRemoveOpen(false)
-      await fetchHouseholds()
+    const res = await removeMember(memberId, selectedReason, service)
+    if (!res) {
+      Alert.alert('Failed', error ?? 'Unable to remove member. Please try again later.')
+      return;
+    }
+    Alert.alert('Success', 'Member has been removed successfully.')
+    setRemoveOpen(false)
+    await fetchHouseholds()
   }
+
+  /* Search execution type is used for retrieving household information.
+    This identifies which operation will be used by the search service object.*/
+  const [searchExecutionType, setSearchExecutionType] = useState(0)
+
+  const findHousehold = async (key: string | number, executionType: number) => {
+
+    /* This function allows users to execute search functionality and retrieve household information.
+
+      - Checks if the search key and execution type are valid.
+      - If not, it fetches all households.
+      - If valid, it uses the search service to get filtered household data.
+      - Parses and transforms the data into a structured format.
+      - Updates the state with the transformed household data.
+      
+      By: raf
+    */
+
+    if (!key || !executionType || executionType === 0) {
+      await fetchHouseholds()
+      return;
+    }
+    if (typeof key === "string") key = key.trim();
+    try {
+      const filteredHouseholdData = await searchService.Execute(key, executionType);
+      const parsedData = filteredHouseholdData.map((item: string) => JSON.parse(item));
+      const transformedHouseholds = HouseholdDataTransformation.TransformFilteredAndSearchHouseholdData(parsedData);
+      setHouseholds(transformedHouseholds);
+    } catch (error) {
+      console.error("Error searching households:", error);
+    }
+  };
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
@@ -165,6 +247,45 @@ const HouseholdList = () => {
           showsVerticalScrollIndicator={false}
         >
           <Spacer height={20} />
+
+          {/* ADD SEARCH AND FILTERS SECTION */}
+          <View style={{ paddingHorizontal: 40 }}>
+            <ThemedTextInput placeholder='Search household #, household head...' value={search} onChangeText={(text: string) => {
+              setStatus(undefined)
+              setWeekRange(undefined)
+              setSearch(text)
+              findHousehold(text, 1)
+            }} />
+            <Spacer height={10} />
+            <View style={styles.filtersWrap}>
+              <View style={styles.filterCol}>
+                <ThemedText style={styles.filterLabel}>Status</ThemedText>
+                <ThemedDropdown
+                  placeholder="All"
+                  items={FILTER_BY_STATUS}
+                  value={status}
+                  setValue={(value) => {
+                    setStatus(value)
+                    setSearch('')
+                    setWeekRange(undefined)
+                    findHousehold(value, 2)
+                  }}
+                  order={0}
+                />
+              </View>
+              <View style={styles.filterCol}>
+                <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
+                <ThemedDropdown placeholder="This Week" items={FILTER_BY_WEEK} value={weekRange} setValue={(val) => {
+                  setWeekRange(val)
+                  setSearch('')
+                  setStatus(undefined)
+                  findHousehold(val, 3)
+                }} order={0} />
+              </View>
+            </View>
+            <Spacer height={10} />
+          </View>
+          {/* END SEARCH AND FILTERS SECTION */}
 
           {households.map((hh) => (
             <View key={hh.id}>
@@ -212,7 +333,7 @@ const HouseholdList = () => {
                   <View style={styles.rowSubContainer}>
                     <Ionicons name="people-outline" size={16} color="#475569" />
                     <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
-                      {hh.families.length} Families
+                      {hh.families ? `${hh.families.length} Families` : 'No Families'}
                     </ThemedText>
                   </View>
 
@@ -234,11 +355,59 @@ const HouseholdList = () => {
       <ThemedBottomSheet visible={open} onClose={closeSheet}>
         {selectedHousehold && (
           <View style={{ flex: 1 }}>
-            <View style={{ marginBottom: 8 }}>
-              <ThemedText subtitle>{selectedHousehold.householdNum}</ThemedText>
-              <ThemedText style={{ color: "#475569" }}>
-                {selectedHousehold.householdHead}
-              </ThemedText>
+            {/* CORRECTED: Single household header with ellipsis */}
+            <View style={{ marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <ThemedText subtitle>{selectedHousehold.householdNum}</ThemedText>
+                <ThemedText style={{ color: '#475569' }}>{selectedHousehold.householdHead}</ThemedText>
+              </View>
+
+              <View style={styles.headerRightWrap}>
+                <Pressable
+                  ref={houseEllipsisRef}
+                  onPress={() =>
+                    openMenuAtRef(houseEllipsisRef.current, [
+                      {
+                        label: 'Update Household Head',
+                        onPress: () => {
+                          closeMenuPortal()
+                          router.push({
+                            pathname: '/updatehhhead',
+                            params: {
+                              id: selectedHousehold.id,
+                              householdNum: selectedHousehold.householdNum,
+                              currentHeadId: '',
+                              currentHeadName: selectedHousehold.householdHead,
+                            },
+                          })
+                        },
+                      },
+                      {
+                        label: 'Update Household Information',
+                        onPress: () => {
+                          closeMenuPortal()
+                          setHouseholdNumber(selectedHousehold.householdNum)
+                          setHouseholdHead(selectedHousehold.householdHead)
+                          clearAddress();
+                          router.push({
+                            pathname: '/updatehhinfo',
+                            params: {
+                              id: selectedHousehold.id,
+                              householdNum: selectedHousehold.householdNum,
+                              currentHeadId: '',
+                              currentHeadName: selectedHousehold.householdHead,
+                            },
+                          })
+                        },
+                      },
+                    ])
+                  }
+                  hitSlop={8}
+                  style={{ padding: 6 }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
+                </Pressable>
+              </View>
             </View>
 
             <ScrollView
@@ -305,115 +474,132 @@ const HouseholdList = () => {
                   onScroll={onFamiliesScroll}
                   scrollEventThrottle={16}
                 >
-                  {selectedHousehold.families.map((fam) => (
-                    <View
-                      key={fam.familyNum}
-                      style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}
-                    >
-                      <View style={styles.familyCover}>
-                        <Ionicons
-                          name="home-outline"
-                          size={20}
-                          color="#475569"
-                        />
-                        <View style={{ marginLeft: 10 }}>
-                          <ThemedText style={{ fontWeight: "700" }}>
-                            {fam.familyNum}
-                          </ThemedText>
-                          <ThemedText
-                            style={{ color: "#64748b", marginTop: 2 }}
-                          >
-                            Family Head:{" "}
-                            <ThemedText style={{ fontWeight: "700" }}>
-                              {fam.headName}
-                            </ThemedText>
-                          </ThemedText>
-                          <View style={styles.badgesRow}>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Type: {fam.type}
+                  {selectedHousehold.families.map((fam) => {
+                    const key = `${selectedHousehold.id}:${fam.familyNum}`
+                    return (
+                      <View
+                        key={fam.familyNum}
+                        style={{ width: SCREEN_WIDTH - 16, paddingRight: 16 }}
+                      >
+                        <View style={[styles.familyCover, { justifyContent: 'space-between' }]}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <Ionicons name="home-outline" size={20} color="#475569" />
+                            <View style={{ marginLeft: 10, flex: 1 }}>
+                              <ThemedText style={{ fontWeight: '700' }}>{fam.familyNum}</ThemedText>
+                              <ThemedText style={{ color: '#64748b', marginTop: 2 }}>
+                                Family Head: <ThemedText style={{ fontWeight: '700' }}>{fam.headName}</ThemedText>
                               </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                NHTS: {String(fam.nhts)}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Indigent: {String(fam.indigent)}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Monthly Income: {fam.monthlyIncome}
-                              </ThemedText>
-                            </View>
-                            <View style={styles.badge}>
-                              <ThemedText style={styles.badgeText}>
-                                Source of Income: {fam.sourceIncome}
-                              </ThemedText>
+                              <View style={styles.badgesRow}>
+                                <View style={styles.badge}><ThemedText style={styles.badgeText}>Type: {fam.type}</ThemedText></View>
+                                <View style={styles.badge}><ThemedText style={styles.badgeText}>NHTS: {String(fam.nhts)}</ThemedText></View>
+                                <View style={styles.badge}><ThemedText style={styles.badgeText}>Indigent: {String(fam.indigent)}</ThemedText></View>
+                                <View style={styles.badge}><ThemedText style={styles.badgeText}>Monthly Income: {fam.monthlyIncome}</ThemedText></View>
+                                <View style={styles.badge}><ThemedText style={styles.badgeText}>Source of Income: {fam.sourceIncome}</ThemedText></View>
+                              </View>
                             </View>
                           </View>
+
+                          <View style={styles.headerRightWrap}>
+                            <Pressable
+                              ref={(r) => { familyEllipsisRefs.current[key] = r }}
+                              onPress={() =>
+                                openMenuAtRef(familyEllipsisRefs.current[key], [
+                                  {
+                                    label: 'Update Family Head',
+                                    onPress: () => {
+                                      closeMenuPortal()
+                                      router.push({
+                                        pathname: '/updatefamhead',
+                                        params: {
+                                          id: selectedHousehold.id,
+                                          householdNum: selectedHousehold.householdNum,
+                                          familyNum: fam.familyNum,
+                                          currentHeadName: fam.headName,
+                                        },
+                                      })
+                                    },
+                                  },
+                                  {
+                                    label: 'Update Family Information',
+                                    onPress: () => {
+                                      closeMenuPortal()
+                                      router.push({
+                                        pathname: '/updatefaminfo',
+                                        params: {
+                                          id: selectedHousehold.id,
+                                          householdNum: selectedHousehold.householdNum,
+                                          familyNum: fam.familyNum,
+                                          familyHeadName: fam.headName,
+                                        },
+                                      })
+                                    },
+                                  },
+                                ])
+                              }
+                              hitSlop={8}
+                              style={{ paddingLeft: 8, paddingVertical: 6 }}
+                            >
+                              <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
+                            </Pressable>
+                          </View>
                         </View>
-                      </View>
 
-                      <Spacer height={10} />
+                        <Spacer height={10} />
 
-                      {/* Family Head block with Update button (near the head) */}
-                      <View style={{ marginBottom: 8 }}>
                         <View style={styles.sectionHeaderRow}>
-                          <ThemedText style={styles.sectionTitle}>Family Head</ThemedText>
+                          <ThemedText style={styles.sectionTitle}>
+                            Members
+                          </ThemedText>
                           <ThemedChip
-                            label="Update Family Head"
-                            onPress={() => onPressUpdateFamilyHead(fam)}
+                            label={"Add Member"}
+                            onPress={() => onPressAddMember(fam.familyNum)}
                             filled={false}
                           />
                         </View>
-                        <ThemedText style={{ color: "#64748b", fontWeight: "700" }}>
-                          {fam.headName}
-                        </ThemedText>
-                      </View>
 
-                      <View style={styles.sectionHeaderRow}>
-                        <ThemedText style={styles.sectionTitle}>
-                          Members
-                        </ThemedText>
-                        <ThemedChip
-                          label={"Add Member"}
-                          onPress={() => onPressAddMember(fam.familyNum)}
-                          filled={false}
-                        />
+                        {fam.members.length > 0 ? (
+                          <View style={styles.memberGrid}>
+                            {fam.members.map((m) => (
+                              <ThemedChip
+                                key={m.id}
+                                label={m.name}
+                                onPress={() => onPressMember(fam, m)}
+                                removable
+                                onRemove={() => openRemoveModal(selectedHousehold.id, fam.familyNum, m)}
+                              />
+                            ))}
+                          </View>
+                        ) : (
+                          <ThemedText
+                            style={{ color: "#64748b", fontStyle: "italic" }}
+                          >
+                            There is no family member in this family.
+                          </ThemedText>
+                        )}
                       </View>
-
-                      {fam.members.length > 0 ? (
-                        <View style={styles.memberGrid}>
-                          {fam.members.map((m) => (
-                            <ThemedChip
-                              key={m.id}
-                              label={m.name}
-                              onPress={() => onPressMember(fam, m)}
-                              removable
-                              onRemove={() => openRemoveModal(selectedHousehold.id, fam.familyNum, m)}
-                            />
-                          ))}
-                        </View>
-                      ) : (
-                        <ThemedText
-                          style={{ color: "#64748b", fontStyle: "italic" }}
-                        >
-                          There is no family member in this family.
-                        </ThemedText>
-                      )}
-                    </View>
-                  ))}
+                    )
+                  })}
                 </ScrollView>
               </View>
             </ScrollView>
           </View>
         )}
       </ThemedBottomSheet>
-      {/* ---------- Remove Member Modal (Bottom Sheet) ---------- */}
+      {/* --------- MENU PORTAL (always on top) ---------- */}
+      <Modal transparent visible={menuPortal.visible} animationType="fade" onRequestClose={closeMenuPortal}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={closeMenuPortal} />
+        <View style={[styles.portalMenu, { top: menuPortal.y, left: menuPortal.x }]}>
+          {menuPortal.items?.map((it, idx) => (
+            <Pressable
+              key={it.label}
+              onPress={it.onPress}
+              style={[styles.menuItem, idx === menuPortal.items.length - 1 && styles.menuItemLast]}
+            >
+              <ThemedText>{it.label}</ThemedText>
+            </Pressable>
+          ))}
+        </View>
+      </Modal>
       <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
         <View style={{ flex: 1 }}>
           {/* Scrollable content above the fixed footer */}
@@ -564,4 +750,24 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   sectionTitle: { fontWeight: "700", flexShrink: 1 },
+  filtersWrap: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  filterCol: { flex: 1, minWidth: 0 },
+  filterLabel: { fontSize: 12, color: '#64748b', marginBottom: 6 },
+  headerRightWrap: { position: 'relative', flexDirection: 'row', alignItems: 'center' },
+  menuItem: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  menuItemLast: { borderBottomWidth: 0 },
+  portalMenu: {
+    position: 'absolute',
+    minWidth: 240,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 50,
+    zIndex: 9999,
+  },
 });

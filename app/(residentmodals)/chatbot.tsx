@@ -1,179 +1,88 @@
-import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedIcon from '@/components/ThemedIcon'
-import ThemedText from '@/components/ThemedText'
-import ThemedTextInput from '@/components/ThemedTextInput'
-import ThemedView from '@/components/ThemedView'
-import React, { useMemo, useRef, useState } from 'react'
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, TouchableOpacity, View } from 'react-native'
+import React, { useMemo, useRef, useEffect } from 'react';
+import {
+    View,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    useColorScheme,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChatBotMessageType } from '@/types/chatbotMessageType';
+import { CHATBOT_COLORS, CHATBOT_HEADER_HEIGHT, chatStyles } from '@/constants/temp/bot/chatbot';
+import { TopBar } from '@/components/temp/bot/topBar';
+import { Bubble } from '@/components/temp/bot/bubble';
+import { Composer } from '@/components/temp/bot/composer';
+import { useAssistant } from '@/hooks/useAssistant';
 
-type Message = {
-  id: string
-  text: string
-  sender: 'user' | 'bot'
-  ts: number
+function getGreeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
 }
 
-const MessageBubble = ({ msg }: { msg: Message }) => {
-  const isUser = msg.sender === 'user'
-  return (
-    <View style={[styles.row, { justifyContent: isUser ? 'flex-end' : 'flex-start' }]}>
-      {!isUser && (
-        <View style={styles.avatar}>
-          <ThemedIcon name="chatbubbles" size={16} containerSize={28} bgColor="#310101" />
-        </View>
-      )}
-      <View
-        style={[
-          styles.bubble,
-          isUser ? styles.userBubble : styles.botBubble,
-          isUser ? { borderTopRightRadius: 6 } : { borderTopLeftRadius: 6 },
-        ]}
-      >
-        <ThemedText style={styles.bubbleText}>{msg.text}</ThemedText>
-        <ThemedText style={styles.timeText}>
-          {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </ThemedText>
-      </View>
-    </View>
-  )
-}
+const ChatBot: React.FC = () => {
+    const scheme = useColorScheme() ?? 'light';
+    const insets = useSafeAreaInsets();
+    const themeBg = scheme === 'dark' ? CHATBOT_COLORS.darkBg : CHATBOT_COLORS.lightBg;
 
-const ChatBot = () => {
-  const [message, setMessage] = useState('')
-  const listRef = useRef<FlatList<Message>>(null)
+    const welcomedRef = useRef(false);
 
-  const messages: Message[] = [
-    {
-      id: '1',
-      text: "Hello! I'm your Barangay AI Assistant. How can I help you today?",
-      sender: 'bot',
-      ts: Date.now(),
-    },
-    {
-      id: '2',
-      text: 'What are the requirements for Barangay Clearance?',
-      sender: 'user',
-      ts: Date.now(),
-    },
-    {
-      id: '3',
-      text: 'You need 1 valid ID and proof of residence.',
-      sender: 'bot',
-      ts: Date.now(),
-    },
-    {
-      id: '4',
-      text: 'You need 1 valid ID and proof of residence.',
-      sender: 'bot',
-      ts: Date.now(),
-    },
-    {
-      id: '5',
-      text: 'You need 1 valid ID and proof of residence.',
-      sender: 'bot',
-      ts: Date.now(),
-    },
-    {
-      id: '6',
-      text: 'You need 1 valid ID and proof of residence.',
-      sender: 'bot',
-      ts: Date.now(),
-    },
-  ]
+    const { message, setMessage, msgs, setMsgs, listRef, loadingTimersRef, handleSend } = useAssistant();
 
-  const data = useMemo(() => [...messages].reverse(), [messages])
+    useEffect(() => {
+        if (welcomedRef.current) return;
+        welcomedRef.current = true;
 
-  return (
+        const welcomeMsg: ChatBotMessageType = {
+            id: `welcome_${Date.now()}`,
+            sender: 'bot',
+            ts: Date.now(),
+            text: `${getGreeting()} 👋\nWelcome—chat with Kabayan! Ask about barangay services, requirements, fees, or schedules.`,
+        };
+        setMsgs(prev => [...prev, welcomeMsg]);
+    }, []);
 
-    <ThemedView style={{flex: 1}} safe>
-      <ThemedAppBar title="Barangay Assistant" showNotif={false} showProfile={false} />
+    const data = useMemo(() => [...msgs].reverse(), [msgs]);
 
-      <ThemedView>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={80}
-        >
-          <FlatList
-            style={{ flex: 1 }}
-            ref={listRef}
-            data={data}
-            keyExtractor={(item) => item.id}
-            inverted
-            contentContainerStyle={{ padding: 12, flexGrow: 1 }}
-            renderItem={({ item }) => <MessageBubble msg={item} />}
-          />
+    useEffect(() => {
+        return () => {
+            Object.values(loadingTimersRef.current).forEach(timer => clearInterval(timer));
+            loadingTimersRef.current = {};
+        };
+    }, []);
 
-          <View style={styles.inputContainer}>
-            <ThemedTextInput
-              style={styles.textInput}
-              placeholder="Type your message..."
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={() => {}} activeOpacity={0.7}>
-              <ThemedIcon name="send" size={20} bgColor="#310101" containerSize={40} />
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </ThemedView>
-    </ThemedView>
-  )
-}
+    const keyboardOffset = CHATBOT_HEADER_HEIGHT + insets.top;
 
-export default ChatBot
+    return (
+        <SafeAreaView style={[chatStyles.safe, { backgroundColor: themeBg }]} edges={['top']}>
+            <TopBar title="Barangay Assistant" />
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  avatar: {
-    marginRight: 8,
-    alignSelf: 'flex-end',
-  },
-  bubble: {
-    maxWidth: '80%',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-  },
-  userBubble: {
-    backgroundColor: '#e9f0ff',
-    alignSelf: 'flex-end',
-  },
-  botBubble: {
-    backgroundColor: '#f2f2f2',
-    alignSelf: 'flex-start',
-  },
-  bubbleText: {
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  timeText: {
-    marginTop: 4,
-    fontSize: 11,
-    opacity: 0.6,
-    alignSelf: 'flex-end',
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    backgroundColor: '#fff',
-  },
-  textInput: {
-    flex: 1,
-    minHeight: 40,
-    maxHeight: 120,
-    paddingHorizontal: 10,
-  },
-  sendButton: {
-    marginLeft: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-})
+            <KeyboardAvoidingView
+                style={chatStyles.flex}
+                behavior={Platform.select({ ios: 'padding', android: 'height' })}
+                keyboardVerticalOffset={Platform.select({ ios: keyboardOffset, android: 0 }) ?? 0}
+            >
+                <View style={[chatStyles.container, { paddingBottom: insets.bottom }]}>
+                    <FlatList
+                        style={chatStyles.flex}
+                        ref={listRef}
+                        data={data}
+                        keyExtractor={(item) => item.id}
+                        inverted
+                        contentContainerStyle={chatStyles.listContent}
+                        renderItem={({ item }) => <Bubble msg={item} />}
+                        keyboardShouldPersistTaps="handled"
+                        automaticallyAdjustKeyboardInsets
+                        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+                    />
+
+                    <Composer value={message} onChange={setMessage} onSend={handleSend} />
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
+};
+
+export default ChatBot;
+
