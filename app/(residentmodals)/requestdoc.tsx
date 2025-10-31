@@ -533,6 +533,13 @@ export default function RequestDoc() {
   const netTotal = netUnit * qty
   const estimatedDisplay = useMemo(() => checkingWaiver ? 'Checking…' : peso(netTotal), [netTotal, checkingWaiver])
 
+  // Auto-select 'Pay at Office' when total is 0
+  useEffect(() => {
+    if (netTotal === 0) {
+      setPayChoice('CASH')
+    }
+  }, [netTotal])
+
   // validation
   const inlineError = useMemo(() => {
     if (!documentTypeId) return 'Please select a document.'
@@ -827,25 +834,37 @@ export default function RequestDoc() {
 
           {/* Payment Method Selection */}
           <Spacer height={16} />
-          <ThemedText weight="600" style={{ marginBottom: 12 }}>Payment Method</ThemedText>
+          <View style={styles.paymentHeader}>
+            <ThemedText weight="700" style={styles.paymentHeaderTitle}>Choose Payment Method</ThemedText>
+            <ThemedText small muted style={styles.paymentHeaderSubtitle}>Select how you'd like to pay for this document</ThemedText>
+          </View>
           
           <View style={styles.paymentContainer}>
             <TouchableOpacity 
-              style={[styles.paymentOption, payChoice === 'ONLINE' && styles.paymentOptionSelected]}
-              onPress={() => setPayChoice('ONLINE')}
-              activeOpacity={0.8}
+              style={[styles.paymentOption, payChoice === 'ONLINE' && styles.paymentOptionSelected, netTotal === 0 && styles.paymentOptionDisabled]}
+              onPress={() => netTotal > 0 && setPayChoice('ONLINE')}
+              activeOpacity={netTotal > 0 ? 0.8 : 1}
+              disabled={netTotal === 0}
             >
-              <View style={styles.paymentIcon}>
-                <Ionicons name="card" size={24} color="#00d632" />
+              <View style={styles.paymentContent}>
+                <View style={[styles.paymentIcon, netTotal === 0 && styles.paymentIconDisabled]}>
+                  <Ionicons name="card" size={22} color={netTotal === 0 ? '#9ca3af' : '#10b981'} />
+                </View>
+                <View style={styles.paymentInfo}>
+                  <View style={styles.paymentTitleRow}>
+                    <ThemedText weight="700" style={[styles.paymentTitle, netTotal === 0 && styles.paymentTitleDisabled]}>GCash Payment</ThemedText>
+                    {netTotal > 0 && (
+                      <View style={styles.recommendedBadge}>
+                        <ThemedText style={styles.recommendedText}>RECOMMENDED</ThemedText>
+                      </View>
+                    )}
+                  </View>
+                  <ThemedText small style={[styles.paymentSubtitle, netTotal === 0 && styles.paymentSubtitleDisabled]}>
+                    {netTotal === 0 ? 'Not available for free documents' : 'Pay instantly with your mobile wallet'}
+                  </ThemedText>
+                </View>
               </View>
-              <View style={styles.paymentInfo}>
-                <ThemedText weight="700" style={styles.paymentTitle}>GCash</ThemedText>
-                {/* <ThemedText small style={styles.paymentSubtitle}>Instant & secure</ThemedText> */}
-              </View>
-              <View style={styles.recommendedBadge}>
-                <ThemedText small weight="600" style={{ color: '#059669' }}>RECOMMENDED</ThemedText>
-              </View>
-              <View style={[styles.paymentRadio, payChoice === 'ONLINE' && styles.paymentRadioSelected]}>
+              <View style={[styles.paymentRadio, payChoice === 'ONLINE' && styles.paymentRadioSelected, netTotal === 0 && styles.paymentRadioDisabled]}>
                 {payChoice === 'ONLINE' && <View style={styles.paymentRadioDot} />}
               </View>
             </TouchableOpacity>
@@ -855,12 +874,23 @@ export default function RequestDoc() {
               onPress={() => setPayChoice('CASH')}
               activeOpacity={0.8}
             >
-              <View style={styles.paymentIcon}>
-                <Ionicons name="business" size={24} color="#6b7280" />
-              </View>
-              <View style={styles.paymentInfo}>
-                <ThemedText weight="700" style={styles.paymentTitle}>Pay at Office</ThemedText>
-                <ThemedText small style={styles.paymentSubtitle}>Visit barangay hall</ThemedText>
+              <View style={styles.paymentContent}>
+                <View style={styles.paymentIcon}>
+                  <Ionicons name="business" size={22} color={BRAND} />
+                </View>
+                <View style={styles.paymentInfo}>
+                  <View style={styles.paymentTitleRow}>
+                    <ThemedText weight="700" style={styles.paymentTitle}>Pay at Barangay Office</ThemedText>
+                    {netTotal === 0 && (
+                      <View style={styles.freeBadge}>
+                        <ThemedText style={styles.freeText}>FREE</ThemedText>
+                      </View>
+                    )}
+                  </View>
+                  <ThemedText small style={styles.paymentSubtitle}>
+                    {netTotal === 0 ? 'No payment required - just pick up your document' : 'Visit the barangay hall to pay and collect'}
+                  </ThemedText>
+                </View>
               </View>
               <View style={[styles.paymentRadio, payChoice === 'CASH' && styles.paymentRadioSelected]}>
                 {payChoice === 'CASH' && <View style={styles.paymentRadioDot} />}
@@ -921,108 +951,93 @@ export default function RequestDoc() {
       <Modal visible={showConfirmModal} transparent animationType="fade" onRequestClose={() => setShowConfirmModal(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.confirmModalCard}>
-            {/* Header with gradient background */}
+            {/* Header */}
             <View style={styles.confirmHeader}>
-              <View style={styles.confirmIconContainer}>
-                <View style={styles.confirmIconWrap}>
-                  <Ionicons name="shield-checkmark" size={32} color="#fff" />
-                </View>
+              <View style={styles.confirmIconWrap}>
+                <Ionicons name="document-text" size={28} color="#fff" />
               </View>
-              <ThemedText style={styles.confirmTitle}>Review & Confirm</ThemedText>
-              <ThemedText style={styles.confirmSubtitle}>Please verify your request details</ThemedText>
+              <ThemedText style={styles.confirmTitle}>Confirm Request</ThemedText>
+              <ThemedText style={styles.confirmSubtitle}>Review your document request details</ThemedText>
             </View>
             
-            {/* Details Card */}
-            <View style={styles.confirmDetailsCard}>
-              <View style={styles.detailItem}>
-                <View style={styles.detailIcon}>
-                  <Ionicons name="document-outline" size={18} color="#6366f1" />
+            {/* Content */}
+            <View style={styles.confirmContent}>
+              {/* Document Info */}
+              <View style={styles.infoSection}>
+                <ThemedText style={styles.sectionLabel}>Document Details</ThemedText>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Type:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name}</ThemedText>
                 </View>
-                <View style={styles.detailContent}>
-                  <ThemedText style={styles.detailLabel}>Document Type</ThemedText>
-                  <ThemedText style={styles.detailValue}>{docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name}</ThemedText>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Purpose:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{selectedPurpose?.purpose_label}</ThemedText>
                 </View>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <View style={styles.detailIcon}>
-                  <Ionicons name="flag-outline" size={18} color="#8b5cf6" />
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>For:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{forWhom === 'SELF' ? 'Myself' : otherPerson.display}</ThemedText>
                 </View>
-                <View style={styles.detailContent}>
-                  <ThemedText style={styles.detailLabel}>Purpose</ThemedText>
-                  <ThemedText style={styles.detailValue}>{selectedPurpose?.purpose_label}</ThemedText>
-                </View>
-              </View>
-              
-              <View style={styles.detailItem}>
-                <View style={styles.detailIcon}>
-                  <Ionicons name="person-outline" size={18} color="#06b6d4" />
-                </View>
-                <View style={styles.detailContent}>
-                  <ThemedText style={styles.detailLabel}>Requesting for</ThemedText>
-                  <ThemedText style={styles.detailValue}>{forWhom === 'SELF' ? 'Myself' : otherPerson.display}</ThemedText>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Payment:</ThemedText>
+                  <View style={styles.paymentBadge}>
+                    <Ionicons name={payChoice === 'ONLINE' ? 'card' : 'business'} size={14} color={payChoice === 'ONLINE' ? '#059669' : '#d97706'} />
+                    <ThemedText style={[styles.paymentText, { color: payChoice === 'ONLINE' ? '#059669' : '#d97706' }]}>
+                      {payChoice === 'ONLINE' ? 'GCash' : 'Pay at Office'}
+                    </ThemedText>
+                  </View>
                 </View>
               </View>
-              
-              <View style={styles.detailItem}>
-                <View style={styles.detailIcon}>
-                  <Ionicons name={payChoice === 'ONLINE' ? 'card-outline' : 'business-outline'} size={18} color={payChoice === 'ONLINE' ? '#10b981' : '#f59e0b'} />
-                </View>
-                <View style={styles.detailContent}>
-                  <ThemedText style={styles.detailLabel}>Payment Method</ThemedText>
-                  <View style={styles.paymentBadgeContainer}>
-                    <View style={[styles.paymentBadge, payChoice === 'ONLINE' ? styles.paymentBadgeOnline : styles.paymentBadgeCash]}>
-                      <ThemedText style={[styles.paymentBadgeText, payChoice === 'ONLINE' ? styles.paymentBadgeTextOnline : styles.paymentBadgeTextCash]}>
-                        {payChoice === 'ONLINE' ? 'GCash' : 'Pay at Office'}
-                      </ThemedText>
+
+              {/* Fee Summary */}
+              <View style={styles.feeSection}>
+                <ThemedText style={styles.sectionLabel}>Fee Summary</ThemedText>
+                <View style={styles.feeBreakdown}>
+                  <View style={styles.feeRow}>
+                    <ThemedText style={styles.feeLabel}>Base Fee</ThemedText>
+                    <ThemedText style={styles.feeValue}>{peso(unit)}</ThemedText>
+                  </View>
+                  <View style={styles.feeRow}>
+                    <ThemedText style={styles.feeLabel}>Quantity</ThemedText>
+                    <ThemedText style={styles.feeValue}>×{qty}</ThemedText>
+                  </View>
+                  {waiverSource && exemptUnit > 0 && (
+                    <View style={styles.feeRow}>
+                      <ThemedText style={[styles.feeLabel, { color: '#059669' }]}>Waiver</ThemedText>
+                      <ThemedText style={[styles.feeValue, { color: '#059669' }]}>-{peso(exemptUnit * qty)}</ThemedText>
                     </View>
+                  )}
+                  <View style={styles.feeDivider} />
+                  <View style={styles.totalRow}>
+                    <ThemedText style={styles.totalLabel}>Total Amount</ThemedText>
+                    <ThemedText style={styles.totalValue}>{peso(netTotal)}</ThemedText>
                   </View>
                 </View>
               </View>
             </View>
             
-            {/* Total Amount Card */}
-            <View style={styles.totalCard}>
-              <View style={styles.totalIconWrap}>
-                <Ionicons name="wallet" size={20} color="#310101" />
-              </View>
-              <View style={styles.totalContent}>
-                <ThemedText style={styles.totalLabel}>Total Amount</ThemedText>
-                <ThemedText style={styles.totalValue}>{estimatedDisplay}</ThemedText>
-              </View>
-            </View>
-            
-            {/* Action Buttons */}
+            {/* Actions */}
             <View style={styles.confirmActions}>
-              <Pressable 
-                style={[styles.cancelBtn, submitting && styles.cancelBtnDisabled]} 
-                onPress={() => setShowConfirmModal(false)} 
-                disabled={submitting}
+              <ThemedButton 
+                submit={false}
+                onPress={() => setShowConfirmModal(false)}
+                style={styles.cancelBtn}
               >
-                <ThemedText style={[styles.cancelBtnText, submitting && styles.cancelBtnTextDisabled]}>Cancel</ThemedText>
-              </Pressable>
+                <ThemedText non_btn>Cancel</ThemedText>
+              </ThemedButton>
               
-              <Pressable 
-                style={[styles.proceedBtn, submitting && styles.proceedBtnLoading]} 
-                onPress={handleConfirmSubmit} 
+              <ThemedButton 
+                onPress={handleConfirmSubmit}
                 disabled={submitting}
+                loading={submitting}
+                style={styles.submitBtn}
               >
-                {submitting ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#fff" />
-                    <ThemedText style={styles.proceedBtnText}>Processing...</ThemedText>
-                  </View>
-                ) : (
-                  <View style={styles.proceedContainer}>
-                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                    <ThemedText style={styles.proceedBtnText}>Proceed</ThemedText>
-                  </View>
-                )}
-              </Pressable>
+                <ThemedText btn>{payChoice === 'ONLINE' ? 'Pay with GCash' : 'Submit Request'}</ThemedText>
+              </ThemedButton>
             </View>
           </View>
         </View>
       </Modal>
+
 
       {/* modal */}
       <Modal visible={modal.visible} transparent animationType="fade" onRequestClose={hideModal}>
@@ -1071,224 +1086,146 @@ const styles = StyleSheet.create({
   // Confirmation Modal Styles
   confirmModalCard: {
     backgroundColor: '#fff',
-    borderRadius: 24,
+    borderRadius: 20,
     margin: 20,
-    maxWidth: 380,
+    maxWidth: 400,
     width: '90%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.15,
-    shadowRadius: 30,
-    elevation: 15,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
     overflow: 'hidden',
   },
   confirmHeader: {
     alignItems: 'center',
-    paddingTop: 32,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    position: 'relative',
-  },
-  confirmIconContainer: {
-    marginBottom: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    backgroundColor: BRAND,
   },
   confirmIconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   confirmTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#fff',
-    marginBottom: 6,
-    textAlign: 'center',
+    marginBottom: 4,
   },
   confirmSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
     textAlign: 'center',
+  },
+  confirmContent: {
+    padding: 20,
+  },
+  infoSection: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#6b7280',
     fontWeight: '500',
   },
-  confirmDetailsCard: {
-    padding: 24,
-    backgroundColor: '#fff',
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  detailIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f8fafc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  detailContent: {
+  infoValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '600',
     flex: 1,
-  },
-  detailLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-    lineHeight: 22,
-  },
-  paymentBadgeContainer: {
-    marginTop: 2,
+    textAlign: 'right',
+    marginLeft: 12,
   },
   paymentBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  paymentBadgeOnline: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#a7f3d0',
-  },
-  paymentBadgeCash: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fcd34d',
-  },
-  paymentBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  paymentBadgeTextOnline: {
-    color: '#065f46',
-  },
-  paymentBadgeTextCash: {
-    color: '#92400e',
-  },
-  totalCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fafafa',
-    marginHorizontal: 24,
-    marginBottom: 24,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#310101',
-    shadowColor: '#310101',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: '#f9fafb',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
   },
-  totalIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#fff',
+  paymentText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  feeSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+  },
+  feeBreakdown: {
+    gap: 8,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
-  totalContent: {
-    flex: 1,
+  feeLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  feeValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  feeDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 8,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
   },
   totalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 4,
+    fontSize: 16,
+    color: '#1f2937',
+    fontWeight: '700',
   },
   totalValue: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#310101',
+    fontSize: 18,
+    color: BRAND,
+    fontWeight: '800',
   },
   confirmActions: {
     flexDirection: 'row',
+    padding: 20,
+    paddingTop: 0,
     gap: 12,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: '#f8fafc',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  cancelBtnDisabled: {
-    opacity: 0.5,
-  },
-  cancelBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  cancelBtnTextDisabled: {
-    color: '#94a3b8',
-  },
-  proceedBtn: {
+  submitBtn: {
     flex: 2,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: '#310101',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#310101',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  proceedBtnLoading: {
-    backgroundColor: '#52525b',
-  },
-  proceedBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#fff',
-    marginLeft: 8,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  proceedContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
+
   sectionTitle: { fontSize: 16, fontWeight: '800' },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center' },
@@ -1303,10 +1240,10 @@ const styles = StyleSheet.create({
   iconPill: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(49,1,1,0.08)', alignItems: 'center', justifyContent: 'center' },
 
   feeRow: {
-    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12,
-    paddingVertical: 8, paddingHorizontal: 12,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fafafa',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
 
   dropzone: { borderWidth: 1, borderStyle: 'dashed', borderColor: '#d1d5db', padding: 14, borderRadius: 14, alignItems: 'center', backgroundColor: '#fcfcfc' },
@@ -1337,71 +1274,139 @@ const styles = StyleSheet.create({
   modalMsg: { textAlign: 'center', opacity: 0.8, marginTop: 6, marginBottom: 14 },
   modalBtn: { marginTop: 4, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, backgroundColor: BRAND },
 
+  paymentHeader: {
+    marginBottom: 16,
+  },
+  paymentHeaderTitle: {
+    fontSize: 17,
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  paymentHeaderSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
   paymentContainer: {
-    gap: 10,
+    gap: 12,
   },
   paymentOption: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 2,
     borderColor: '#e5e7eb',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   paymentOptionSelected: {
-    borderColor: '#059669',
-    backgroundColor: '#f0fdf4',
+    borderColor: BRAND,
+    backgroundColor: '#fef7f0',
+    shadowColor: BRAND,
+    shadowOpacity: 0.15,
+  },
+  paymentOptionDisabled: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+    shadowOpacity: 0.02,
+  },
+  paymentContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   paymentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  paymentIconDisabled: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
   },
   paymentInfo: {
     flex: 1,
   },
+  paymentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   paymentTitle: {
     fontSize: 16,
-    color: '#111827',
-    marginBottom: 2,
+    color: '#1f2937',
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  paymentTitleDisabled: {
+    color: '#9ca3af',
   },
   paymentSubtitle: {
+    fontSize: 13,
     color: '#6b7280',
+    lineHeight: 18,
+  },
+  paymentSubtitleDisabled: {
+    color: '#9ca3af',
   },
   paymentRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: '#d1d5db',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: 12,
   },
   paymentRadioSelected: {
-    borderColor: '#059669',
+    borderColor: BRAND,
+  },
+  paymentRadioDisabled: {
+    borderColor: '#e5e7eb',
   },
   paymentRadioDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#059669',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: BRAND,
   },
   recommendedBadge: {
-    backgroundColor: '#d1fae5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginRight: 8,
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  recommendedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#166534',
+    letterSpacing: 0.5,
+  },
+  freeBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  freeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400e',
+    letterSpacing: 0.5,
   },
 })

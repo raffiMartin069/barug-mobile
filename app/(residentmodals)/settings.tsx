@@ -26,8 +26,8 @@ const settingsData = [
   {
     title: 'Support',
     options: [
-      { label: 'Help Center', route: '/newpassword' },
-      { label: 'About', route: '/emailsent' },
+      { label: 'Help Center', route: '/help-center' },
+      { label: 'About', route: '/about' },
     ],
   },
 ] as const

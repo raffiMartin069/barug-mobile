@@ -108,10 +108,21 @@ const FILTERS = [
 
 type FilterKey = typeof FILTERS[number]['key']
 
-const BarangayCases = () => {
+const BarangayCases = ({ personId, personName }: { personId?: string; personName?: string } = {}) => {
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all')
   const router = useRouter()
+
+  // Filter cases by person involvement
+  const getPersonCases = (cases: CaseItem[]) => {
+    if (!personId && !personName) return cases
+    return cases.filter(c => 
+      personName ? c.parties.toLowerCase().includes(personName.toLowerCase()) : true
+    )
+  }
+
+  const personActiveCases = getPersonCases(ACTIVE_CASES)
+  const personHistoryCases = getPersonCases(HISTORY_CASES)
 
   const searchLower = search.trim().toLowerCase()
   const matches = (c: CaseItem) =>
@@ -124,8 +135,8 @@ const BarangayCases = () => {
       (c.role?.toLowerCase().includes(searchLower) ?? false)
     )
 
-  const visibleActive = useMemo(() => ACTIVE_CASES.filter(matches), [search, activeFilter])
-  const visibleHistory = useMemo(() => HISTORY_CASES.filter(matches), [search, activeFilter])
+  const visibleActive = useMemo(() => personActiveCases.filter(matches), [personActiveCases, search, activeFilter])
+  const visibleHistory = useMemo(() => personHistoryCases.filter(matches), [personHistoryCases, search, activeFilter])
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe>
@@ -182,7 +193,7 @@ const BarangayCases = () => {
 
             {visibleActive.length === 0 ? (
               <ThemedText subtitle style={{ textAlign: 'center', color: '#808080' }}>
-                No active barangay cases.
+                {personName ? `No active barangay cases for ${personName}.` : 'No active barangay cases.'}
               </ThemedText>
             ) : (
               visibleActive.map((c) => {
@@ -225,7 +236,7 @@ const BarangayCases = () => {
 
             {visibleHistory.length === 0 ? (
               <ThemedText subtitle style={{ textAlign: 'center', color: '#808080' }}>
-                No barangay cases history.
+                {personName ? `No barangay cases history for ${personName}.` : 'No barangay cases history.'}
               </ThemedText>
             ) : (
               visibleHistory.map((c) => {

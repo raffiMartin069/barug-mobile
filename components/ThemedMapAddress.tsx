@@ -25,7 +25,7 @@ const ThemedMapAddress: React.FC<Props> = ({ route }) => {
   const handleAddress = () => {
     router.replace({
       pathname: route, // ✅ replace, don’t push
-      params: {
+      params: { 
         street: location.street,
         brgy: location.barangay,
         city: location.city,

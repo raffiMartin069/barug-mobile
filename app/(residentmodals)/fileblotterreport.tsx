@@ -48,13 +48,11 @@ type Respondent = {
   address?: string | null;
 };
 
-const accent = '#dc2626';
+const accent = '#6d2932';
 const wash = '#fafafa';
-const ink = '#111827';
+const ink = '#1f2937';
 const line = '#e5e7eb';
-const primary = '#1e40af';
-const success = '#059669';
-const warning = '#d97706';
+const muted = '#6b7280';
 
 type Errors = {
   subject?: string | null;
@@ -327,44 +325,70 @@ export default function FileBlotterReport() {
       <ThemedAppBar title="File a Blotter Report" showNotif={false} showProfile={false} />
 
       <ThemedKeyboardAwareScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-        {/* Progress / Stepper */}
-        <ThemedCard style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <ThemedIcon name="clipboard-outline" size={20} containerSize={28} bgColor={primary} />
-            <ThemedText style={styles.progressTitle}>Filing Progress</ThemedText>
-          </View>
-          <View style={styles.stepperRow}>
-            <Step icon="person" text="Details" active completed />
-            <StepConnector active={!!address} />
-            <Step icon="location" text="Location" active={!!address} completed={!!address} />
-            <StepConnector active={respondents.length > 0} />
-            <Step icon="people" text="Respondents" active={respondents.length > 0} completed={respondents.length > 0} />
-            <StepConnector active={false} />
-            <Step icon="send" text="Submit" active={false} />
+        {/* Progress */}
+        <ThemedCard style={styles.card}>
+          <View style={styles.row}>
+            <ThemedIcon name="clipboard-outline" size={18} containerSize={24} bgColor={accent} />
+            <ThemedText style={styles.cardTitle}>Blotter Report Form</ThemedText>
           </View>
         </ThemedCard>
 
         <Spacer height={16} />
 
-        {/* Important Note */}
+        {/* Notice */}
         <ThemedCard style={styles.card}>
-          <SectionHeader icon="information-circle-outline" title="Before you submit" />
-          <ThemedText muted style={{ marginTop: 4 }}>
-            You’re filing as <ThemedText style={{ fontWeight: '700', color: ink }}>{complainantName}</ThemedText>.
-            Ensure details are accurate. False reporting may lead to legal consequences.
+          <ThemedText style={styles.notice}>
+            Filing as: <ThemedText style={{ fontWeight: '600', color: accent }}>{complainantName}</ThemedText>
           </ThemedText>
+          <ThemedText style={styles.warning}>
+            Ensure all information is accurate. False reporting may result in legal consequences.
+          </ThemedText>
+        </ThemedCard>
 
-          <Spacer height={10} />
-          <Bullet icon="checkmark-circle-outline" text="Provide a clear subject and a concise description." />
-          <Bullet icon="shield-checkmark-outline" text="Use the map picker to set an exact location." />
-          <Bullet icon="chatbubbles-outline" text="A barangay officer may contact you for clarification." />
+        <Spacer height={16} />
+
+        {/* Incident Location */}
+        <ThemedCard style={styles.card}>
+          <SectionHeader icon="location-outline" title="Incident Location" />
+
+          <Label required>Pick on map</Label>
+          <Pressable onPress={goPickIncidentAddress} style={{ borderRadius: 8 }}>
+            <TextField
+              placeholder="Tap to pick (Street, Purok/Sitio, Barangay, City)"
+              multiline
+              numberOfLines={2}
+              value={address}
+              onChangeText={() => {}}
+              editable={false}
+              pointerEvents="none"
+              error={!!errors.address}
+            />
+          </Pressable>
+          {!!errors.address && <FieldError text={errors.address!} />}
+
+          {(lat || lng) && (
+            <>
+              <Spacer height={6} />
+              <ThemedText muted style={{ fontSize: 12 }}>
+                Coordinates: {lat || '—'}, {lng || '—'}
+              </ThemedText>
+            </>
+          )}
+
+          <Spacer height={8} />
+          <View style={styles.tipBox}>
+            <ThemedIcon name="map-outline" size={16} containerSize={22} bgColor={muted} />
+            <ThemedText muted style={{ marginLeft: 8, flex: 1 }}>
+              Use landmarks and the exact purok/sitio for faster response.
+            </ThemedText>
+          </View>
         </ThemedCard>
 
         <Spacer height={16} />
 
         {/* Incident Details */}
         <ThemedCard style={styles.card}>
-          <SectionHeader icon="document-text-outline" title="Incident details" />
+          <SectionHeader icon="document-text-outline" title="Incident Details" />
 
           <Label required>Subject</Label>
           <TextField
@@ -430,48 +454,9 @@ export default function FileBlotterReport() {
 
         <Spacer height={16} />
 
-        {/* Incident Location */}
-        <ThemedCard style={styles.card}>
-          <SectionHeader icon="location-outline" title="Incident location" />
-
-          <Label required>Pick on map</Label>
-          <Pressable onPress={goPickIncidentAddress} style={{ borderRadius: 12 }}>
-            <TextField
-              placeholder="Tap to pick (Street, Purok/Sitio, Barangay, City)"
-              multiline
-              numberOfLines={2}
-              value={address}
-              onChangeText={() => {}}
-              editable={false}
-              pointerEvents="none"
-              error={!!errors.address}
-            />
-          </Pressable>
-          {!!errors.address && <FieldError text={errors.address!} />}
-
-          {(lat || lng) && (
-            <>
-              <Spacer height={6} />
-              <ThemedText muted>
-                Coordinates: {lat || '—'}, {lng || '—'}
-              </ThemedText>
-            </>
-          )}
-
-          <Spacer height={8} />
-          <View style={styles.tipBox}>
-            <ThemedIcon name="map-outline" size={16} containerSize={22} />
-            <ThemedText muted style={{ marginLeft: 8, flex: 1 }}>
-              Use landmarks and the exact purok/sitio for faster response.
-            </ThemedText>
-          </View>
-        </ThemedCard>
-
-        <Spacer height={16} />
-
         {/* Respondents */}
         <ThemedCard style={styles.card}>
-          <SectionHeader icon="people-outline" title="Respondents (optional)" />
+          <SectionHeader icon="people-outline" title="Respondents (Optional)" />
 
           {respondents.length > 0 && (
             <>
@@ -487,17 +472,16 @@ export default function FileBlotterReport() {
                 </TouchableOpacity>
               </View>
 
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                 {respondents.map((r) => (
                   <View key={r.person_id} style={styles.chip}>
-                    <ThemedText style={{ fontWeight: '600' }}>{r.name}</ThemedText>
+                    <ThemedText style={{ fontWeight: '600', fontSize: 13 }}>{r.name}</ThemedText>
                     <TouchableOpacity onPress={() => removeRespondent(r.person_id)} style={{ marginLeft: 8 }}>
-                      <ThemedIcon name="close" size={14} containerSize={18} />
+                      <ThemedIcon name="close" size={14} containerSize={18} bgColor={accent} />
                     </TouchableOpacity>
                   </View>
                 ))}
               </View>
-              <Spacer height={8} />
             </>
           )}
 
@@ -514,7 +498,7 @@ export default function FileBlotterReport() {
           />
           <View style={styles.hintRow}>
             <ThemedText muted style={{ fontSize: 12 }}>
-              Can’t find someone? You may leave this blank.
+              Can't find someone? You may leave this blank.
             </ThemedText>
           </View>
         </ThemedCard>
@@ -522,35 +506,20 @@ export default function FileBlotterReport() {
         <Spacer height={20} />
 
         {/* Submit */}
-        <ThemedCard style={[styles.card, styles.submitCard]}>
-          <View style={styles.submitRow}>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={{ fontWeight: '800', fontSize: 16, color: ink }}>
-                Ready to submit?
-              </ThemedText>
-              <ThemedText muted>
-                You can’t attach files here. You may be asked for supporting documents later.
-              </ThemedText>
-            </View>
-
-            <TouchableOpacity
-              onPress={onSubmit}
-              disabled={busy}
-              style={[styles.submitBtn, busy && { opacity: 0.7 }]}
-            >
-              {busy ? (
-                <ActivityIndicator />
-              ) : (
-                <>
-                  <ThemedIcon name="send-outline" size={18} containerSize={22} />
-                  <ThemedText style={{ color: '#fff', fontWeight: '700', marginLeft: 8 }}>
-                    Submit Report
-                  </ThemedText>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ThemedCard>
+        <TouchableOpacity
+          onPress={onSubmit}
+          disabled={busy}
+          style={[styles.submitBtn, busy && { opacity: 0.7 }]}
+        >
+          {busy ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <ThemedIcon name="send" size={18} containerSize={22} bgColor="transparent" />
+              <ThemedText style={styles.submitText}>Submit Report</ThemedText>
+            </>
+          )}
+        </TouchableOpacity>
       </ThemedKeyboardAwareScrollView>
     </ThemedView>
   );
@@ -558,10 +527,10 @@ export default function FileBlotterReport() {
 
 /* ---------------- Small UI helpers ---------------- */
 
-function Bullet({ icon, text }: { icon: string; text: string }) {
+function Bullet({ icon, text, color }: { icon: string; text: string; color?: string }) {
   return (
     <View style={styles.bulletRow}>
-      <ThemedIcon name={icon} size={16} containerSize={22} />
+      <ThemedIcon name={icon} size={16} containerSize={22} bgColor={color || accent} />
       <ThemedText muted style={styles.bulletText}>
         {text}
       </ThemedText>
@@ -571,8 +540,8 @@ function Bullet({ icon, text }: { icon: string; text: string }) {
 
 function SectionHeader({ icon, title }: { icon: string; title: string }) {
   return (
-    <View style={[styles.row, { marginBottom: 8 }]}>
-      <ThemedIcon name={icon} bgColor={accent} size={18} containerSize={26} />
+    <View style={[styles.row, { marginBottom: 12 }]}>
+      <ThemedIcon name={icon} bgColor={accent} size={16} containerSize={22} />
       <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
     </View>
   );
@@ -600,37 +569,24 @@ function StepConnector({ active }: { active?: boolean }) {
   return <View style={[styles.stepConnector, active ? styles.stepConnectorActive : styles.stepConnectorInactive]} />;
 }
 
-function InfoItem({ icon, text, color }: { icon: string; text: string; color: string }) {
-  return (
-    <View style={styles.infoItem}>
-      <View style={[styles.infoItemIcon, { backgroundColor: `${color}15` }]}>
-        <ThemedIcon name={icon} size={16} containerSize={20} bgColor="transparent" />
-      </View>
-      <ThemedText style={styles.infoItemText}>{text}</ThemedText>
-    </View>
-  );
-}
-
-
-
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-      <ThemedText style={{ fontWeight: '700' }}>{children}</ThemedText>
-      {required && <ThemedText style={{ color: '#ef4444', marginLeft: 6 }}>*</ThemedText>}
+      <ThemedText style={{ fontWeight: '600', color: ink }}>{children}</ThemedText>
+      {required && <ThemedText style={{ color: accent, marginLeft: 4 }}>*</ThemedText>}
     </View>
   );
 }
 
 function FieldError({ text }: { text: string }) {
-  return <ThemedText style={{ color: '#d00', marginTop: 6 }}>{text}</ThemedText>;
+  return <ThemedText style={{ color: accent, marginTop: 4, fontSize: 12 }}>{text}</ThemedText>;
 }
 
 function QuickBtn({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.quickBtn}>
-      <ThemedIcon name={icon} size={14} containerSize={18} />
-      <ThemedText style={{ marginLeft: 6, fontWeight: '700' }}>{label}</ThemedText>
+      <ThemedIcon name={icon} size={14} containerSize={18} bgColor={muted} />
+      <ThemedText style={{ marginLeft: 6, fontWeight: '600', fontSize: 12 }}>{label}</ThemedText>
     </TouchableOpacity>
   );
 }
@@ -642,15 +598,17 @@ function TextField(
   return (
     <TextInput
       {...rest}
-      placeholderTextColor="#999"
+      placeholderTextColor={muted}
       style={[
         {
           borderWidth: 1,
-          borderColor: error ? '#d00' : 'rgba(0,0,0,0.12)',
-          borderRadius: 12,
+          borderColor: error ? accent : line,
+          borderRadius: 8,
           paddingHorizontal: 12,
           paddingVertical: 10,
           backgroundColor: '#fff',
+          fontSize: 14,
+          color: ink,
         },
         style,
       ]}
@@ -663,368 +621,80 @@ function TextField(
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: line,
     backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  progressCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e0e7ff',
-    backgroundColor: '#fff',
-    shadowColor: primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    padding: 16,
     marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
   },
-  progressTitle: {
+  cardTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: ink,
-    marginLeft: 12,
-  },
-  stepContainer: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  stepIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  stepIconCompleted: {
-    backgroundColor: success,
-  },
-  stepIconActive: {
-    backgroundColor: primary,
-  },
-  stepIconInactive: {
-    backgroundColor: '#f1f5f9',
-  },
-  stepText: {
-    fontSize: 11,
-    textAlign: 'center',
     fontWeight: '600',
-  },
-  stepTextActive: {
     color: ink,
+    marginLeft: 8,
   },
-  stepTextInactive: {
-    color: '#64748b',
-  },
-  stepConnector: {
-    height: 2,
-    flex: 1,
-    marginHorizontal: 8,
-    marginTop: -24,
-  },
-  stepConnectorActive: {
-    backgroundColor: success,
-  },
-  stepConnectorInactive: {
-    backgroundColor: '#e2e8f0',
-  },
-  infoCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#dbeafe',
-    backgroundColor: '#f8faff',
-    shadowColor: primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  infoIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#dbeafe',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: ink,
-    marginBottom: 2,
-  },
-  infoSubtitle: {
+  notice: {
     fontSize: 14,
-    color: '#64748b',
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  infoItem: {
-    flex: 1,
-    minWidth: '30%',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  infoItemIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    color: ink,
     marginBottom: 8,
   },
-  infoItemText: {
+  warning: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
-    textAlign: 'center',
+    color: muted,
+    fontStyle: 'italic',
   },
-  warningBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef3c7',
-    borderRadius: 8,
-    padding: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: warning,
-  },
-  warningText: {
-    fontSize: 13,
-    color: '#92400e',
-    fontWeight: '600',
-    marginLeft: 8,
-    flex: 1,
-  },
-  detailsCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e0e7ff',
-    backgroundColor: '#fff',
-    shadowColor: primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  locationCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#d1fae5',
-    backgroundColor: '#fff',
-    shadowColor: success,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  respondentsCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#fed7aa',
-    backgroundColor: '#fff',
-    shadowColor: warning,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  sectionIconWrap: {
-    marginRight: 12,
-  },
+
+
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: ink,
-  },
-  sectionTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  optionalBadge: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  optionalText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#6b7280',
-  },
-  submitCard: {
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: accent,
-    backgroundColor: '#fff',
-    shadowColor: accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  submitHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  submitIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#fee2e2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  submitContent: {
-    flex: 1,
-  },
-  submitTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: ink,
-    marginBottom: 2,
-  },
-  submitSubtitle: {
     fontSize: 14,
-    color: '#64748b',
-  },
-  submitNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-  },
-  submitNoteText: {
-    fontSize: 13,
-    color: '#64748b',
+    fontWeight: '600',
+    color: ink,
     marginLeft: 8,
-    flex: 1,
   },
   submitBtn: {
     backgroundColor: accent,
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 8,
+    paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  submitBtnLoading: {
-    backgroundColor: '#9ca3af',
-  },
-  submitBtnContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
   },
-  submitBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
+  submitText: {
     color: '#fff',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    fontWeight: '600',
+    fontSize: 16,
+    marginLeft: 8,
   },
   row: { flexDirection: 'row', alignItems: 'center' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-
-  sectionTitle: { paddingLeft: 10, fontSize: 15, fontWeight: '800', color: ink },
-
-  /* Stepper */
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingVertical: 4,
-  },
-
-  /* Bullets */
-  bulletRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
-  bulletText: { marginLeft: 6, flex: 1 },
-
-  /* Hints */
   hintRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 6,
   },
-
-  /* Quick small outline button */
   quickBtn: {
     alignSelf: 'flex-start',
     marginTop: 8,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.12)',
+    borderColor: line,
     backgroundColor: '#fff',
     flexDirection: 'row',
     alignItems: 'center',
   },
-
   tipBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f6f3f2',
+    backgroundColor: '#f9fafb',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    borderRadius: 12,
+    borderColor: line,
+    borderRadius: 6,
     padding: 10,
   },
-
-  /* Respondents */
   selectedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1032,36 +702,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   linkBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(109,41,50,0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: 'rgba(109,41,50,0.1)',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: '#f6f3f2',
-    borderRadius: 999,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-  },
-
-  /* Submit */
-  submitCard: {
-    borderColor: '#ead7da',
-    backgroundColor: '#fff',
-  },
-  submitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  submitBtn: {
-    backgroundColor: accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    flexDirection: 'row',
-    minWidth: 160,
+    borderColor: line,
   },
 });
