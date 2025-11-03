@@ -34,6 +34,16 @@ async function uriToBlob(uri: string): Promise<Blob> {
   return await res.blob();
 }
 
+function inferContentType(uri: string): string {
+  const lower = uri.split('?')[0].toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.heic')) return 'image/heic';
+  if (lower.endsWith('.jpeg') || lower.endsWith('.jpg')) return 'image/jpeg';
+  // default blob type
+  return 'application/octet-stream';
+}
+
 function makeUniqueFolder(prefix = 'blotter-evidence') {
   const rand = Math.random().toString(36).slice(2, 8);
   return `${prefix}/${Date.now()}_${rand}`;
@@ -51,13 +61,22 @@ export async function uploadEvidence(
   for (let i = 0; i < uris.length; i++) {
     const uri = uris[i];
     const blob = await uriToBlob(uri);
-    const path = `${base}/${i}_${Date.now()}.jpg`;
-    const { error } = await supabase.storage.from(bucket).upload(path, blob, {
-      contentType: 'image/jpeg',
+    const path = `${base}/${i}_${Date.now()}`;
+    const contentType = inferContentType(uri);
+    const ext =
+      contentType === 'image/png' ? 'png'
+      : contentType === 'image/webp' ? 'webp'
+      : contentType === 'image/heic' ? 'heic'
+      : contentType === 'image/jpeg' ? 'jpg'
+      : 'bin';
+
+    const fullPath = `${path}.${ext}`;
+    const { error } = await supabase.storage.from(bucket).upload(fullPath, blob, {
+      contentType,
       upsert: false,
     });
     if (error) throw new Error(`Upload failed: ${error.message}`);
-    out.push({ bucket, path });
+    out.push({ bucket, path: fullPath });
   }
   return out;
 }
@@ -139,7 +158,7 @@ export async function createBlotterReport(input: CreateBlotterReportInput): Prom
 
   // Log the final payload we intend to send to RPC
   const debugPayload = {
-    // IMPORTANT: your PostgREST hint says use p_reported_by (NOT p_staff_id)
+    // IMPORTANT: mobile has no staff -> use reported_by (person) or null if API expects staff only
     p_reported_by: null, // mobile → no staff
     p_incident_subject: input.incidentSubject || null,
     p_incident_desc: input.incidentDesc || null,
@@ -178,6 +197,57 @@ export async function createBlotterReport(input: CreateBlotterReportInput): Prom
   }
 
   throw new Error('RPC returned no blotter_report_id.');
+}
+
+/* ---------------- NEW: Report history via RPC ---------------- */
+
+export type PersonBlotterHistoryRow = {
+  role_in_report: 'COMPLAINANT' | 'RESPONDENT';
+  blotter_report_id: number;
+  incident_date: string;            // 'YYYY-MM-DD'
+  incident_time: string;            // 'HH:mm:ss'
+  incident_subject: string | null;
+  incident_desc: string | null;
+  date_time_reported: string;       // timestamptz
+  status_name: string | null;       // e.g., 'FOR CASE FILING'
+  status_date: string | null;       // timestamptz
+  evidence_count: number;
+  linked_case_id: number | null;
+  linked_case_num: string | null;
+};
+
+/**
+ * Read a person's blotter report history using your RPC:
+ *   select * from fn_person_blotter_report_history(p_person_id)
+ */
+export async function getPersonBlotterReportHistory(personId: number): Promise<PersonBlotterHistoryRow[]> {
+  if (!personId) return [];
+
+  console.log('[BlotterHistory] → fetching via RPC fn_person_blotter_report_history', {
+    p_person_id: personId,
+  });
+
+  // IMPORTANT: param name must match SQL arg: p_person_id
+  let { data, error } = await supabase.rpc('fn_person_blotter_report_history', {
+    p_person_id: personId,
+  });
+
+  // Optional fallback: if a wrapper exists that accepts { person_id }, try it
+  if (error && /schema cache|could not find the function|No function matches/i.test(error.message)) {
+    console.warn('[BlotterHistory] RPC name/arg mismatch, retrying with { person_id } …', error);
+    ({ data, error } = await supabase.rpc('fn_person_blotter_report_history', {
+      person_id: personId,
+    }));
+  }
+
+  if (error) {
+    console.error('[BlotterHistory] RPC error:', error);
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as PersonBlotterHistoryRow[];
+  console.log('[BlotterHistory] ✓ fetched', rows.length, 'rows');
+  return rows;
 }
 
 /* ---------------- Search (unchanged) ---------------- */
