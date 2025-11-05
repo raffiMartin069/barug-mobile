@@ -549,7 +549,16 @@ export class MaternalRepository {
 	 */
 	async getChildHealthRecordsByMotherId(motherPersonId: number): Promise<ChildHealthRecord[]> {
 		if (!Number.isFinite(motherPersonId)) return []
-		const { data, error } = await supabase.from('child_health_record').select('*').eq('mother_id', motherPersonId)
+		// include joined person info so we can display the child's name in the UI
+		const { data, error } = await supabase
+			.from('child_health_record')
+			.select(
+				`
+					*,
+					person:person_id(person_id,first_name,middle_name,last_name,suffix)
+				`
+			)
+			.eq('mother_id', motherPersonId)
 		if (error) throw error
 		const rows = data ?? []
 		const childIds = rows.map((r: any) => Number(r.child_record_id)).filter((id) => Number.isFinite(id))
@@ -563,7 +572,18 @@ export class MaternalRepository {
 		if (childIds.length) {
 			const { data: imRows, error: imErr } = await supabase
 				.from('child_immunization')
-				.select('*')
+				.select(
+					`
+					child_immunization_id,
+					date_given,
+					immunization_type_id,
+					immunization_stage_given_id,
+					child_record_id,
+					visit_id,
+					immunization_type:immunization_type_id(immunization_type_id,immunization_type_name),
+					immunization_stage:immunization_stage_given_id(immunization_stage_given_id,immunization_stage_name)
+				`
+				)
 				.in('child_record_id', childIds)
 				// actual column is date_given
 				.order('date_given', { ascending: false })
@@ -572,15 +592,26 @@ export class MaternalRepository {
 
 			for (const r of imRows ?? []) {
 				const cid = Number(r.child_record_id)
+				// normalize joined immunization_type which may be returned as an object or an array
+				const immJoined = Array.isArray(r.immunization_type) ? r.immunization_type[0] : r.immunization_type
+				const vaccineName = immJoined && immJoined.immunization_type_name ? String(immJoined.immunization_type_name) : (r.immunization_type_id != null ? String(r.immunization_type_id) : null)
+				// normalize joined immunization_stage which may be array/object
+				const stageJoined = Array.isArray(r.immunization_stage) ? r.immunization_stage[0] : r.immunization_stage
+				const stageId = r.immunization_stage_given_id == null ? null : Number(r.immunization_stage_given_id)
+				const stageName = stageJoined && stageJoined.immunization_stage_name ? String(stageJoined.immunization_stage_name) : null
+
 				const entry: ChildImmunization = {
-					child_immunization_id: Number(r.child_immunization_id ?? r.id ?? 0),
+					child_immunization_id: Number(r.child_immunization_id ?? 0),
 					child_record_id: cid,
 					// DB column is date_given
 					immunization_date: r.date_given ?? null,
-					// immunization_type_id references immunization_type; leave numeric id for now
-					vaccine_type: r.immunization_type_id != null ? String(r.immunization_type_id) : null,
-					batch_no: r.batch_no ?? null,
-					notes: r.notes ?? null,
+					// human-readable name when available
+					vaccine_type: vaccineName,
+					immunization_stage_given_id: stageId,
+					immunization_stage_name: stageName,
+					// table does not include batch_no/notes in current schema
+					batch_no: null,
+					notes: null,
 				}
 				if (!immunByChild.has(cid)) immunByChild.set(cid, [])
 				immunByChild.get(cid)!.push(entry)
@@ -616,13 +647,24 @@ export class MaternalRepository {
 
 		return rows.map((r: any) => {
 			const id = Number(r.child_record_id)
+			// normalize joined person (may be object or array), prefer joined values when present
+			const personJoined = Array.isArray(r.person) ? r.person[0] : r.person
+			const first = personJoined?.first_name ?? null
+			const middle = personJoined?.middle_name ?? null
+			const last = personJoined?.last_name ?? null
+			const suffix = personJoined?.suffix ?? null
+			const nameParts = [first, middle, last, suffix].filter((p) => p && String(p).trim() !== '')
+			const childName = nameParts.length ? nameParts.join(' ').trim() : null
+
 			return {
 				child_record_id: id,
-				person_id: Number(r.person_id),
+				person_id: Number(personJoined?.person_id ?? r.person_id),
 				mother_id: r.mother_id == null ? null : Number(r.mother_id),
 				father_id: r.father_id == null ? null : Number(r.father_id),
 				birth_order: r.birth_order ?? null,
 				created_at: r.created_at ?? null,
+				// human-readable name for UI
+				child_name: childName,
 				immunization_count: immunCount.get(id) ?? 0,
 				monitoring_count: monitorCount.get(id) ?? 0,
 				immunizations: immunByChild.get(id) ?? [],

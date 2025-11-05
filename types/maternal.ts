@@ -151,6 +151,8 @@ export interface ChildHealthRecord {
   father_id: number | null
   birth_order: string | null
   created_at: string | null
+  /** Human-readable display name for the child (first/last etc) */
+  child_name?: string | null
   /** Optional counts for quick UI summary */
   immunization_count?: number
   monitoring_count?: number
@@ -165,6 +167,8 @@ export interface ChildImmunization {
   child_record_id: number
   immunization_date: string | null
   vaccine_type: string | null
+  immunization_stage_given_id?: number | null
+  immunization_stage_name?: string | null
   batch_no: string | null
   notes: string | null
 }

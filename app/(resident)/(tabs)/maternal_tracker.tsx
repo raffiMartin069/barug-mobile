@@ -30,6 +30,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native'
+import ThemedBottomSheet from '@/components/ThemedBottomSheet'
 
 type ScheduleGroup = MaternalScheduleGroup<PostpartumSchedule | PrenatalSchedule>
 
@@ -59,6 +60,7 @@ const MaternalTracker = () => {
     const [childRecords, setChildRecords] = useState<ChildHealthRecord[]>([])
     const [selectedChild, setSelectedChild] = useState<ChildHealthRecord | null>(null)
     const [childModalVisible, setChildModalVisible] = useState<boolean>(false)
+    const [childTab, setChildTab] = useState<'overview' | 'immunizations' | 'monitoring'>('overview')
     const [latestTracker, setLatestTracker] = useState<TrimesterTrackerItem[]>([])
     const [detailModalVisible, setDetailModalVisible] = useState<boolean>(false)
     const [expandedRecords, setExpandedRecords] = useState<Set<number>>(() => new Set())
@@ -752,19 +754,32 @@ const MaternalTracker = () => {
                             {childRecords.map((child) => (
                                 <TouchableOpacity
                                     key={child.child_record_id}
-                                    activeOpacity={0.85}
+                                    activeOpacity={0.9}
                                     onPress={() => {
                                         setSelectedChild(child)
+                                        setChildTab('overview')
                                         setChildModalVisible(true)
                                     }}
                                 >
-                                    <View style={{ marginBottom: 10 }}>
-                                        <ThemedText style={styles.blockText}>
-                                            Child Record #{child.child_record_id} • Born: {formatDate(child.created_at)}
-                                        </ThemedText>
-                                        <ThemedText style={styles.blockText}>
-                                            Birth order: {child.birth_order ?? '—'} • Immunizations: {child.immunization_count ?? 0} • Monitoring logs: {child.monitoring_count ?? 0}
-                                        </ThemedText>
+                                    <View style={styles.childRow}>
+                                        <View style={styles.childAvatar}>
+                                            <Ionicons name="person" size={20} color="#fff" />
+                                        </View>
+                                        <View style={{ flex: 1, marginLeft: 12 }}>
+                                            <ThemedText style={styles.childName}>{child.child_name ?? `Child #${child.child_record_id}`}</ThemedText>
+                                            <ThemedText style={styles.childMeta}>Born {formatDate(child.created_at)} • Order: {child.birth_order ?? '—'}</ThemedText>
+                                        </View>
+                                        <View style={{ alignItems: 'flex-end' }}>
+                                            <View style={styles.countRow}>
+                                                <View style={styles.smallBadge}>
+                                                    <ThemedText style={styles.smallBadgeText}>{child.immunization_count ?? 0}</ThemedText>
+                                                </View>
+                                                <View style={styles.smallBadgeSecondary}>
+                                                    <ThemedText style={styles.smallBadgeText}>{child.monitoring_count ?? 0}</ThemedText>
+                                                </View>
+                                            </View>
+                                            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+                                        </View>
                                     </View>
                                 </TouchableOpacity>
                             ))}
@@ -773,58 +788,85 @@ const MaternalTracker = () => {
 
                     {/* Child detail modal */}
                     {selectedChild && (
-                        <Modal visible={childModalVisible} transparent animationType="slide" onRequestClose={() => setChildModalVisible(false)}>
-                            <View style={styles.modalBackdrop}>
-                                <View style={[styles.modalCard, { maxHeight: '85%' }]}>
-                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 12 }}>
-                                        <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>Child #{selectedChild.child_record_id}</ThemedText>
-                                        <Pressable onPress={() => setChildModalVisible(false)} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }]}>
-                                            <Ionicons name="close" size={20} color="#374151" />
-                                        </Pressable>
-                                    </View>
+                        <ThemedBottomSheet visible={childModalVisible} onClose={() => {
+                            setChildModalVisible(false)
+                            setSelectedChild(null)
+                        }} heightPercent={0.85}>
+                            {/* Header */}
+                            <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 8 }]}>
+                                <View>
+                                    <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>{selectedChild.child_name ?? `Child #${selectedChild.child_record_id}`}</ThemedText>
+                                    <ThemedText style={[styles.childMeta, { marginTop: 4 }]}>Born {formatDate(selectedChild.created_at)} • Order: {selectedChild.birth_order ?? '—'}</ThemedText>
+                                </View>
+                                <Pressable onPress={() => {
+                                    setChildModalVisible(false)
+                                    setSelectedChild(null)
+                                }} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }]}>
+                                    <Ionicons name="close" size={20} color="#374151" />
+                                </Pressable>
+                            </View>
 
-                                    <ScrollView style={{ width: '100%' }} contentContainerStyle={{ gap: 12 }}>
-                                        <ThemedText style={styles.blockText}>Born: {formatDate(selectedChild.created_at)}</ThemedText>
-                                        <ThemedText style={styles.blockText}>Birth order: {selectedChild.birth_order ?? '—'}</ThemedText>
+                            {/* Tabs */}
+                            <View style={styles.tabRow}>
+                                <Pressable onPress={() => setChildTab('overview')} style={[styles.tabButton, childTab === 'overview' && styles.tabButtonActive]}>
+                                    <ThemedText style={[styles.tabButtonText, childTab === 'overview' && styles.tabButtonTextActive]}>Overview</ThemedText>
+                                </Pressable>
+                                <Pressable onPress={() => setChildTab('immunizations')} style={[styles.tabButton, childTab === 'immunizations' && styles.tabButtonActive]}>
+                                    <ThemedText style={[styles.tabButtonText, childTab === 'immunizations' && styles.tabButtonTextActive]}>Immunizations</ThemedText>
+                                </Pressable>
+                                <Pressable onPress={() => setChildTab('monitoring')} style={[styles.tabButton, childTab === 'monitoring' && styles.tabButtonActive]}>
+                                    <ThemedText style={[styles.tabButtonText, childTab === 'monitoring' && styles.tabButtonTextActive]}>Monitoring</ThemedText>
+                                </Pressable>
+                            </View>
+
+                            <Spacer height={8} />
+
+                            {/* Content area */}
+                            <ScrollView style={{ width: '100%' }} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
+                                {childTab === 'overview' && (
+                                    <View>
                                         <ThemedText style={styles.blockText}>Immunizations: {selectedChild.immunization_count ?? 0}</ThemedText>
                                         <ThemedText style={styles.blockText}>Monitoring logs: {selectedChild.monitoring_count ?? 0}</ThemedText>
-
                                         <Spacer height={8} />
-                                        <ThemedText style={styles.blockTitle}>Immunizations</ThemedText>
+                                        <ThemedText style={styles.blockTitle}>Quick actions</ThemedText>
+                                        <ThemedText style={styles.blockText}>Tap the tabs to view immunizations or monitoring logs. You can scroll each list independently.</ThemedText>
+                                    </View>
+                                )}
+
+                                {childTab === 'immunizations' && (
+                                    <View>
                                         {(!selectedChild.immunizations || selectedChild.immunizations.length === 0) ? (
                                             <ThemedText style={styles.blockText}>No immunization records.</ThemedText>
                                         ) : (
                                             selectedChild.immunizations.map((im) => (
-                                                <View key={im.child_immunization_id} style={{ paddingVertical: 6 }}>
-                                                    <ThemedText style={styles.blockText}>{im.vaccine_type ?? 'Vaccine'} • {formatDate(im.immunization_date)}</ThemedText>
-                                                    {im.batch_no && <ThemedText style={styles.blockText}>Batch: {im.batch_no}</ThemedText>}
-                                                    {im.notes && <ThemedText style={styles.blockText}>Notes: {im.notes}</ThemedText>}
+                                                <View key={im.child_immunization_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eef2f7' }}>
+                                                    <ThemedText style={styles.blockText}>{im.vaccine_type ?? 'Vaccine'}</ThemedText>
+                                                    <ThemedText style={styles.blockMeta}>{formatDate(im.immunization_date)}</ThemedText>
+                                                    {im.immunization_stage_name && <ThemedText style={styles.blockText}>Stage: {im.immunization_stage_name}</ThemedText>}
                                                 </View>
                                             ))
                                         )}
+                                    </View>
+                                )}
 
-                                        <Spacer height={8} />
-                                        <ThemedText style={styles.blockTitle}>Monitoring Logs</ThemedText>
+                                {childTab === 'monitoring' && (
+                                    <View>
                                         {(!selectedChild.monitoring_logs || selectedChild.monitoring_logs.length === 0) ? (
                                             <ThemedText style={styles.blockText}>No monitoring logs.</ThemedText>
                                         ) : (
                                             selectedChild.monitoring_logs.map((m) => (
-                                                <View key={m.child_monitoring_id} style={{ paddingVertical: 6 }}>
-                                                    <ThemedText style={styles.blockText}>{formatDate(m.visit_date)} • Wt: {m.weight_kg ?? '—'} kg • Ht: {m.height_cm ?? '—'} cm</ThemedText>
+                                                <View key={m.child_monitoring_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eef2f7' }}>
+                                                    <ThemedText style={styles.blockText}>{formatDate(m.visit_date)}</ThemedText>
+                                                    <ThemedText style={styles.blockMeta}>Wt: {m.weight_kg ?? '—'} kg • Ht: {m.height_cm ?? '—'} cm</ThemedText>
                                                     {m.muac != null && <ThemedText style={styles.blockText}>MUAC: {m.muac}</ThemedText>}
                                                     {m.notes && <ThemedText style={styles.blockText}>Notes: {m.notes}</ThemedText>}
                                                 </View>
                                             ))
                                         )}
-                                    </ScrollView>
-
-                                    <Spacer height={12} />
-                                    <Pressable onPress={() => setChildModalVisible(false)} style={({ pressed }) => [styles.modalCloseButton, pressed && { opacity: 0.8 }]}>
-                                        <ThemedText style={{ color: '#fff', fontWeight: '700' }}>Close</ThemedText>
-                                    </Pressable>
-                                </View>
-                            </View>
-                        </Modal>
+                                    </View>
+                                )}
+                            </ScrollView>
+                        </ThemedBottomSheet>
                     )}
 
                     {renderScheduleSection('Postpartum Schedule', postpartum, 'No postpartum schedule found.')}
@@ -961,6 +1003,54 @@ const styles = StyleSheet.create({
         marginTop: 8,
         paddingHorizontal: 2,
     },
+    childRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 6,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f3f4f6',
+    },
+    childAvatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#0b74ff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    childName: {
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    childMeta: {
+        fontSize: 13,
+        color: '#6b7280',
+    },
+    countRow: {
+        flexDirection: 'row',
+        gap: 8,
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    smallBadge: {
+        backgroundColor: '#eef2ff',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+    },
+    smallBadgeSecondary: {
+        backgroundColor: '#f1f5f9',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 8,
+        marginLeft: 6,
+    },
+    smallBadgeText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#0b5cf6',
+    },
     badge: {
         paddingVertical: 6,
         paddingHorizontal: 10,
@@ -1001,5 +1091,11 @@ const styles = StyleSheet.create({
     modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 },
     modalCard: { width: '100%', maxHeight: '80%', borderRadius: 16, backgroundColor: '#fff', padding: 18 },
     detailRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eef2f7' },
+    tabRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+    tabButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: '#f8fafc' },
+    tabButtonActive: { backgroundColor: '#0b74ff' },
+    tabButtonText: { fontSize: 14, fontWeight: '700', color: '#374151' },
+    tabButtonTextActive: { color: '#fff' },
+    blockMeta: { fontSize: 13, color: '#6b7280' },
     modalCloseButton: { marginTop: 8, backgroundColor: '#0b5cf6', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
 })
