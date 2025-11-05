@@ -1,5 +1,6 @@
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
+import ThemedBottomSheet from '@/components/ThemedBottomSheet'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedText from '@/components/ThemedText'
@@ -30,7 +31,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native'
-import ThemedBottomSheet from '@/components/ThemedBottomSheet'
 
 type ScheduleGroup = MaternalScheduleGroup<PostpartumSchedule | PrenatalSchedule>
 
