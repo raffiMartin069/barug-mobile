@@ -143,6 +143,42 @@ export interface TTVaccineRecord {
   date_given: string
 }
 
+/** Minimal child health record summary included in maternal bundles. */
+export interface ChildHealthRecord {
+  child_record_id: number
+  person_id: number
+  mother_id: number | null
+  father_id: number | null
+  birth_order: string | null
+  created_at: string | null
+  /** Optional counts for quick UI summary */
+  immunization_count?: number
+  monitoring_count?: number
+  /** Full child immunization entries (optional, populated when fetching child contents) */
+  immunizations?: ChildImmunization[]
+  /** Full child monitoring log entries (optional) */
+  monitoring_logs?: ChildMonitoringLog[]
+}
+
+export interface ChildImmunization {
+  child_immunization_id: number
+  child_record_id: number
+  immunization_date: string | null
+  vaccine_type: string | null
+  batch_no: string | null
+  notes: string | null
+}
+
+export interface ChildMonitoringLog {
+  child_monitoring_id: number
+  child_record_id: number
+  visit_date: string | null
+  weight_kg: number | null
+  height_cm: number | null
+  muac: number | null
+  notes: string | null
+}
+
 export interface TrimesterStageLite {
   trimester_stage_id: number | null
   trimester_stage_name: string | null
@@ -187,6 +223,8 @@ export interface MaternalRecordBundle extends MaternalRecordBase {
   record_level_lab_results: LabResult[]
   /** Optional trimester tracker data returned by RPC `get_anc_trimester_tracker` */
   anc_trimester_tracker?: TrimesterTrackerItem[]
+  /** Child health records associated with this maternal record (if any) */
+  child_health_records?: ChildHealthRecord[]
 }
 
 export interface TrimesterTrackerItem {

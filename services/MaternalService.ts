@@ -1,5 +1,5 @@
 import { MaternalRepository } from '@/repository/MaternalRepository'
-import { MaternalRecordBundle, MaternalScheduleGroup, PostpartumSchedule, PrenatalSchedule } from '@/types/maternal'
+import { ChildHealthRecord, MaternalRecordBundle, MaternalScheduleGroup, PostpartumSchedule, PrenatalSchedule } from '@/types/maternal'
 
 export class MaternalService {
   private repo: MaternalRepository
@@ -14,15 +14,17 @@ export class MaternalService {
     prenatal: MaternalScheduleGroup<PrenatalSchedule>
     records: MaternalRecordBundle[]
     latestTracker: import('@/types/maternal').TrimesterTrackerItem[]
+    childRecords: ChildHealthRecord[]
   }> {
-    const [postpartum, prenatal, records] = await Promise.all([
+    const [postpartum, prenatal, records, childRecords] = await Promise.all([
       this.repo.getPostpartumScheduleByPersonId(personId),
       this.repo.getPrenatalScheduleByPersonId(personId),
       this.repo.getMaternalRecordBundlesByPersonId(personId),
+      this.repo.getChildHealthRecordsByMotherId(personId),
     ])
     const latestTracker = await this.repo.getTrimesterTrackerForLatestRecord(personId)
 
-    return { postpartum, prenatal, records, latestTracker }
+    return { postpartum, prenatal, records, latestTracker, childRecords }
   }
 
   async getPostpartum(personId: number) {

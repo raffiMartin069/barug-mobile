@@ -1,26 +1,29 @@
 import { supabase } from '@/constants/supabase'
 import {
-    LabResult,
-    MaternalAncRow,
-    MaternalAncVisitDetail,
-    MaternalChecklist,
-    MaternalRecordBase,
-    MaternalRecordBundle,
-    MaternalScheduleGroup,
-    MaternalScheduleRow,
-    MedicalHistory,
-    Micronutrient,
-    ObstetricHistory,
-    PlanAndBaseline,
-    PostpartumSchedule,
-    PrenatalSchedule,
-    PresentPregnancyStatus,
-    PreviousPregnancyInfo,
-    RiskResponse,
-    TrimesterStageLite,
-    TrimesterTrackerItem,
-    TTVaccineRecord,
-    VisitStatusLite,
+	ChildHealthRecord,
+	ChildImmunization,
+	ChildMonitoringLog,
+	LabResult,
+	MaternalAncRow,
+	MaternalAncVisitDetail,
+	MaternalChecklist,
+	MaternalRecordBase,
+	MaternalRecordBundle,
+	MaternalScheduleGroup,
+	MaternalScheduleRow,
+	MedicalHistory,
+	Micronutrient,
+	ObstetricHistory,
+	PlanAndBaseline,
+	PostpartumSchedule,
+	PrenatalSchedule,
+	PresentPregnancyStatus,
+	PreviousPregnancyInfo,
+	RiskResponse,
+	TrimesterStageLite,
+	TrimesterTrackerItem,
+	TTVaccineRecord,
+	VisitStatusLite,
 } from '@/types/maternal'
 
 type RawScheduleRow = {
@@ -188,7 +191,6 @@ export class MaternalRepository {
 			.eq('person_id', personId)
 			.order('created_at', { ascending: false })
 			.order('maternal_record_id', { ascending: false })
-
 		if (error) throw error
 		return this.mapBaseRecords(data ?? [])
 	}
@@ -381,10 +383,26 @@ export class MaternalRepository {
 
 		try {
 			const { data, error } = await supabase.rpc('get_anc_trimester_tracker', { p_maternal_record_id: recordId })
-			if (error || !data) return []
+			if (error) {
+				// log Supabase error object for troubleshooting (may include code/message/details)
+				console.error('get_anc_trimester_tracker RPC error:', {
+					personId,
+					recordId,
+					supabaseError: error,
+				})
+				return []
+			}
+			if (!data) return []
 			const rows = Array.isArray(data) ? (data as any[]) : []
 			return rows.map((r) => this.mapTrimesterTrackerRow(r)).filter(Boolean) as TrimesterTrackerItem[]
-		} catch {
+		} catch (err: any) {
+			// Catch network/Cloudflare/edge errors — include as much detail as possible
+			console.error('get_anc_trimester_tracker RPC threw:', {
+				personId,
+				recordId,
+				error: err && err.message ? err.message : String(err),
+				stack: err && err.stack ? err.stack : undefined,
+			})
 			return []
 		}
 	}
@@ -523,6 +541,95 @@ export class MaternalRepository {
 		result_img_path: row.result_img_path ?? null,
 		date_tested: row.date_tested ?? null,
 	})
+
+	/**
+	 * Fetch child health records for a single mother (person_id of the mother).
+	 * This method accepts a single motherPersonId and returns an array of
+	 * ChildHealthRecord summaries with quick counts for immunizations and monitoring logs.
+	 */
+	async getChildHealthRecordsByMotherId(motherPersonId: number): Promise<ChildHealthRecord[]> {
+		if (!Number.isFinite(motherPersonId)) return []
+		const { data, error } = await supabase.from('child_health_record').select('*').eq('mother_id', motherPersonId)
+		if (error) throw error
+		const rows = data ?? []
+		const childIds = rows.map((r: any) => Number(r.child_record_id)).filter((id) => Number.isFinite(id))
+
+		// We'll fetch full immunization and monitoring records for these child IDs
+		const immunByChild = new Map<number, ChildImmunization[]>()
+		const monitorByChild = new Map<number, ChildMonitoringLog[]>()
+		const immunCount = new Map<number, number>()
+		const monitorCount = new Map<number, number>()
+
+		if (childIds.length) {
+			const { data: imRows, error: imErr } = await supabase
+				.from('child_immunization')
+				.select('*')
+				.in('child_record_id', childIds)
+				// actual column is date_given
+				.order('date_given', { ascending: false })
+
+			if (imErr) throw imErr
+
+			for (const r of imRows ?? []) {
+				const cid = Number(r.child_record_id)
+				const entry: ChildImmunization = {
+					child_immunization_id: Number(r.child_immunization_id ?? r.id ?? 0),
+					child_record_id: cid,
+					// DB column is date_given
+					immunization_date: r.date_given ?? null,
+					// immunization_type_id references immunization_type; leave numeric id for now
+					vaccine_type: r.immunization_type_id != null ? String(r.immunization_type_id) : null,
+					batch_no: r.batch_no ?? null,
+					notes: r.notes ?? null,
+				}
+				if (!immunByChild.has(cid)) immunByChild.set(cid, [])
+				immunByChild.get(cid)!.push(entry)
+				immunCount.set(cid, (immunCount.get(cid) ?? 0) + 1)
+			}
+
+			const { data: monRows, error: monErr } = await supabase
+				.from('child_monitoring_log')
+				.select('*')
+				.in('child_record_id', childIds)
+				// actual column is check_date
+				.order('check_date', { ascending: false })
+
+			if (monErr) throw monErr
+
+			for (const r of monRows ?? []) {
+				const cid = Number(r.child_record_id)
+				const entry: ChildMonitoringLog = {
+					child_monitoring_id: Number(r.child_monitoring_id ?? r.id ?? 0),
+					child_record_id: cid,
+					// DB column is check_date
+					visit_date: r.check_date ?? null,
+					weight_kg: r.weight == null ? null : Number(r.weight),
+					height_cm: r.height == null ? null : Number(r.height),
+					muac: r.muac == null ? null : Number(r.muac),
+					notes: r.notes ?? null,
+				}
+				if (!monitorByChild.has(cid)) monitorByChild.set(cid, [])
+				monitorByChild.get(cid)!.push(entry)
+				monitorCount.set(cid, (monitorCount.get(cid) ?? 0) + 1)
+			}
+		}
+
+		return rows.map((r: any) => {
+			const id = Number(r.child_record_id)
+			return {
+				child_record_id: id,
+				person_id: Number(r.person_id),
+				mother_id: r.mother_id == null ? null : Number(r.mother_id),
+				father_id: r.father_id == null ? null : Number(r.father_id),
+				birth_order: r.birth_order ?? null,
+				created_at: r.created_at ?? null,
+				immunization_count: immunCount.get(id) ?? 0,
+				monitoring_count: monitorCount.get(id) ?? 0,
+				immunizations: immunByChild.get(id) ?? [],
+				monitoring_logs: monitorByChild.get(id) ?? [],
+			}
+		})
+	}
 
 	private mapChecklist = (row: any): MaternalChecklist => ({
 		maternal_checklist_id: Number(row.maternal_checklist_id),

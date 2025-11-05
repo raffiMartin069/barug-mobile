@@ -8,6 +8,7 @@ import { DEV_SKIP_SESSION } from '@/constants/dev'
 import { MaternalService } from '@/services/MaternalService'
 import { useAccountRole } from '@/store/useAccountRole'
 import {
+    ChildHealthRecord,
     MaternalRecordBundle,
     MaternalScheduleGroup,
     PostpartumSchedule,
@@ -55,6 +56,9 @@ const MaternalTracker = () => {
     const [postpartum, setPostpartum] = useState<ScheduleGroup>(emptyScheduleGroup)
     const [prenatal, setPrenatal] = useState<ScheduleGroup>(emptyScheduleGroup)
     const [records, setRecords] = useState<MaternalRecordBundle[]>([])
+    const [childRecords, setChildRecords] = useState<ChildHealthRecord[]>([])
+    const [selectedChild, setSelectedChild] = useState<ChildHealthRecord | null>(null)
+    const [childModalVisible, setChildModalVisible] = useState<boolean>(false)
     const [latestTracker, setLatestTracker] = useState<TrimesterTrackerItem[]>([])
     const [detailModalVisible, setDetailModalVisible] = useState<boolean>(false)
     const [expandedRecords, setExpandedRecords] = useState<Set<number>>(() => new Set())
@@ -141,11 +145,12 @@ const MaternalTracker = () => {
             try {
                 const bundle = await service.fetchAllForPerson(personId)
                 // console.log(bundle);
-                // console.log(`[MaternalTracker] fetched maternal data for person #${personId}:`, bundle)
+                console.log(`[MaternalTracker] fetched maternal data for person #${personId}:`, bundle)
                 setPostpartum(bundle.postpartum)
                 setPrenatal(bundle.prenatal)
                 setRecords(bundle.records)
                 setLatestTracker(bundle.latestTracker ?? [])
+                setChildRecords((bundle as any).childRecords ?? [])
             } catch (err: any) {
                 console.error('[MaternalTracker] fetch error:', err)
                 const message = err?.message ? String(err.message) : 'Failed to load maternal data.'
@@ -634,6 +639,22 @@ const MaternalTracker = () => {
                                 ))}
                             </View>
                         )}
+
+                        {record.child_health_records && record.child_health_records.length > 0 && (
+                            <View style={styles.block}>
+                                <ThemedText style={styles.blockTitle}>Child Health Records</ThemedText>
+                                {record.child_health_records.map((child) => (
+                                    <View key={child.child_record_id} style={{ marginTop: 6 }}>
+                                        <ThemedText style={styles.blockText}>
+                                            Child Record #{child.child_record_id} • Born: {formatDate(child.created_at)}
+                                        </ThemedText>
+                                        <ThemedText style={styles.blockText}>
+                                            Birth order: {child.birth_order ?? '—'} • Immunizations: {child.immunization_count ?? 0} • Monitoring logs: {child.monitoring_count ?? 0}
+                                        </ThemedText>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
                     </>
                 )}
             </ThemedCard>
@@ -720,6 +741,91 @@ const MaternalTracker = () => {
 
                     {renderLatestTrackerCard()}
                     {renderDetailModal()}
+
+                    {/* Mother-level child health records (fetched by mother person id) */}
+                    {childRecords && childRecords.length > 0 && (
+                        <ThemedCard>
+                            <View style={styles.sectionHeader}>
+                                <ThemedText style={styles.sectionTitle}>Children</ThemedText>
+                            </View>
+                            <Spacer height={12} />
+                            {childRecords.map((child) => (
+                                <TouchableOpacity
+                                    key={child.child_record_id}
+                                    activeOpacity={0.85}
+                                    onPress={() => {
+                                        setSelectedChild(child)
+                                        setChildModalVisible(true)
+                                    }}
+                                >
+                                    <View style={{ marginBottom: 10 }}>
+                                        <ThemedText style={styles.blockText}>
+                                            Child Record #{child.child_record_id} • Born: {formatDate(child.created_at)}
+                                        </ThemedText>
+                                        <ThemedText style={styles.blockText}>
+                                            Birth order: {child.birth_order ?? '—'} • Immunizations: {child.immunization_count ?? 0} • Monitoring logs: {child.monitoring_count ?? 0}
+                                        </ThemedText>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ThemedCard>
+                    )}
+
+                    {/* Child detail modal */}
+                    {selectedChild && (
+                        <Modal visible={childModalVisible} transparent animationType="slide" onRequestClose={() => setChildModalVisible(false)}>
+                            <View style={styles.modalBackdrop}>
+                                <View style={[styles.modalCard, { maxHeight: '85%' }]}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 12 }}>
+                                        <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>Child #{selectedChild.child_record_id}</ThemedText>
+                                        <Pressable onPress={() => setChildModalVisible(false)} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }]}>
+                                            <Ionicons name="close" size={20} color="#374151" />
+                                        </Pressable>
+                                    </View>
+
+                                    <ScrollView style={{ width: '100%' }} contentContainerStyle={{ gap: 12 }}>
+                                        <ThemedText style={styles.blockText}>Born: {formatDate(selectedChild.created_at)}</ThemedText>
+                                        <ThemedText style={styles.blockText}>Birth order: {selectedChild.birth_order ?? '—'}</ThemedText>
+                                        <ThemedText style={styles.blockText}>Immunizations: {selectedChild.immunization_count ?? 0}</ThemedText>
+                                        <ThemedText style={styles.blockText}>Monitoring logs: {selectedChild.monitoring_count ?? 0}</ThemedText>
+
+                                        <Spacer height={8} />
+                                        <ThemedText style={styles.blockTitle}>Immunizations</ThemedText>
+                                        {(!selectedChild.immunizations || selectedChild.immunizations.length === 0) ? (
+                                            <ThemedText style={styles.blockText}>No immunization records.</ThemedText>
+                                        ) : (
+                                            selectedChild.immunizations.map((im) => (
+                                                <View key={im.child_immunization_id} style={{ paddingVertical: 6 }}>
+                                                    <ThemedText style={styles.blockText}>{im.vaccine_type ?? 'Vaccine'} • {formatDate(im.immunization_date)}</ThemedText>
+                                                    {im.batch_no && <ThemedText style={styles.blockText}>Batch: {im.batch_no}</ThemedText>}
+                                                    {im.notes && <ThemedText style={styles.blockText}>Notes: {im.notes}</ThemedText>}
+                                                </View>
+                                            ))
+                                        )}
+
+                                        <Spacer height={8} />
+                                        <ThemedText style={styles.blockTitle}>Monitoring Logs</ThemedText>
+                                        {(!selectedChild.monitoring_logs || selectedChild.monitoring_logs.length === 0) ? (
+                                            <ThemedText style={styles.blockText}>No monitoring logs.</ThemedText>
+                                        ) : (
+                                            selectedChild.monitoring_logs.map((m) => (
+                                                <View key={m.child_monitoring_id} style={{ paddingVertical: 6 }}>
+                                                    <ThemedText style={styles.blockText}>{formatDate(m.visit_date)} • Wt: {m.weight_kg ?? '—'} kg • Ht: {m.height_cm ?? '—'} cm</ThemedText>
+                                                    {m.muac != null && <ThemedText style={styles.blockText}>MUAC: {m.muac}</ThemedText>}
+                                                    {m.notes && <ThemedText style={styles.blockText}>Notes: {m.notes}</ThemedText>}
+                                                </View>
+                                            ))
+                                        )}
+                                    </ScrollView>
+
+                                    <Spacer height={12} />
+                                    <Pressable onPress={() => setChildModalVisible(false)} style={({ pressed }) => [styles.modalCloseButton, pressed && { opacity: 0.8 }]}>
+                                        <ThemedText style={{ color: '#fff', fontWeight: '700' }}>Close</ThemedText>
+                                    </Pressable>
+                                </View>
+                            </View>
+                        </Modal>
+                    )}
 
                     {renderScheduleSection('Postpartum Schedule', postpartum, 'No postpartum schedule found.')}
                     {renderScheduleSection('Prenatal Schedule', prenatal, 'No prenatal schedule found.')}
