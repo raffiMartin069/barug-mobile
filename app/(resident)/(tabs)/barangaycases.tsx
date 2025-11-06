@@ -253,7 +253,7 @@ const BarangayCases = () => {
               containerSize={36}
               bgColor="rgba(0,0,0,.18)"
             />
-            <ThemedText style={styles.heroTitle}>Barangay Cases</ThemedText>
+            <ThemedText style={styles.heroTitle}>\d*s</ThemedText>
           </View>
           <ThemedText style={styles.heroSubtitle}>
             A clean overview of your active and historical cases.
@@ -397,7 +397,7 @@ const BarangayCases = () => {
 
   return (
     <ThemedView style={{ flex: 1, backgroundColor: WASH }} safe>
-      <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
+      <ThemedAppBar title="\d*s" showNotif={false} showProfile={false} />
 
       <KeyboardAvoidingView>
         {loading ? (
@@ -428,7 +428,7 @@ const BarangayCases = () => {
                 <ThemedText style={styles.emptyTitle}>No cases found</ThemedText>
                 <ThemedText style={styles.emptyText}>
                   {statusFilter === 'all'
-                    ? "You don't have any barangay cases yet."
+                    ? "You don't have any \d*s yet."
                     : `No ${STATUS_UI[statusFilter as StatusBucket]?.label || 'matching'} cases found.`}
                 </ThemedText>
                 <TouchableOpacity
