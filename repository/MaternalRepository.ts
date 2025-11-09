@@ -1,4 +1,5 @@
 import { supabase } from '@/constants/supabase'
+import Normalizers from '@/lib/supabase-normalizers'
 import {
 	ChildHealthRecord,
 	ChildImmunization,
@@ -86,7 +87,8 @@ export class MaternalRepository {
 
 		if (error) throw error
 
-		const rows = (data ?? []).map((row) => this.mapScheduleRow(row, 'postpartum_visit_schedule_id'))
+	const norm = Normalizers.normalizeScheduleRows(data)
+	const rows = (norm ?? []).map((row: any) => this.mapScheduleRow(row, 'postpartum_visit_schedule_id'))
 		return this.partitionLatest(rows)
 	}
 
@@ -120,7 +122,8 @@ export class MaternalRepository {
 
 		if (error) throw error
 
-		const rows = (data ?? []).map((row) => this.mapScheduleRow(row, 'maternal_visit_schedule_id'))
+	const norm = Normalizers.normalizeScheduleRows(data)
+	const rows = (norm ?? []).map((row: any) => this.mapScheduleRow(row, 'maternal_visit_schedule_id'))
 		return this.partitionLatest(rows)
 	}
 
@@ -192,7 +195,8 @@ export class MaternalRepository {
 			.order('created_at', { ascending: false })
 			.order('maternal_record_id', { ascending: false })
 		if (error) throw error
-		return this.mapBaseRecords(data ?? [])
+	const normalized = Normalizers.normalizeBaseRecords(data)
+	return this.mapBaseRecords(normalized)
 	}
 
 	private async getBaseRecordsByIds(recordIds: number[]): Promise<MaternalRecordBase[]> {
@@ -220,7 +224,8 @@ export class MaternalRepository {
 			.order('maternal_record_id', { ascending: false })
 
 		if (error) throw error
-		return this.mapBaseRecords(data ?? [])
+	const normalized = Normalizers.normalizeBaseRecords(data)
+	return this.mapBaseRecords(normalized)
 	}
 
 	private mapBaseRecords(rows: RawBaseRecord[]): MaternalRecordBase[] {

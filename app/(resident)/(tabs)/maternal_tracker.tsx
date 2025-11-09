@@ -5,20 +5,17 @@ import ThemedCard from '@/components/ThemedCard'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { DEV_SKIP_SESSION } from '@/constants/dev'
-import { MaternalService } from '@/services/MaternalService'
-import { useAccountRole } from '@/store/useAccountRole'
+import { Colors } from '@/constants/Colors'
+import { default as useMaternalTracker } from '@/hooks/useMaternalTracker'
 import {
-    ChildHealthRecord,
     MaternalRecordBundle,
     MaternalScheduleGroup,
     PostpartumSchedule,
     PrenatalSchedule,
-    TrimesterTrackerItem,
 } from '@/types/maternal'
 import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import {
     ActivityIndicator,
     Animated,
@@ -34,48 +31,37 @@ import {
 
 type ScheduleGroup = MaternalScheduleGroup<PostpartumSchedule | PrenatalSchedule>
 
-const emptyScheduleGroup: ScheduleGroup = { latest: null, history: [] }
-
 const MaternalTracker = () => {
-    const currentRole = useAccountRole((state) => state.currentRole)
-    const getProfile = useAccountRole((state) => state.getProfile)
-    // Session/profile loader disabled for development
-    // const ensureLoaded = useAccountRole((state) => state.ensureLoaded)
+    // use a dedicated hook to keep data/state logic out of the UI
+    const cachedProfile: any = null
+    const initialPersonId = useMemo(() => Number(cachedProfile?.person_id ?? cachedProfile?.details?.person_id ?? 0), [])
 
-    const role = currentRole ?? 'resident'
-    const cachedProfile: any = getProfile(role)
-    const initialPersonId = useMemo(() => {
-        return Number(cachedProfile?.person_id ?? cachedProfile?.details?.person_id ?? 0)
-    }, [cachedProfile])
-
-    // Default to cached profile if present. In development, DEV_SKIP_SESSION allows
-    // bypassing session/profile and uses a local test person id (177) for faster iteration.
-    const [personId, setPersonId] = useState<number>(initialPersonId || (DEV_SKIP_SESSION ? 177 : 0))
-    const [loading, setLoading] = useState<boolean>(true)
-    const [refreshing, setRefreshing] = useState<boolean>(false)
-    const [error, setError] = useState<string | null>(null)
-    const [postpartum, setPostpartum] = useState<ScheduleGroup>(emptyScheduleGroup)
-    const [prenatal, setPrenatal] = useState<ScheduleGroup>(emptyScheduleGroup)
-    const [records, setRecords] = useState<MaternalRecordBundle[]>([])
-    const [childRecords, setChildRecords] = useState<ChildHealthRecord[]>([])
-    const [selectedChild, setSelectedChild] = useState<ChildHealthRecord | null>(null)
-    const [childModalVisible, setChildModalVisible] = useState<boolean>(false)
-    const [childTab, setChildTab] = useState<'overview' | 'immunizations' | 'monitoring'>('overview')
-    const [latestTracker, setLatestTracker] = useState<TrimesterTrackerItem[]>([])
-    const [detailModalVisible, setDetailModalVisible] = useState<boolean>(false)
-    const [expandedRecords, setExpandedRecords] = useState<Set<number>>(() => new Set())
-    // Pagination
-    const PAGE_SIZE = 3
-    const [currentPage, setCurrentPage] = useState<number>(1)
-
-    useEffect(() => {
-        if (initialPersonId && initialPersonId !== personId) {
-            setPersonId(initialPersonId)
-        }
-    }, [initialPersonId, personId])
-
-    const service = useMemo(() => new MaternalService(), [])
-    const ensureLoaded = useAccountRole((state) => state.ensureLoaded)
+    const {
+        
+        loading,
+        refreshing,
+        error,
+        postpartum,
+        prenatal,
+        records,
+        childRecords,
+        selectedChild,
+        setSelectedChild,
+        childModalVisible,
+        setChildModalVisible,
+        childTab,
+        setChildTab,
+        latestTracker,
+        detailModalVisible,
+        setDetailModalVisible,
+        expandedRecords,
+        toggleRecord,
+        PAGE_SIZE,
+        currentPage,
+        setCurrentPage,
+    paginatedRecords,
+    onRefresh,
+    } = useMaternalTracker(initialPersonId)
 
     // Small animated progress bar for trimester percent.
     const TrimesterProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
@@ -96,97 +82,13 @@ const MaternalTracker = () => {
         })
 
         return (
-            <View style={{ width: 80, height: 8, backgroundColor: '#e6eef7', borderRadius: 6, overflow: 'hidden' }}>
-                <Animated.View style={{ height: '100%', backgroundColor: '#60a5fa', width: widthInterpolated }} />
+            <View style={{ width: 80, height: 8, backgroundColor: Colors.light.card, borderRadius: 6, overflow: 'hidden' }}>
+                <Animated.View style={{ height: '100%', backgroundColor: Colors.light.tint, width: widthInterpolated }} />
             </View>
         )
     }
 
-    useEffect(() => {
-        // If we already have a personId, do nothing. In development we may explicitly
-        // allow skipping the session/profile load via DEV_SKIP_SESSION.
-        if (personId) return
-
-        let cancelled = false
-        // if (DEV_SKIP_SESSION) {
-        //     // local dev shortcut
-        //     setPersonId(177)
-        //     setLoading(false)
-        //     return
-        // }
-
-        ; (async () => {
-            try {
-                const details: any = await ensureLoaded('resident')
-                if (cancelled) return
-                const id = Number(details?.person_id ?? details?.details?.person_id ?? 0)
-                if (id) setPersonId(id)
-                else {
-                    setError('Profile does not have a linked person record.')
-                    setLoading(false)
-                }
-            } catch (err) {
-                if (cancelled) return
-                console.warn('[MaternalTracker] failed to ensure profile:', err)
-                setError('Unable to load profile information.')
-                setLoading(false)
-            }
-        })()
-
-        return () => {
-            cancelled = true
-        }
-    }, [ensureLoaded, personId])
-
-    const fetchAll = useCallback(
-        async (mode: 'initial' | 'refresh' = 'initial') => {
-            if (!personId) return
-            if (mode === 'refresh') setRefreshing(true)
-            else setLoading(true)
-            setError(null)
-            try {
-                const bundle = await service.fetchAllForPerson(personId)
-                // console.log(bundle);
-                console.log(`[MaternalTracker] fetched maternal data for person #${personId}:`, bundle)
-                setPostpartum(bundle.postpartum)
-                setPrenatal(bundle.prenatal)
-                setRecords(bundle.records)
-                setLatestTracker(bundle.latestTracker ?? [])
-                setChildRecords((bundle as any).childRecords ?? [])
-            } catch (err: any) {
-                console.error('[MaternalTracker] fetch error:', err)
-                const message = err?.message ? String(err.message) : 'Failed to load maternal data.'
-                setError(message)
-            } finally {
-                if (mode === 'refresh') setRefreshing(false)
-                else setLoading(false)
-            }
-        },
-        [personId, service]
-    )
-
-    useEffect(() => {
-        if (!personId) return
-        let cancelled = false
-            ; (async () => {
-                await fetchAll('initial')
-                if (cancelled) return
-            })()
-        return () => {
-            cancelled = true
-        }
-    }, [personId, fetchAll])
-
-    useEffect(() => {
-        // whenever records change, reset to first page to avoid empty pages
-        setCurrentPage(1)
-    }, [records])
-
-    // paginated slice of records
-    const paginatedRecords = useMemo(() => {
-        const start = (currentPage - 1) * PAGE_SIZE
-        return records.slice(start, start + PAGE_SIZE)
-    }, [records, currentPage])
+    
 
     const getEdcFromRecord = (r: MaternalRecordBundle) => {
         // try present pregnancy at record level first
@@ -206,14 +108,14 @@ const MaternalTracker = () => {
         // Risk badge
         if (status.includes('high') || status.includes('risk') || status.includes('critical')) {
             badges.push(
-                <View key="risk" style={[styles.badge, { backgroundColor: '#fee2e2' }]}>
-                    <ThemedText style={[styles.badgeText, { color: '#b91c1c' }]}>High risk</ThemedText>
+                <View key="risk" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
+                    <ThemedText style={[styles.badgeText, { color: Colors.warning }]}>High risk</ThemedText>
                 </View>
             )
         } else {
             badges.push(
-                <View key="ok" style={[styles.badge, { backgroundColor: '#ecfccb' }]}>
-                    <ThemedText style={[styles.badgeText, { color: '#365314' }]}>Status: {r.record_status_name ?? '—'}</ThemedText>
+                <View key="ok" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
+                    <ThemedText style={[styles.badgeText, { color: Colors.light.text }]}>Status: {r.record_status_name ?? '—'}</ThemedText>
                 </View>
             )
         }
@@ -221,20 +123,20 @@ const MaternalTracker = () => {
         // BMI badge
         if (bmi.includes('under') || bmi.includes('thin')) {
             badges.push(
-                <View key="bmi-uw" style={[styles.badge, { backgroundColor: '#fff7ed' }]}>
-                    <ThemedText style={[styles.badgeText, { color: '#92400e' }]}>Underweight</ThemedText>
+                <View key="bmi-uw" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
+                    <ThemedText style={[styles.badgeText, { color: Colors.light.text }]}>Underweight</ThemedText>
                 </View>
             )
         } else if (bmi.includes('over') || bmi.includes('obese')) {
             badges.push(
-                <View key="bmi-ow" style={[styles.badge, { backgroundColor: '#fff1f2' }]}>
-                    <ThemedText style={[styles.badgeText, { color: '#991b1b' }]}>High BMI</ThemedText>
+                <View key="bmi-ow" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
+                    <ThemedText style={[styles.badgeText, { color: Colors.warning }]}>High BMI</ThemedText>
                 </View>
             )
         } else if (bmi) {
             badges.push(
-                <View key="bmi-ok" style={[styles.badge, { backgroundColor: '#ecfccb' }]}>
-                    <ThemedText style={[styles.badgeText, { color: '#365314' }]}>{r.bmi_status_name}</ThemedText>
+                <View key="bmi-ok" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
+                    <ThemedText style={[styles.badgeText, { color: Colors.light.text }]}>{r.bmi_status_name}</ThemedText>
                 </View>
             )
         }
@@ -243,8 +145,8 @@ const MaternalTracker = () => {
         const edc = getEdcFromRecord(r)
         if (edc) {
             badges.push(
-                <View key="edc" style={[styles.badge, { backgroundColor: '#eef2ff' }]}>
-                    <ThemedText style={[styles.badgeText, { color: '#3730a3' }]}>EDC {formatDate(edc)}</ThemedText>
+                <View key="edc" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
+                    <ThemedText style={[styles.badgeText, { color: Colors.light.tint }]}>EDC {formatDate(edc)}</ThemedText>
                 </View>
             )
         }
@@ -267,7 +169,7 @@ const MaternalTracker = () => {
                 accessibilityRole="button"
                 accessibilityLabel="Previous page"
             >
-                <Ionicons name="chevron-back" size={18} color="#111827" />
+                <Ionicons name="chevron-back" size={18} color={Colors.light.text} />
                 <ThemedText style={styles.pageButtonText}>Prev</ThemedText>
             </TouchableOpacity>
 
@@ -283,23 +185,12 @@ const MaternalTracker = () => {
                 accessibilityLabel="Next page"
             >
                 <ThemedText style={styles.pageButtonText}>Next</ThemedText>
-                <Ionicons name="chevron-forward" size={18} color="#111827" />
+                <Ionicons name="chevron-forward" size={18} color={Colors.light.text} />
             </TouchableOpacity>
         </View>
     )
 
-    const toggleRecord = useCallback((recordId: number) => {
-        setExpandedRecords((prev) => {
-            const next = new Set(prev)
-            if (next.has(recordId)) next.delete(recordId)
-            else next.add(recordId)
-            return next
-        })
-    }, [])
-
-    const onRefresh = useCallback(() => {
-        fetchAll('refresh')
-    }, [fetchAll])
+    // toggleRecord and onRefresh are provided by the useMaternalTracker hook
 
     const formatDate = (value: string | null | undefined, fallback = '—') => {
         if (!value) return fallback
@@ -396,8 +287,8 @@ const MaternalTracker = () => {
                                     : 0)
 
                             return (
-                                <View key={`tri-latest-${tri}-${idx}`} style={[styles.badge, { backgroundColor: '#f0f9ff' }]} accessibilityLabel={`Trimester ${tri} progress ${label}`}>
-                                    <ThemedText style={[styles.badgeText, { color: '#0369a1' }]}>T{tri} • {label}</ThemedText>
+                                <View key={`tri-latest-${tri}-${idx}`} style={[styles.badge, { backgroundColor: Colors.light.card }]} accessibilityLabel={`Trimester ${tri} progress ${label}`}>
+                                    <ThemedText style={[styles.badgeText, { color: Colors.light.tint }]}>T{tri} • {label}</ThemedText>
                                     <View style={{ marginTop: 6 }}>
                                         <TrimesterProgressBar percent={percent} />
                                     </View>
@@ -426,7 +317,7 @@ const MaternalTracker = () => {
                                 Created {formatDate(record.created_at)}
                             </ThemedText>
                         </View>
-                        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={'#4b5563'} />
+                            <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={20} color={Colors.light.icon} />
                     </View>
                 </TouchableOpacity>
 
@@ -672,7 +563,7 @@ const MaternalTracker = () => {
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 12 }}>
                             <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>Detailed Trimester Tracker</ThemedText>
                             <Pressable onPress={() => setDetailModalVisible(false)} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }]}>
-                                <Ionicons name="close" size={20} color="#374151" />
+                                <Ionicons name="close" size={20} color={Colors.light.icon} />
                             </Pressable>
                         </View>
 
@@ -692,12 +583,12 @@ const MaternalTracker = () => {
                                     <View key={`detail-tri-${tri}-${idx}`} style={styles.detailRow}>
                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <ThemedText style={{ fontWeight: '700' }}>Trimester {tri}</ThemedText>
-                                            <ThemedText style={{ color: '#374151' }}>{completed != null && expected != null ? `${completed}/${expected}` : '—'}</ThemedText>
+                                            <ThemedText style={{ color: Colors.light.icon }}>{completed != null && expected != null ? `${completed}/${expected}` : '—'}</ThemedText>
                                         </View>
                                         <View style={{ marginTop: 8 }}>
                                             <TrimesterProgressBar percent={percent} />
                                         </View>
-                                        {note ? <ThemedText style={{ marginTop: 8, color: '#4b5563' }}>{note}</ThemedText> : null}
+                                        {note ? <ThemedText style={{ marginTop: 8, color: Colors.light.icon }}>{note}</ThemedText> : null}
                                     </View>
                                 )
                             })}
@@ -705,7 +596,7 @@ const MaternalTracker = () => {
 
                         <Spacer height={12} />
                         <Pressable onPress={() => setDetailModalVisible(false)} style={({ pressed }) => [styles.modalCloseButton, pressed && { opacity: 0.8 }]}>
-                            <ThemedText style={{ color: '#fff', fontWeight: '700' }}>Close</ThemedText>
+                            <ThemedText style={{ color: Colors.light.background, fontWeight: '700' }}>Close</ThemedText>
                         </Pressable>
                     </View>
                 </View>
@@ -763,7 +654,7 @@ const MaternalTracker = () => {
                                 >
                                     <View style={styles.childRow}>
                                         <View style={styles.childAvatar}>
-                                            <Ionicons name="person" size={20} color="#fff" />
+                                            <Ionicons name="person" size={20} color={Colors.light.background} />
                                         </View>
                                         <View style={{ flex: 1, marginLeft: 12 }}>
                                             <ThemedText style={styles.childName}>{child.child_name ?? `Child #${child.child_record_id}`}</ThemedText>
@@ -778,7 +669,7 @@ const MaternalTracker = () => {
                                                     <ThemedText style={styles.smallBadgeText}>{child.monitoring_count ?? 0}</ThemedText>
                                                 </View>
                                             </View>
-                                            <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+                                            <Ionicons name="chevron-forward" size={18} color={Colors.light.icon} />
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -801,8 +692,8 @@ const MaternalTracker = () => {
                                 <Pressable onPress={() => {
                                     setChildModalVisible(false)
                                     setSelectedChild(null)
-                                }} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }]}>
-                                    <Ionicons name="close" size={20} color="#374151" />
+                                }} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }] }>
+                                    <Ionicons name="close" size={20} color={Colors.light.icon} />
                                 </Pressable>
                             </View>
 
@@ -839,7 +730,7 @@ const MaternalTracker = () => {
                                             <ThemedText style={styles.blockText}>No immunization records.</ThemedText>
                                         ) : (
                                             selectedChild.immunizations.map((im) => (
-                                                <View key={im.child_immunization_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eef2f7' }}>
+                                                <View key={im.child_immunization_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.light.card }}>
                                                     <ThemedText style={styles.blockText}>{im.vaccine_type ?? 'Vaccine'}</ThemedText>
                                                     <ThemedText style={styles.blockMeta}>{formatDate(im.immunization_date)}</ThemedText>
                                                     {im.immunization_stage_name && <ThemedText style={styles.blockText}>Stage: {im.immunization_stage_name}</ThemedText>}
@@ -855,7 +746,7 @@ const MaternalTracker = () => {
                                             <ThemedText style={styles.blockText}>No monitoring logs.</ThemedText>
                                         ) : (
                                             selectedChild.monitoring_logs.map((m) => (
-                                                <View key={m.child_monitoring_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eef2f7' }}>
+                                                <View key={m.child_monitoring_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.light.card }}>
                                                     <ThemedText style={styles.blockText}>{formatDate(m.visit_date)}</ThemedText>
                                                     <ThemedText style={styles.blockMeta}>Wt: {m.weight_kg ?? '—'} kg • Ht: {m.height_cm ?? '—'} cm</ThemedText>
                                                     {m.muac != null && <ThemedText style={styles.blockText}>MUAC: {m.muac}</ThemedText>}
@@ -906,16 +797,16 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     muted: {
-        color: '#6b7280',
+        color: Colors.light.icon,
         fontSize: 14,
     },
     errorText: {
-        color: '#b91c1c',
+        color: Colors.warning,
         fontSize: 14,
         fontWeight: '600',
     },
     errorCard: {
-        borderColor: '#f87171',
+        borderColor: Colors.warning,
         borderWidth: 1,
     },
     sectionHeader: {
@@ -930,7 +821,7 @@ const styles = StyleSheet.create({
     sectionSubtitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: Colors.light.text,
     },
     scheduleRow: {
         paddingVertical: 8,
@@ -945,7 +836,7 @@ const styles = StyleSheet.create({
     },
     scheduleMeta: {
         fontSize: 13,
-        color: '#6b7280',
+        color: Colors.light.icon,
         marginTop: 2,
     },
     recordCard: {
@@ -963,7 +854,7 @@ const styles = StyleSheet.create({
     },
     recordSubTitle: {
         fontSize: 13,
-        color: '#6b7280',
+        color: Colors.light.icon,
     },
     recordSummaryRow: {
         flexDirection: 'row',
@@ -972,7 +863,7 @@ const styles = StyleSheet.create({
     },
     fieldLabel: {
         fontSize: 12,
-        color: '#6b7280',
+        color: Colors.light.icon,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
@@ -989,12 +880,12 @@ const styles = StyleSheet.create({
     },
     blockText: {
         fontSize: 13,
-        color: '#374151',
+        color: Colors.light.text,
     },
     visitCard: {
         marginTop: 8,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
+        borderColor: Colors.light.card,
         borderRadius: 12,
         padding: 10,
         gap: 4,
@@ -1009,13 +900,13 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 6,
         borderBottomWidth: 1,
-        borderBottomColor: '#f3f4f6',
+        borderBottomColor: Colors.light.card,
     },
     childAvatar: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#0b74ff',
+        backgroundColor: Colors.light.tint,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -1025,7 +916,7 @@ const styles = StyleSheet.create({
     },
     childMeta: {
         fontSize: 13,
-        color: '#6b7280',
+        color: Colors.light.icon,
     },
     countRow: {
         flexDirection: 'row',
@@ -1034,13 +925,13 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     smallBadge: {
-        backgroundColor: '#eef2ff',
+        backgroundColor: Colors.light.card,
         paddingVertical: 4,
         paddingHorizontal: 8,
         borderRadius: 8,
     },
     smallBadgeSecondary: {
-        backgroundColor: '#f1f5f9',
+        backgroundColor: Colors.light.card,
         paddingVertical: 4,
         paddingHorizontal: 8,
         borderRadius: 8,
@@ -1049,7 +940,7 @@ const styles = StyleSheet.create({
     smallBadgeText: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#0b5cf6',
+        color: Colors.light.tint,
     },
     badge: {
         paddingVertical: 6,
@@ -1076,26 +967,26 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 12,
         borderRadius: 10,
-        backgroundColor: '#f3f4f6',
+        backgroundColor: Colors.light.card,
     },
     pageButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#111827',
+        color: Colors.light.text,
     },
     pageIndicator: {
         fontSize: 13,
-        color: '#374151',
+        color: Colors.light.text,
         fontWeight: '600',
     },
     modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 20 },
-    modalCard: { width: '100%', maxHeight: '80%', borderRadius: 16, backgroundColor: '#fff', padding: 18 },
-    detailRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eef2f7' },
+    modalCard: { width: '100%', maxHeight: '80%', borderRadius: 16, backgroundColor: Colors.light.background, padding: 18 },
+    detailRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.light.card },
     tabRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
-    tabButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: '#f8fafc' },
-    tabButtonActive: { backgroundColor: '#0b74ff' },
-    tabButtonText: { fontSize: 14, fontWeight: '700', color: '#374151' },
-    tabButtonTextActive: { color: '#fff' },
-    blockMeta: { fontSize: 13, color: '#6b7280' },
-    modalCloseButton: { marginTop: 8, backgroundColor: '#0b5cf6', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
+    tabButton: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center', backgroundColor: Colors.light.card },
+    tabButtonActive: { backgroundColor: Colors.light.tint },
+    tabButtonText: { fontSize: 14, fontWeight: '700', color: Colors.light.text },
+    tabButtonTextActive: { color: Colors.light.background },
+    blockMeta: { fontSize: 13, color: Colors.light.icon },
+    modalCloseButton: { marginTop: 8, backgroundColor: Colors.light.tint, paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
 })
