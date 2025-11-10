@@ -11,18 +11,18 @@ class SupabaseNormalizers {
         return value as T
     }
 
-    static normalizeScheduleRows(rows: any[] | null | undefined): any[] {
+    static normalizeScheduleRows<T = any>(rows: T[] | null | undefined): T[] {
         const input = rows ?? []
         return input.map((r: any) => {
             const status = SupabaseNormalizers.ensureSingle(r.status)
             return {
                 ...r,
                 status,
-            } as any
-        }) as any[]
+            } as T
+        }) as T[]
     }
 
-    static normalizeBaseRecords(rows: any[] | null | undefined): any[] {
+    static normalizeBaseRecords<T = any>(rows: T[] | null | undefined): T[] {
         const input = rows ?? []
         return input.map((r: any) => {
             const bmi_status = SupabaseNormalizers.ensureSingle(r.bmi_status)
@@ -31,8 +31,8 @@ class SupabaseNormalizers {
                 ...r,
                 bmi_status,
                 record_status,
-            } as any
-        }) as any[]
+            } as T
+        }) as T[]
     }
 }
 

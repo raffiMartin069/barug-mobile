@@ -1,31 +1,32 @@
 import { supabase } from '@/constants/supabase'
 import Normalizers from '@/lib/supabase-normalizers'
 import {
-	ChildHealthRecord,
-	ChildImmunization,
-	ChildMonitoringLog,
-	LabResult,
-	MaternalAncRow,
-	MaternalAncVisitDetail,
-	MaternalChecklist,
-	MaternalRecordBase,
-	MaternalRecordBundle,
-	MaternalScheduleGroup,
-	MaternalScheduleRow,
-	MedicalHistory,
-	Micronutrient,
-	ObstetricHistory,
-	PlanAndBaseline,
-	PostpartumSchedule,
-	PrenatalSchedule,
-	PresentPregnancyStatus,
-	PreviousPregnancyInfo,
-	RiskResponse,
-	TrimesterStageLite,
-	TrimesterTrackerItem,
-	TTVaccineRecord,
-	VisitStatusLite,
+    ChildHealthRecord,
+    ChildImmunization,
+    ChildMonitoringLog,
+    LabResult,
+    MaternalAncRow,
+    MaternalAncVisitDetail,
+    MaternalChecklist,
+    MaternalRecordBase,
+    MaternalRecordBundle,
+    MaternalScheduleGroup,
+    MaternalScheduleRow,
+    MedicalHistory,
+    Micronutrient,
+    ObstetricHistory,
+    PlanAndBaseline,
+    PostpartumSchedule,
+    PrenatalSchedule,
+    PresentPregnancyStatus,
+    PreviousPregnancyInfo,
+    RiskResponse,
+    TrimesterStageLite,
+    TrimesterTrackerItem,
+    TTVaccineRecord,
+    VisitStatusLite,
 } from '@/types/maternal'
+import type { RawChildHealthRecord, RawChildImmunization, RawChildMonitoringLog } from '@/types/raw/maternal_raw'
 
 type RawScheduleRow = {
 	postpartum_visit_schedule_id?: number
@@ -195,8 +196,8 @@ export class MaternalRepository {
 			.order('created_at', { ascending: false })
 			.order('maternal_record_id', { ascending: false })
 		if (error) throw error
-	const normalized = Normalizers.normalizeBaseRecords(data)
-	return this.mapBaseRecords(normalized)
+		const normalized = Normalizers.normalizeBaseRecords(data)
+		return this.mapBaseRecords(normalized as unknown as RawBaseRecord[])
 	}
 
 	private async getBaseRecordsByIds(recordIds: number[]): Promise<MaternalRecordBase[]> {
@@ -224,8 +225,8 @@ export class MaternalRepository {
 			.order('maternal_record_id', { ascending: false })
 
 		if (error) throw error
-	const normalized = Normalizers.normalizeBaseRecords(data)
-	return this.mapBaseRecords(normalized)
+		const normalized = Normalizers.normalizeBaseRecords(data)
+		return this.mapBaseRecords(normalized as unknown as RawBaseRecord[])
 	}
 
 	private mapBaseRecords(rows: RawBaseRecord[]): MaternalRecordBase[] {
@@ -565,7 +566,7 @@ export class MaternalRepository {
 			)
 			.eq('mother_id', motherPersonId)
 		if (error) throw error
-		const rows = data ?? []
+	const rows = (data ?? []) as RawChildHealthRecord[]
 		const childIds = rows.map((r: any) => Number(r.child_record_id)).filter((id) => Number.isFinite(id))
 
 		// We'll fetch full immunization and monitoring records for these child IDs
@@ -595,15 +596,15 @@ export class MaternalRepository {
 
 			if (imErr) throw imErr
 
-			for (const r of imRows ?? []) {
+			for (const r of (imRows ?? []) as RawChildImmunization[]) {
 				const cid = Number(r.child_record_id)
 				// normalize joined immunization_type which may be returned as an object or an array
-				const immJoined = Array.isArray(r.immunization_type) ? r.immunization_type[0] : r.immunization_type
-				const vaccineName = immJoined && immJoined.immunization_type_name ? String(immJoined.immunization_type_name) : (r.immunization_type_id != null ? String(r.immunization_type_id) : null)
+				const immJoined = Normalizers.ensureSingle(r.immunization_type)
+				const vaccineName = immJoined && (immJoined.immunization_type_name ?? immJoined.name) ? String(immJoined.immunization_type_name ?? immJoined.name) : (r.immunization_type_id != null ? String(r.immunization_type_id) : null)
 				// normalize joined immunization_stage which may be array/object
-				const stageJoined = Array.isArray(r.immunization_stage) ? r.immunization_stage[0] : r.immunization_stage
+				const stageJoined = Normalizers.ensureSingle(r.immunization_stage)
 				const stageId = r.immunization_stage_given_id == null ? null : Number(r.immunization_stage_given_id)
-				const stageName = stageJoined && stageJoined.immunization_stage_name ? String(stageJoined.immunization_stage_name) : null
+				const stageName = stageJoined && (stageJoined.immunization_stage_name ?? stageJoined.name) ? String(stageJoined.immunization_stage_name ?? stageJoined.name) : null
 
 				const entry: ChildImmunization = {
 					child_immunization_id: Number(r.child_immunization_id ?? 0),
@@ -632,7 +633,7 @@ export class MaternalRepository {
 
 			if (monErr) throw monErr
 
-			for (const r of monRows ?? []) {
+			for (const r of (monRows ?? []) as RawChildMonitoringLog[]) {
 				const cid = Number(r.child_record_id)
 				const entry: ChildMonitoringLog = {
 					child_monitoring_id: Number(r.child_monitoring_id ?? r.id ?? 0),
@@ -650,7 +651,7 @@ export class MaternalRepository {
 			}
 		}
 
-		return rows.map((r: any) => {
+		return (rows as RawChildHealthRecord[]).map((r) => {
 			const id = Number(r.child_record_id)
 			// normalize joined person (may be object or array), prefer joined values when present
 			const personJoined = Array.isArray(r.person) ? r.person[0] : r.person
@@ -663,10 +664,10 @@ export class MaternalRepository {
 
 			return {
 				child_record_id: id,
-				person_id: Number(personJoined?.person_id ?? r.person_id),
+				person_id: Number(personJoined?.person_id ?? r.person_id ?? 0),
 				mother_id: r.mother_id == null ? null : Number(r.mother_id),
 				father_id: r.father_id == null ? null : Number(r.father_id),
-				birth_order: r.birth_order ?? null,
+				birth_order: r.birth_order == null ? null : String(r.birth_order),
 				created_at: r.created_at ?? null,
 				// human-readable name for UI
 				child_name: childName,

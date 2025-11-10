@@ -1,6 +1,6 @@
 import { DEV_SKIP_SESSION } from '@/constants/dev'
+import { useSession } from '@/providers/SessionProvider'
 import { MaternalService } from '@/services/MaternalService'
-import { useAccountRole } from '@/store/useAccountRole'
 import {
     ChildHealthRecord,
     MaternalRecordBundle,
@@ -16,12 +16,10 @@ type ScheduleGroup = MaternalScheduleGroup<PostpartumSchedule | PrenatalSchedule
 const emptyScheduleGroup: ScheduleGroup = { latest: null, history: [] }
 
 function useMaternalTracker(initialPersonIdFromProfile?: number) {
-    const currentRole = useAccountRole((s) => s.currentRole)
-    const getProfile = useAccountRole((s) => s.getProfile)
-    const ensureLoaded = useAccountRole((s) => s.ensureLoaded)
-
-    const role = currentRole ?? 'resident'
-    const cachedProfile: any = getProfile(role)
+    const session = useSession()
+    const role = 'resident'
+    const cachedProfile: any = session.getProfile ? session.getProfile(role) : null
+    const ensureLoaded = session.ensureLoaded
     const initialFromCache = initialPersonIdFromProfile ?? Number(cachedProfile?.person_id ?? cachedProfile?.details?.person_id ?? 0)
 
     const [personId, setPersonId] = useState<number>(initialFromCache || (DEV_SKIP_SESSION ? 177 : 0))

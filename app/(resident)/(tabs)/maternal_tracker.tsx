@@ -1,6 +1,10 @@
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedBottomSheet from '@/components/ThemedBottomSheet'
+ 
+import ChildDetailSheet from '@/components/maternal/ChildDetailSheet'
+import ChildList from '@/components/maternal/ChildList'
+import StatusBadge from '@/components/maternal/StatusBadge'
+import TrimesterProgressBar from '@/components/maternal/TrimesterProgressBar'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedDivider from '@/components/ThemedDivider'
 import ThemedText from '@/components/ThemedText'
@@ -15,11 +19,9 @@ import {
 } from '@/types/maternal'
 import { Ionicons } from '@expo/vector-icons'
 import dayjs from 'dayjs'
-import React, { useEffect, useMemo } from 'react'
+import React, { useMemo } from 'react'
 import {
     ActivityIndicator,
-    Animated,
-    Easing,
     Modal,
     Pressable,
     RefreshControl,
@@ -64,30 +66,6 @@ const MaternalTracker = () => {
     } = useMaternalTracker(initialPersonId)
 
     // Small animated progress bar for trimester percent.
-    const TrimesterProgressBar: React.FC<{ percent: number }> = ({ percent }) => {
-        const animated = useMemo(() => new Animated.Value(0), [])
-        useEffect(() => {
-            animated.setValue(0)
-            Animated.timing(animated, {
-                toValue: Math.max(0, Math.min(100, percent)),
-                duration: 700,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: false,
-            }).start()
-        }, [percent, animated])
-
-        const widthInterpolated = animated.interpolate({
-            inputRange: [0, 100],
-            outputRange: ['0%', '100%'],
-        })
-
-        return (
-            <View style={{ width: 80, height: 8, backgroundColor: Colors.light.card, borderRadius: 6, overflow: 'hidden' }}>
-                <Animated.View style={{ height: '100%', backgroundColor: Colors.light.tint, width: widthInterpolated }} />
-            </View>
-        )
-    }
-
     
 
     const getEdcFromRecord = (r: MaternalRecordBundle) => {
@@ -101,54 +79,31 @@ const MaternalTracker = () => {
     }
 
     const renderHighlights = (r: MaternalRecordBundle) => {
-        const badges: React.ReactNode[] = []
         const status = (r.record_status_name ?? '').toLowerCase()
         const bmi = (r.bmi_status_name ?? '').toLowerCase()
 
-        // Risk badge
+        const badges: React.ReactNode[] = []
+
+        // Risk / status
         if (status.includes('high') || status.includes('risk') || status.includes('critical')) {
-            badges.push(
-                <View key="risk" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
-                    <ThemedText style={[styles.badgeText, { color: Colors.warning }]}>High risk</ThemedText>
-                </View>
-            )
+            badges.push(<StatusBadge key="risk" label="High risk" variant="warning" icon="warning" />)
         } else {
-            badges.push(
-                <View key="ok" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
-                    <ThemedText style={[styles.badgeText, { color: Colors.light.text }]}>Status: {r.record_status_name ?? '—'}</ThemedText>
-                </View>
-            )
+            badges.push(<StatusBadge key="ok" label={`Status: ${r.record_status_name ?? '—'}`} variant="neutral" />)
         }
 
-        // BMI badge
+        // BMI
         if (bmi.includes('under') || bmi.includes('thin')) {
-            badges.push(
-                <View key="bmi-uw" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
-                    <ThemedText style={[styles.badgeText, { color: Colors.light.text }]}>Underweight</ThemedText>
-                </View>
-            )
+            badges.push(<StatusBadge key="bmi-uw" label="Underweight" variant="warning" icon="remove" />)
         } else if (bmi.includes('over') || bmi.includes('obese')) {
-            badges.push(
-                <View key="bmi-ow" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
-                    <ThemedText style={[styles.badgeText, { color: Colors.warning }]}>High BMI</ThemedText>
-                </View>
-            )
+            badges.push(<StatusBadge key="bmi-ow" label="High BMI" variant="warning" icon="warning" />)
         } else if (bmi) {
-            badges.push(
-                <View key="bmi-ok" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
-                    <ThemedText style={[styles.badgeText, { color: Colors.light.text }]}>{r.bmi_status_name}</ThemedText>
-                </View>
-            )
+            badges.push(<StatusBadge key="bmi-ok" label={r.bmi_status_name ?? '—'} variant="positive" icon="checkmark" />)
         }
 
-        // EDC / next date
+        // EDC
         const edc = getEdcFromRecord(r)
         if (edc) {
-            badges.push(
-                <View key="edc" style={[styles.badge, { backgroundColor: Colors.light.card }]}>
-                    <ThemedText style={[styles.badgeText, { color: Colors.light.tint }]}>EDC {formatDate(edc)}</ThemedText>
-                </View>
-            )
+            badges.push(<StatusBadge key="edc" label={`EDC ${formatDate(edc)}`} variant="info" icon="calendar" />)
         }
 
         return (
@@ -287,8 +242,8 @@ const MaternalTracker = () => {
                                     : 0)
 
                             return (
-                                <View key={`tri-latest-${tri}-${idx}`} style={[styles.badge, { backgroundColor: Colors.light.card }]} accessibilityLabel={`Trimester ${tri} progress ${label}`}>
-                                    <ThemedText style={[styles.badgeText, { color: Colors.light.tint }]}>T{tri} • {label}</ThemedText>
+                                <View key={`tri-latest-${tri}-${idx}`} accessibilityLabel={`Trimester ${tri} progress ${label}`}>
+                                    <StatusBadge label={`T${tri} • ${label}`} variant="info" icon="bar-chart" />
                                     <View style={{ marginTop: 6 }}>
                                         <TrimesterProgressBar percent={percent} />
                                     </View>
@@ -642,122 +597,29 @@ const MaternalTracker = () => {
                                 <ThemedText style={styles.sectionTitle}>Children</ThemedText>
                             </View>
                             <Spacer height={12} />
-                            {childRecords.map((child) => (
-                                <TouchableOpacity
-                                    key={child.child_record_id}
-                                    activeOpacity={0.9}
-                                    onPress={() => {
-                                        setSelectedChild(child)
-                                        setChildTab('overview')
-                                        setChildModalVisible(true)
-                                    }}
-                                >
-                                    <View style={styles.childRow}>
-                                        <View style={styles.childAvatar}>
-                                            <Ionicons name="person" size={20} color={Colors.light.background} />
-                                        </View>
-                                        <View style={{ flex: 1, marginLeft: 12 }}>
-                                            <ThemedText style={styles.childName}>{child.child_name ?? `Child #${child.child_record_id}`}</ThemedText>
-                                            <ThemedText style={styles.childMeta}>Born {formatDate(child.created_at)} • Order: {child.birth_order ?? '—'}</ThemedText>
-                                        </View>
-                                        <View style={{ alignItems: 'flex-end' }}>
-                                            <View style={styles.countRow}>
-                                                <View style={styles.smallBadge}>
-                                                    <ThemedText style={styles.smallBadgeText}>{child.immunization_count ?? 0}</ThemedText>
-                                                </View>
-                                                <View style={styles.smallBadgeSecondary}>
-                                                    <ThemedText style={styles.smallBadgeText}>{child.monitoring_count ?? 0}</ThemedText>
-                                                </View>
-                                            </View>
-                                            <Ionicons name="chevron-forward" size={18} color={Colors.light.icon} />
-                                        </View>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
+                            <ChildList
+                                items={childRecords}
+                                onSelect={(child) => {
+                                    setSelectedChild(child)
+                                    setChildTab('overview')
+                                    setChildModalVisible(true)
+                                }}
+                            />
                         </ThemedCard>
                     )}
 
-                    {/* Child detail modal */}
+                    {/* Child detail sheet (extracted) */}
                     {selectedChild && (
-                        <ThemedBottomSheet visible={childModalVisible} onClose={() => {
-                            setChildModalVisible(false)
-                            setSelectedChild(null)
-                        }} heightPercent={0.85}>
-                            {/* Header */}
-                            <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 8 }]}>
-                                <View>
-                                    <ThemedText style={{ fontSize: 18, fontWeight: '700' }}>{selectedChild.child_name ?? `Child #${selectedChild.child_record_id}`}</ThemedText>
-                                    <ThemedText style={[styles.childMeta, { marginTop: 4 }]}>Born {formatDate(selectedChild.created_at)} • Order: {selectedChild.birth_order ?? '—'}</ThemedText>
-                                </View>
-                                <Pressable onPress={() => {
-                                    setChildModalVisible(false)
-                                    setSelectedChild(null)
-                                }} style={({ pressed }) => [{ padding: 6, borderRadius: 8 }, pressed && { opacity: 0.7 }] }>
-                                    <Ionicons name="close" size={20} color={Colors.light.icon} />
-                                </Pressable>
-                            </View>
-
-                            {/* Tabs */}
-                            <View style={styles.tabRow}>
-                                <Pressable onPress={() => setChildTab('overview')} style={[styles.tabButton, childTab === 'overview' && styles.tabButtonActive]}>
-                                    <ThemedText style={[styles.tabButtonText, childTab === 'overview' && styles.tabButtonTextActive]}>Overview</ThemedText>
-                                </Pressable>
-                                <Pressable onPress={() => setChildTab('immunizations')} style={[styles.tabButton, childTab === 'immunizations' && styles.tabButtonActive]}>
-                                    <ThemedText style={[styles.tabButtonText, childTab === 'immunizations' && styles.tabButtonTextActive]}>Immunizations</ThemedText>
-                                </Pressable>
-                                <Pressable onPress={() => setChildTab('monitoring')} style={[styles.tabButton, childTab === 'monitoring' && styles.tabButtonActive]}>
-                                    <ThemedText style={[styles.tabButtonText, childTab === 'monitoring' && styles.tabButtonTextActive]}>Monitoring</ThemedText>
-                                </Pressable>
-                            </View>
-
-                            <Spacer height={8} />
-
-                            {/* Content area */}
-                            <ScrollView style={{ width: '100%' }} contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
-                                {childTab === 'overview' && (
-                                    <View>
-                                        <ThemedText style={styles.blockText}>Immunizations: {selectedChild.immunization_count ?? 0}</ThemedText>
-                                        <ThemedText style={styles.blockText}>Monitoring logs: {selectedChild.monitoring_count ?? 0}</ThemedText>
-                                        <Spacer height={8} />
-                                        <ThemedText style={styles.blockTitle}>Quick actions</ThemedText>
-                                        <ThemedText style={styles.blockText}>Tap the tabs to view immunizations or monitoring logs. You can scroll each list independently.</ThemedText>
-                                    </View>
-                                )}
-
-                                {childTab === 'immunizations' && (
-                                    <View>
-                                        {(!selectedChild.immunizations || selectedChild.immunizations.length === 0) ? (
-                                            <ThemedText style={styles.blockText}>No immunization records.</ThemedText>
-                                        ) : (
-                                            selectedChild.immunizations.map((im) => (
-                                                <View key={im.child_immunization_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.light.card }}>
-                                                    <ThemedText style={styles.blockText}>{im.vaccine_type ?? 'Vaccine'}</ThemedText>
-                                                    <ThemedText style={styles.blockMeta}>{formatDate(im.immunization_date)}</ThemedText>
-                                                    {im.immunization_stage_name && <ThemedText style={styles.blockText}>Stage: {im.immunization_stage_name}</ThemedText>}
-                                                </View>
-                                            ))
-                                        )}
-                                    </View>
-                                )}
-
-                                {childTab === 'monitoring' && (
-                                    <View>
-                                        {(!selectedChild.monitoring_logs || selectedChild.monitoring_logs.length === 0) ? (
-                                            <ThemedText style={styles.blockText}>No monitoring logs.</ThemedText>
-                                        ) : (
-                                            selectedChild.monitoring_logs.map((m) => (
-                                                <View key={m.child_monitoring_id} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.light.card }}>
-                                                    <ThemedText style={styles.blockText}>{formatDate(m.visit_date)}</ThemedText>
-                                                    <ThemedText style={styles.blockMeta}>Wt: {m.weight_kg ?? '—'} kg • Ht: {m.height_cm ?? '—'} cm</ThemedText>
-                                                    {m.muac != null && <ThemedText style={styles.blockText}>MUAC: {m.muac}</ThemedText>}
-                                                    {m.notes && <ThemedText style={styles.blockText}>Notes: {m.notes}</ThemedText>}
-                                                </View>
-                                            ))
-                                        )}
-                                    </View>
-                                )}
-                            </ScrollView>
-                        </ThemedBottomSheet>
+                        <ChildDetailSheet
+                            visible={childModalVisible}
+                            onClose={() => {
+                                setChildModalVisible(false)
+                                setSelectedChild(null)
+                            }}
+                            child={selectedChild}
+                            tab={childTab}
+                            setTab={setChildTab}
+                        />
                     )}
 
                     {renderScheduleSection('Postpartum Schedule', postpartum, 'No postpartum schedule found.')}
