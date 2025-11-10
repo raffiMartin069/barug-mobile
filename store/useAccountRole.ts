@@ -1,7 +1,7 @@
 // store/useAccountRole.ts
 import { fetchResidentPlus } from '@/services/profile'
-// import { fetchStaffProfile } from '@/services/staff'      // TODO: add when ready
-// import { fetchBusinessProfile } from '@/services/business' // TODO: add when ready
+// import { fetchStaffProfile } from '@/services/staff'
+// import { fetchBusinessProfile } from '@/services/business'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { create } from 'zustand'
 import { createJSONStorage, persist } from 'zustand/middleware'
@@ -15,47 +15,104 @@ const MAX_AGE = 5 * 60_000 // 5 minutes
 type Profiles = Partial<Record<Role, { data: Profile; cachedAt: number }>>
 
 type State = {
-  /** Which role the user is currently using in the UI. */
+  hasHydrated: boolean
+  waitForHydration: () => Promise<void>
+
   currentRole: Role | null
-  /** If the user is staff, we store the staffId here after the first successful fetch. */
   staffId: number | null
-  /** Per-role cached profile objects, persisted to AsyncStorage. */
   profiles: Profiles
 
-  // ---- Role switchers ----
   setResident: () => void
   setBusiness: () => void
   setStaff: (staffId: number) => void
 
-  // ---- Cache helpers ----
-  /** Get profile for a role (defaults to currentRole). Returns null if missing. */
   getProfile: (role?: Role | null) => Profile | null
-  /** Write profile to cache for a role and timestamp it. */
   setProfile: (role: Role, data: Profile) => void
-  /**
-   * Ensure a profile is available and fresh in the cache.
-   * - Returns cached data if fresh (<= MAX_AGE) and force !== true
-   * - Otherwise fetches the profile for that role, stores it, and returns it.
-   */
   ensureLoaded: (role: Role, opts?: { force?: boolean }) => Promise<Profile | null>
 
-  /** Clear *everything* (use on logout). */
   clearAll: () => void
+}
+
+/* ---------- Hydration gate (module-scope) ---------- */
+let resolveHydration: (() => void) | null = null
+const hydrationPromise = new Promise<void>((res) => { resolveHydration = res })
+
+/* ---------- EXPECTED FIELDS for Household & Family ---------- */
+const EXPECTED_HOUSEHOLD_FIELDS = [
+  'household_head_first_name',
+  'household_head_middle_name',
+  'household_head_last_name',
+  'household_head_suffix',
+  'household_num',
+  'house_type',
+  'house_ownership',
+]
+
+const EXPECTED_FAMILY_FIELDS = [
+  'family_head_first_name',
+  'family_head_middle_name',
+  'family_head_last_name',
+  'family_head_suffix',
+  'family_num',
+  'household_type',
+  'nhts_status',
+  'indigent_status',
+  'source_of_income',
+  'family_monthly_income',
+]
+
+/* ---------- Debug Helpers ---------- */
+function summarize(obj: any) {
+  if (!obj || typeof obj !== 'object') return obj
+  const keys = Object.keys(obj)
+  return { keysCount: keys.length, sampleKeys: keys.slice(0, 20) }
+}
+
+function missingKeys(obj: any, expected: string[]) {
+  return expected.filter((k) => obj?.[k] === undefined)
+}
+
+function debugResidentProfile(prefix: string, details: any) {
+  // High level
+  console.log(`[RoleStore][${prefix}] details summary:`, summarize(details))
+
+  // Print some identity basics
+  const idBasics = {
+    person_id: details?.person_id,
+    person_code: details?.person_code,
+    name: [details?.first_name, details?.middle_name, details?.last_name, details?.suffix].filter(Boolean).join(' '),
+  }
+  console.table(idBasics)
+
+  // Household block
+  const hhPick = Object.fromEntries(EXPECTED_HOUSEHOLD_FIELDS.map(k => [k, details?.[k]]))
+  console.log(`[RoleStore][${prefix}] HOUSEHOLD fields:`)
+  console.table(hhPick)
+  const hhMissing = missingKeys(details, EXPECTED_HOUSEHOLD_FIELDS)
+  if (hhMissing.length) console.warn(`[RoleStore][${prefix}] Missing household fields:`, hhMissing)
+
+  // Family block
+  const famPick = Object.fromEntries(EXPECTED_FAMILY_FIELDS.map(k => [k, details?.[k]]))
+  console.log(`[RoleStore][${prefix}] FAMILY fields:`)
+  console.table(famPick)
+  const famMissing = missingKeys(details, EXPECTED_FAMILY_FIELDS)
+  if (famMissing.length) console.warn(`[RoleStore][${prefix}] Missing family fields:`, famMissing)
 }
 
 export const useAccountRole = create<State>()(
   persist(
     (set, get) => ({
-      currentRole: null,
+      hasHydrated: false,
+      waitForHydration: () => hydrationPromise,
+
+      currentRole: 'resident',
       staffId: null,
       profiles: {},
 
-      // ---- Role switchers ----
       setResident: () => set({ currentRole: 'resident' }),
       setBusiness: () => set({ currentRole: 'business' }),
       setStaff: (staffId) => set({ currentRole: 'staff', staffId }),
 
-      // ---- Cache helpers ----
       getProfile: (role = get().currentRole) =>
         role ? get().profiles[role]?.data ?? null : null,
 
@@ -64,53 +121,102 @@ export const useAccountRole = create<State>()(
           ...get().profiles,
           [role]: { data, cachedAt: Date.now() },
         }
+        console.log('[RoleStore] setProfile()', { role, cachedAt: profiles[role]?.cachedAt })
+        if (role === 'resident') {
+          debugResidentProfile('setProfile', data)
+        }
         set({ profiles })
       },
 
       ensureLoaded: async (role, opts) => {
+        console.log('[RoleStore] ensureLoaded() start', { role, opts })
+        await get().waitForHydration()
+
         const entry = get().profiles[role]
         const force = !!opts?.force
         const stale = !entry || Date.now() - entry.cachedAt > MAX_AGE
 
+        console.log('[RoleStore] cache state:', {
+          hasEntry: !!entry,
+          cachedAt: entry?.cachedAt ?? null,
+          ageMs: entry ? Date.now() - entry.cachedAt : null,
+          stale,
+          force,
+        })
+
         if (!force && !stale) {
-          // fresh cache → return immediately
+          console.log('[RoleStore] returning FRESH CACHED profile for', role)
+          if (role === 'resident') debugResidentProfile('return-cached', entry?.data)
           return entry?.data ?? null
         }
 
-        // ---- Fetch per role ----
-        if (role === 'resident') {
-          // Your API returns: { details, is_staff, staff_id }
-          const { details, is_staff, staff_id } = await fetchResidentPlus()
-          if (is_staff && staff_id && get().staffId !== staff_id) {
-            set({ staffId: staff_id })
+        try {
+          if (role === 'resident') {
+            console.log('[RoleStore] fetching resident via fetchResidentPlus() …')
+            const payload = await fetchResidentPlus() // expected { details, is_staff, staff_id }
+            console.log('[RoleStore] fetchResidentPlus() raw:', summarize(payload))
+
+            const { details, is_staff, staff_id } = payload || {}
+            console.log('[RoleStore] fetchResidentPlus() unpacked:', {
+              hasDetails: !!details,
+              is_staff,
+              staff_id,
+            })
+            if (is_staff && staff_id && get().staffId !== staff_id) {
+              console.log('[RoleStore] updating staffId from resident payload:', staff_id)
+              set({ staffId: staff_id })
+            }
+            if (details) {
+              debugResidentProfile('after-fetch', details)
+              get().setProfile('resident', details)
+            } else {
+              console.warn('[RoleStore] fetchResidentPlus() returned NO details')
+            }
+            return details ?? entry?.data ?? null
           }
-          if (details) get().setProfile('resident', details)
-          return details ?? null
-        }
 
-        if (role === 'staff') {
-          // TODO: Replace with your actual staff fetcher:
-          // const details = await fetchStaffProfile()
-          // if (details) get().setProfile('staff', details)
-          return get().profiles.staff?.data ?? null
-        }
+          if (role === 'staff') {
+            // const details = await fetchStaffProfile()
+            // if (details) get().setProfile('staff', details)
+            console.log('[RoleStore] staff role requested; returning cached staff profile only')
+            return get().profiles.staff?.data ?? null
+          }
 
-        if (role === 'business') {
-          // TODO: Replace with your actual business fetcher:
-          // const details = await fetchBusinessProfile()
-          // if (details) get().setProfile('business', details)
-          return get().profiles.business?.data ?? null
-        }
+          if (role === 'business') {
+            // const details = await fetchBusinessProfile()
+            // if (details) get().setProfile('business', details)
+            console.log('[RoleStore] business role requested; returning cached business profile only')
+            return get().profiles.business?.data ?? null
+          }
 
-        return null
+          return entry?.data ?? null
+        } catch (e) {
+          console.log('[RoleStore] ensureLoaded() fetch failed:', e)
+          return entry?.data ?? null
+        }
       },
 
-      clearAll: () => set({ currentRole: null, staffId: null, profiles: {} }),
+      clearAll: () => {
+        console.log('[RoleStore] clearAll() called — clearing cache & role')
+        set({ currentRole: 'resident', staffId: null, profiles: {} })
+      },
     }),
     {
       name: 'role-store-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      // Optional: version/migration hooks can go here later
+      onRehydrateStorage: () => {
+        console.log('[RoleStore] onRehydrateStorage() BEFORE')
+        return (state, error) => {
+          if (error) {
+            console.error('[RoleStore] rehydrate error:', error)
+          } else {
+            console.log('[RoleStore] onRehydrateStorage() AFTER ok')
+          }
+          state?.hasHydrated === false && (state as any).set?.({ hasHydrated: true })
+          // resolve the hydration gate
+          try { resolveHydration?.() } catch {}
+        }
+      },
     }
   )
 )

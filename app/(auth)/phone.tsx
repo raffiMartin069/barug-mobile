@@ -66,42 +66,68 @@ export default function Phone() {
     return !!data
   }
 
-  const sendOtp = async () => {
-    if (loading) return
-    setLoading(true)
-    try {
-      const phone = toE164PH(local10)
-      if (!phone) {
-        open('Invalid number', 'Enter the last 10 digits after +63 (e.g., 9XXXXXXXXX).', 'warn')
-        return
-      }
+const sendOtp = async () => {
+  if (loading) return;
+  setLoading(true);
+  try {
+    const phone = toE164PH(local10);
 
-      const exists = await checkPhoneExists(phone)
-      if (!exists) {
-        open('Number not found', 'This mobile number is not registered. Please register first or contact the barangay office.', 'warn')
-        return
-      }
+    console.log('[OTP] local10:', local10);
+    console.log('[OTP] toE164PH(local10):', phone);
 
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: { channel: 'sms' },
-      })
-      if (error) {
-        open('Failed to send code', error.message, 'error')
-        return
-      }
-
-      open('OTP sent', `We’ve sent a verification code to ${phone}.`, 'success')
-      setTimeout(() => {
-        hideModal()
-        router.push({ pathname: '/(auth)/verify', params: { phone } })
-      }, 500)
-    } catch (err: any) {
-      open('Error', err?.message ?? 'Something went wrong.', 'error')
-    } finally {
-      setLoading(false)
+    if (!phone) {
+      open('Invalid number', 'Enter the last 10 digits after +63 (e.g., 9XXXXXXXXX).', 'warn');
+      return;
     }
+
+    const exists = await checkPhoneExists(phone);
+    console.log('[OTP] phone_exists result:', exists);
+    if (!exists) {
+      open('Number not found', 'This mobile number is not registered. Please register first or contact the barangay office.', 'warn');
+      return;
+    }
+
+    // Build the exact payload and log it before sending
+    const payload = {
+      phone, // ⬅️ use the computed phone (remove hard-coded number)
+      options: { channel: 'sms', shouldCreateUser: true },
+    } as const;
+
+    console.log('[OTP] signInWithOtp payload:', payload);
+
+    const { data, error } = await supabase.auth.signInWithOtp(payload);
+
+    // Log full response objects for debugging
+    console.log('[OTP] signInWithOtp data:', data);
+    console.log('[OTP] signInWithOtp error:', error);
+
+    if (error) {
+      const errAny = error as any;
+      console.log('[OTP] error details:', {
+        status: errAny?.status,
+        name: errAny?.name,
+        message: errAny?.message,
+        cause: errAny?.cause,
+        stack: errAny?.stack,
+      });
+      const msg = errAny?.message || 'Failed to send code';
+      open('Failed to send code', msg, 'error');
+      return;
+    }
+
+    open('OTP sent', `We’ve sent a verification code to ${phone}.`, 'success');
+    setTimeout(() => {
+      hideModal();
+      router.push({ pathname: '/(auth)/verify', params: { phone } });
+    }, 500);
+  } catch (err: any) {
+    console.log('[OTP] exception thrown:', err);
+    open('Error', err?.message ?? 'Something went wrong.', 'error');
+  } finally {
+    setLoading(false);
   }
+};
+
 
   return (
     <KeyboardAvoidingView

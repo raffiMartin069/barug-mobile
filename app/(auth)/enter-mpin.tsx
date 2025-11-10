@@ -1,4 +1,6 @@
 // app/(auth)/enter-mpin.tsx
+// at top
+import { registerMyDevice } from '@/services/push'
 import NiceModal, { ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedText from '@/components/ThemedText'
@@ -51,7 +53,69 @@ const Mpin = () => {
   const isLocked = lockedUntil > Date.now()
   const secondsLeft = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000))
 
-  // fetch registered phone once
+  // ===== DEBUG: log access token from Supabase + AsyncStorage once on mount =====
+  useEffect(() => {
+    (async () => {
+      try {
+        // 1) Preferred: ask Supabase for the current session
+        const { data, error } = await supabase.auth.getSession()
+        if (error) {
+          console.warn('[AUTH][DEBUG] getSession error:', error.message)
+        }
+        const token = data?.session?.access_token
+        const refresh = data?.session?.refresh_token
+        if (token) {
+          // Truncated preview for safety
+          console.log('[AUTH][DEBUG] access_token (getSession) preview:', token.slice(0, 16) + '…')
+          // Full token (DEV ONLY) — remove after testing
+          console.log('[AUTH][DEBUG][DANGEROUS] access_token (FULL):', token)
+        } else {
+          console.log('[AUTH][DEBUG] No session access_token from getSession()')
+        }
+        if (refresh) {
+          console.log('[AUTH][DEBUG] refresh_token preview:', refresh.slice(0, 16) + '…')
+        }
+
+        // 2) Fallback: scan AsyncStorage for the Supabase auth key
+        const keys = await AsyncStorage.getAllKeys()
+        const sbKey =
+          keys.find(k => k.includes('-auth-token')) ||
+          keys.find(k => k.startsWith('sb-') && k.endsWith('-auth-token'))
+        if (sbKey) {
+          const raw = await AsyncStorage.getItem(sbKey)
+          console.log('[AUTH][DEBUG] AsyncStorage key:', sbKey)
+          if (raw) {
+            console.log('[AUTH][DEBUG] raw auth JSON length:', raw.length)
+            try {
+              const parsed = JSON.parse(raw as string)
+              const at =
+                parsed?.access_token ??
+                parsed?.currentSession?.access_token ??
+                parsed?.session?.access_token
+              if (at) {
+                console.log('[AUTH][DEBUG] access_token (AsyncStorage) preview:', String(at).slice(0, 16) + '…')
+                // Full token (DEV ONLY) — remove after testing
+                console.log('[AUTH][DEBUG][DANGEROUS] access_token (AsyncStorage FULL):', at)
+              } else {
+                console.log('[AUTH][DEBUG] Could not find access_token inside parsed JSON.')
+              }
+            } catch {
+              console.log('[AUTH][DEBUG] Stored value is not JSON; raw:', raw)
+            }
+          } else {
+            console.log('[AUTH][DEBUG] No value for', sbKey)
+          }
+        } else {
+          console.log('[AUTH][DEBUG] No Supabase auth key found in AsyncStorage keys:', keys)
+        }
+      } catch (e: any) {
+        console.warn('[AUTH][DEBUG] Token logging failed:', e?.message || String(e))
+      }
+    })()
+  }, [])
+  // ===== /DEBUG =====
+
+  // ====== FETCH PROFILE ======
   useEffect(() => {
     let alive = true
     const run = async () => {
@@ -145,6 +209,14 @@ const Mpin = () => {
       setLockedUntil(0)
       setPin('')
 
+      // 👇 NEW: register push device (resident)
+      try {
+        // safest: fetch IDs now (you already called me_profile earlier, but we fetch again)
+        const prof = await supabase.rpc('me_profile');
+        const personId = prof.data?.person_id ?? null;
+        await registerMyDevice({ user_type_id: 1, person_id: personId, staff_id: null });
+      } catch { /* ignore for now */ }
+
       openModal('Unlocked', 'Welcome back!', 'success', {
         onPrimary: () => {
           router.replace('/(auth)/choose-account')
@@ -237,7 +309,7 @@ const Mpin = () => {
       {busy && <ActivityIndicator style={{ marginVertical: 10 }} color="#310101" />}
 
       <View style={[styles.pad, (busy || isLocked) && { opacity: 0.4 }]}>
-        {keys.map((k, i) => {
+        {(['1','2','3','4','5','6','7','8','9','blank','0','back'] as const).map((k, i) => {
           if (k === 'blank') return <View key={i} style={styles.keyBlank} />
           if (k === 'back') {
             return (

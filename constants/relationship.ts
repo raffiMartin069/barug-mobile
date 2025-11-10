@@ -21,3 +21,4 @@ export const RELATIONSHIP = [
     { label: "OTHER RELATIVE", value: 20 },
     { label: "NON-RELATIVE", value: 21 },
 ]
+
