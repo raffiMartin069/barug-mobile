@@ -1,4 +1,3 @@
-import { DEV_SKIP_SESSION } from '@/constants/dev'
 import { useSession } from '@/providers/SessionProvider'
 import { MaternalService } from '@/services/MaternalService'
 import {
@@ -22,7 +21,8 @@ function useMaternalTracker(initialPersonIdFromProfile?: number) {
     const ensureLoaded = session.ensureLoaded
     const initialFromCache = initialPersonIdFromProfile ?? Number(cachedProfile?.person_id ?? cachedProfile?.details?.person_id ?? 0)
 
-    const [personId, setPersonId] = useState<number>(initialFromCache || (DEV_SKIP_SESSION ? 177 : 0))
+    // const [personId, setPersonId] = useState<number>(initialFromCache || (DEV_SKIP_SESSION ? 177 : 0))
+    const [personId, setPersonId] = useState<number>(initialFromCache || 0)
     const [loading, setLoading] = useState<boolean>(true)
     const [refreshing, setRefreshing] = useState<boolean>(false)
     const [error, setError] = useState<string | null>(null)
