@@ -3,14 +3,15 @@ import CustomDropdown from '@/components/maternal/CustomDropdown'
 import MaternalCard from '@/components/maternal/MaternalCard'
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
+import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { Colors } from '@/constants/Colors'
 import type { PostpartumScheduleDisplay } from '@/repository/MaternalRepository'
 import { MaternalService } from '@/services/MaternalService'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ActivityIndicator, Animated, Easing, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native'
 
 const PostpartumTab = () => {
     const [loading, setLoading] = useState<boolean>(true)
@@ -152,6 +153,20 @@ const PostpartumTab = () => {
         return filtered
     }, [items, searchQuery, sortBy])
 
+    const searchPending = (searchText ?? '').trim() !== (searchQuery ?? '').trim()
+
+    // animated fade for the small spinner
+    const spinnerOpacity = useRef(new Animated.Value(0)).current
+
+    useEffect(() => {
+        Animated.timing(spinnerOpacity, {
+            toValue: searchPending ? 1 : 0,
+            duration: 200,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+        }).start()
+    }, [searchPending, spinnerOpacity])
+
     // debounce searchText -> searchQuery
     React.useEffect(() => {
         const t = setTimeout(() => setSearchQuery(searchText), 300)
@@ -171,9 +186,15 @@ const PostpartumTab = () => {
                             placeholder="Search name, record # or purpose"
                             style={{ flex: 1 }}
                         />
+                        {searchPending ? (
+                            <Animated.View style={[styles.searchSpinner, { opacity: spinnerOpacity }]}>
+                                <ActivityIndicator size="small" color={Colors.primary} />
+                            </Animated.View>
+                        ) : null}
+
                         {searchText ? (
                             <Pressable onPress={() => { setSearchText(''); setSearchQuery('') }} style={styles.clearBtn} accessibilityRole="button">
-                                <ThemedText style={styles.clearText}>Clear</ThemedText>
+                                <ThemedIcon name="close" size={14} iconColor="#fff" bgColor={Colors.primary} containerSize={28} />
                             </Pressable>
                         ) : null}
                     </View>
@@ -209,7 +230,7 @@ const PostpartumTab = () => {
                             keyExtractor={(i) => String(i.schedule_id)}
                             renderItem={renderItem}
                             ListEmptyComponent={renderEmpty}
-                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                            refreshControl={searchPending ? undefined : <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
                             contentContainerStyle={items.length ? undefined : { flex: 1 }}
                         />
                     )}
@@ -315,6 +336,9 @@ const styles = StyleSheet.create({
     clearText: {
         color: Colors.primary,
         fontWeight: '700',
+    },
+    searchSpinner: {
+        marginLeft: 8,
     },
     safeArea: {
         flex: 1,
