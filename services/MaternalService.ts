@@ -1,4 +1,4 @@
-import { MaternalRepository } from '@/repository/MaternalRepository'
+import { MaternalRepository, PostpartumScheduleDisplay } from '@/repository/MaternalRepository'
 import { ChildHealthRecord, MaternalRecordBundle, MaternalScheduleGroup, PostpartumSchedule, PrenatalSchedule } from '@/types/maternal'
 
 export class MaternalService {
@@ -37,5 +37,13 @@ export class MaternalService {
 
   async getRecords(personId: number) {
     return this.repo.getMaternalRecordBundlesByPersonId(personId)
+  }
+
+  /**
+   * Fetch latest pending postpartum schedules across all records.
+   */
+  async fetchLatestPendingPostpartumSchedules(): Promise<PostpartumScheduleDisplay[]> {
+    // repository method handles normalization and name lookup
+    return this.repo.getLatestPendingPostpartumSchedules()
   }
 }

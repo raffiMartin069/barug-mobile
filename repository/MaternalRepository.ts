@@ -1,30 +1,30 @@
 import { supabase } from '@/constants/supabase'
 import Normalizers from '@/lib/supabase-normalizers'
 import {
-    ChildHealthRecord,
-    ChildImmunization,
-    ChildMonitoringLog,
-    LabResult,
-    MaternalAncRow,
-    MaternalAncVisitDetail,
-    MaternalChecklist,
-    MaternalRecordBase,
-    MaternalRecordBundle,
-    MaternalScheduleGroup,
-    MaternalScheduleRow,
-    MedicalHistory,
-    Micronutrient,
-    ObstetricHistory,
-    PlanAndBaseline,
-    PostpartumSchedule,
-    PrenatalSchedule,
-    PresentPregnancyStatus,
-    PreviousPregnancyInfo,
-    RiskResponse,
-    TrimesterStageLite,
-    TrimesterTrackerItem,
-    TTVaccineRecord,
-    VisitStatusLite,
+	ChildHealthRecord,
+	ChildImmunization,
+	ChildMonitoringLog,
+	LabResult,
+	MaternalAncRow,
+	MaternalAncVisitDetail,
+	MaternalChecklist,
+	MaternalRecordBase,
+	MaternalRecordBundle,
+	MaternalScheduleGroup,
+	MaternalScheduleRow,
+	MedicalHistory,
+	Micronutrient,
+	ObstetricHistory,
+	PlanAndBaseline,
+	PostpartumSchedule,
+	PrenatalSchedule,
+	PresentPregnancyStatus,
+	PreviousPregnancyInfo,
+	RiskResponse,
+	TrimesterStageLite,
+	TrimesterTrackerItem,
+	TTVaccineRecord,
+	VisitStatusLite,
 } from '@/types/maternal'
 import type { RawChildHealthRecord, RawChildImmunization, RawChildMonitoringLog } from '@/types/raw/maternal_raw'
 
@@ -57,7 +57,158 @@ type RawBaseRecord = {
 	record_status?: { record_status_id: number; record_status_name: string | null } | null
 }
 
+// Minimal display type for latest pending postpartum schedules
+// returned by `getLatestPendingPostpartumSchedules`.
+// Keep intentionally small for UI list displays.
+export type PostpartumScheduleDisplay = {
+	schedule_id: number
+	maternal_record_id: number
+	scheduled_date: string | null
+	scheduled_time: string | null
+	visit_purpose: string | null
+	notes: string | null
+	status_id: number | null
+	status_name: string | null
+	person_id: number | null
+	person_name: string | null
+}
+
+
 export class MaternalRepository {
+	/**
+	 * Fetch the latest postpartum schedule for each maternal_record and
+	 * return only those where the latest schedule has status PENDING (1).
+	 * The result is an array of small display-friendly objects including
+	 * the patient's name for quick UI rendering.
+	 */
+	async getLatestPendingPostpartumSchedules(): Promise<PostpartumScheduleDisplay[]> {
+		const { data, error } = await supabase
+			.from('postpartum_visit_schedule')
+			.select(
+				`
+					postpartum_visit_schedule_id,
+					maternal_record_id,
+					scheduled_date,
+					scheduled_time,
+					fulfilled_visit_id,
+					date_time_completed,
+					status_id,
+					visit_purpose,
+					notes,
+					created_at,
+					updated_at,
+					status:status_id(status_id,status_name)
+				`
+			)
+			// order so the first seen row per maternal_record is the latest
+			.order('scheduled_date', { ascending: false })
+			.order('scheduled_time', { ascending: false })
+
+		if (error) throw error
+
+		const norm = Normalizers.normalizeScheduleRows(data)
+
+		// pick the latest row per maternal_record_id (data is ordered desc)
+		const latestByRecord = new Map<number, any>()
+		for (const row of (norm ?? []) as any[]) {
+			const recId = Number(row.maternal_record_id ?? (row.maternal_record?.maternal_record_id))
+			if (!Number.isFinite(recId)) continue
+			if (!latestByRecord.has(recId)) latestByRecord.set(recId, row)
+		}
+
+		// filter to only those whose latest status is PENDING (1)
+		const pending = Array.from(latestByRecord.values()).filter((r) => {
+			const statusId = r.status_id == null ? r.status?.status_id ?? null : Number(r.status_id)
+			return statusId === 1
+		})
+
+		if (!pending.length) return []
+
+		// fetch maternal_health_record rows for these maternal_record_ids
+		const recordIds = Array.from(new Set(pending.map((r: any) => Number(r.maternal_record_id)).filter((id) => Number.isFinite(id))))
+		const recordPersonMap = new Map<number, number | null>()
+		if (recordIds.length) {
+			const { data: recs, error: recErr } = await supabase
+				.from('maternal_health_record')
+				.select('maternal_record_id, person_id')
+				.in('maternal_record_id', recordIds)
+			if (recErr) throw recErr
+			for (const rec of (recs ?? []) as any[]) {
+				recordPersonMap.set(Number(rec.maternal_record_id), rec.person_id == null ? null : Number(rec.person_id))
+			}
+		}
+
+		console.log('Person IDs to resolve for postpartum schedules:', Array.from(recordPersonMap.values()))
+
+		// collect person_ids to fetch names (resolve via maternal record mapping)
+		const personIds = Array.from(
+			new Set(
+				pending
+					.map((r) => {
+						const recId = Number(r.maternal_record_id)
+						const pid = recordPersonMap.get(recId) ?? null
+						return pid
+					})
+					.filter((id) => Number.isFinite(Number(id)))
+			)
+		)
+
+		console.log('Fetching person names for IDs:', personIds)
+
+		const personMap = new Map<number, any>()
+		if (personIds.length) {
+			const { data: persons, error: personErr } = await supabase
+				.from('person')
+				.select('person_id, first_name, middle_name, last_name, suffix')
+				.in('person_id', personIds)
+			if (personErr) throw personErr
+			for (const p of (persons ?? []) as any[]) {
+				personMap.set(Number(p.person_id), p)
+			}
+		}
+
+		console.log('Person details fetched for postpartum schedules:', personMap)
+
+		// map to compact display objects
+		// Resolve person_id using the earlier record -> person mapping (recordPersonMap).
+		// Avoid coercing `null` to 0 (Number(null) === 0) which previously caused an invalid
+		// person_id=0 to be emitted and prevented name lookups.
+		const results: PostpartumScheduleDisplay[] = pending.map((r: any) => {
+			console.log('Mapping postpartum schedule row:', r)
+			const recId = Number(r.maternal_record_id)
+			const rawPersonId = Number.isFinite(recId) ? (recordPersonMap.get(recId) ?? null) : null
+			const personId = rawPersonId == null ? null : Number(rawPersonId)
+
+			const p = personId != null && Number.isFinite(personId) ? personMap.get(personId) : undefined
+			const first = p?.first_name ?? null
+			const middle = p?.middle_name ?? null
+			const last = p?.last_name ?? null
+			const suffix = p?.suffix ?? null
+			const nameParts = [first, middle, last, suffix]
+				.filter((x) => x != null && String(x).trim() !== '')
+				.map((x) => String(x).trim())
+			const personName = nameParts.length ? nameParts.join(' ') : null
+
+			const statusId = r.status_id == null ? (r.status?.status_id == null ? null : Number(r.status.status_id)) : Number(r.status_id)
+
+			return {
+				schedule_id: Number(r.postpartum_visit_schedule_id ?? 0),
+				maternal_record_id: Number(r.maternal_record_id),
+				scheduled_date: r.scheduled_date ?? null,
+				scheduled_time: r.scheduled_time ?? null,
+				visit_purpose: r.visit_purpose ?? null,
+				notes: r.notes ?? null,
+				status_id: statusId,
+				status_name: r.status?.status_name ?? null,
+				person_id: personId != null && Number.isFinite(personId) ? personId : null,
+				person_name: personName,
+			}
+		})
+
+		console.log('Pending postpartum schedules found:', results)
+
+		return results
+	}
 	async getPostpartumScheduleByPersonId(personId: number): Promise<MaternalScheduleGroup<PostpartumSchedule>> {
 		const recordIds = await this.getMaternalRecordIds(personId)
 		if (!recordIds.length) {
