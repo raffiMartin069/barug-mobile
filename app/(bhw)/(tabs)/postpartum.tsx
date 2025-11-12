@@ -20,6 +20,7 @@ const PostpartumTab = () => {
 
     const service = useMemo(() => new MaternalService(), [])
     const [searchQuery, setSearchQuery] = useState<string>('')
+    const [searchText, setSearchText] = useState<string>('')
     const [sortBy, setSortBy] = useState<'name' | 'earliest' | 'oldest'>('earliest')
     // form state for "Check" action
     const [showCheckForm, setShowCheckForm] = useState(false)
@@ -151,17 +152,31 @@ const PostpartumTab = () => {
         return filtered
     }, [items, searchQuery, sortBy])
 
+    // debounce searchText -> searchQuery
+    React.useEffect(() => {
+        const t = setTimeout(() => setSearchQuery(searchText), 300)
+        return () => clearTimeout(t)
+    }, [searchText])
+
     return (
         <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
             <ThemedAppBar title="Postpartum" />
             <ThemedView style={styles.container}>
                 {/* Search and sort controls */}
                 <View style={styles.controlsStack}>
-                    <ThemedTextInput
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        placeholder="Search name, record # or purpose"
-                    />
+                    <View style={styles.searchRow}>
+                        <ThemedTextInput
+                            value={searchText}
+                            onChangeText={setSearchText}
+                            placeholder="Search name, record # or purpose"
+                            style={{ flex: 1 }}
+                        />
+                        {searchText ? (
+                            <Pressable onPress={() => { setSearchText(''); setSearchQuery('') }} style={styles.clearBtn} accessibilityRole="button">
+                                <ThemedText style={styles.clearText}>Clear</ThemedText>
+                            </Pressable>
+                        ) : null}
+                    </View>
 
                     <View style={{ height: 8 }} />
 
@@ -284,6 +299,22 @@ const styles = StyleSheet.create({
     },
     sortRow: {
         width: 200,
+    },
+    searchRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    clearBtn: {
+        marginLeft: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: 'transparent',
+    },
+    clearText: {
+        color: Colors.primary,
+        fontWeight: '700',
     },
     safeArea: {
         flex: 1,
