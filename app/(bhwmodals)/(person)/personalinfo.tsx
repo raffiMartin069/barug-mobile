@@ -1,99 +1,39 @@
 // app/(bhwmodals)/(person)/personal-info.tsx
-import NiceModal, { type ModalVariant } from '@/components/NiceModal'; // ✅ use NiceModal
-import Spacer from '@/components/Spacer';
-import ThemedAppBar from '@/components/ThemedAppBar';
-import ThemedButton from '@/components/ThemedButton';
-import ThemedDatePicker from '@/components/ThemedDatePicker';
-import ThemedDropdown from '@/components/ThemedDropdown';
-import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
-import ThemedProgressBar from '@/components/ThemedProgressBar';
-import ThemedRadioButton from '@/components/ThemedRadioButton';
-import ThemedText from '@/components/ThemedText';
-import ThemedTextInput from '@/components/ThemedTextInput';
-import ThemedView from '@/components/ThemedView';
+import NiceModal, { type ModalVariant } from '@/components/NiceModal' // ✅ use NiceModal
+import Spacer from '@/components/Spacer'
+import ThemedAppBar from '@/components/ThemedAppBar'
+import ThemedButton from '@/components/ThemedButton'
+import ThemedDatePicker from '@/components/ThemedDatePicker'
+import ThemedDropdown from '@/components/ThemedDropdown'
+import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
+import ThemedProgressBar from '@/components/ThemedProgressBar'
+import ThemedRadioButton from '@/components/ThemedRadioButton'
+import ThemedText from '@/components/ThemedText'
+import ThemedTextInput from '@/components/ThemedTextInput'
+import ThemedView from '@/components/ThemedView'
 import {
   civilStatusOptions,
   genderOptions,
   nationalityOptions,
   religionOptions,
   suffixOptions,
-} from '@/constants/formoptions';
-import { useResidentFormStore } from '@/store/forms';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+} from '@/constants/formoptions'
+import { useResidentFormStore } from '@/store/forms'
+import { useRouter } from 'expo-router'
+import React, { useState } from 'react'
+import { StyleSheet, View } from 'react-native'
 
-function toTitleCase(str: string) {
-  return str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-// Safely coerce expo-router params (string | string[] | undefined) to string
-const pickOne = (v: unknown): string => {
-  if (Array.isArray(v)) return v[0] ?? ''
-  return v != null ? String(v) : ''
-}
-
+// --- Screen ---
 const PersonalInfo = () => {
   const router = useRouter()
-  const params = useLocalSearchParams<{
-    street?: string | string[]
-    purok_name?: string | string[]
-    brgy?: string | string[]
-    city?: string | string[]
-    lat?: string | string[]
-    lng?: string | string[]
-  }>()
-
-  // Extract primitives once per render (robust for string[] cases)
-  const streetParam = pickOne(params.street)
-  const purokParam = toTitleCase(pickOne(params.purok_name))
-  const brgyParam = pickOne(params.brgy)
-  const cityParam = pickOne(params.city)
-  const latParam = pickOne(params.lat)
-  const lngParam = pickOne(params.lng)
 
   const {
     // personal fields from the store
     fname, mname, lname, suffix,
     gender, dob, civilStatus, nationality, religion,
-    haddress, street, purokSitio, brgy, city,
     mobnum, email,
     setMany,
   } = useResidentFormStore()
-
-  // Write address parts to store if any param present
-  useEffect(() => {
-    if (!streetParam && !purokParam && !brgyParam && !cityParam) return
-    const nextFull = `${streetParam}, ${purokParam}, ${brgyParam}, ${cityParam}`
-
-    const changed =
-      street !== streetParam ||
-      purokSitio !== purokParam ||
-      brgy !== brgyParam ||
-      city !== cityParam ||
-      haddress !== nextFull
-
-    if (changed) {
-      setMany({
-        street: streetParam,
-        purokSitio: purokParam,
-        brgy: brgyParam,
-        city: cityParam,
-        haddress: nextFull,
-      })
-    }
-  }, [streetParam, purokParam, brgyParam, cityParam])
-
-  // Only write coords when provided
-  useEffect(() => {
-    if (latParam || lngParam) {
-      setMany({
-        latitude: latParam || '',
-        longitude: lngParam || '',
-      })
-      console.log('[PersonalInfo] coords saved to store', { lat: latParam, lng: lngParam })
-    }
-  }, [latParam, lngParam])
 
   // --- Adapters mimicking setState signatures ---
   const setSuffixAdapt = (updater: string | ((curr: string) => string)) => {
@@ -134,7 +74,6 @@ const PersonalInfo = () => {
   const setFname = (v: string) => setMany({ fname: v })
   const setMname = (v: string) => setMany({ mname: v })
   const setLname = (v: string) => setMany({ lname: v })
-  const setHAddress = (v: string) => setMany({ haddress: v })
   const setMobNum = (v: string) => setMany({ mobnum: v })
   const setEmail = (v: string) => setMany({ email: v })
 
@@ -171,13 +110,6 @@ const PersonalInfo = () => {
       return
     }
     router.push({ pathname: '/linkparentguardian' })
-  }
-
-  const handleHomeAddress = () => {
-    router.push({
-      pathname: '/mapaddress',
-      params: { returnTo: '/residentaddress' },
-    })
   }
 
   return (
@@ -247,19 +179,6 @@ const PersonalInfo = () => {
             placeholder="Religion *"
             order={3}
           />
-
-          <Spacer height={10} />
-          <Pressable onPress={handleHomeAddress}>
-            <ThemedTextInput
-              placeholder="Home Address"
-              multiline
-              numberOfLines={2}
-              value={haddress}
-              onChangeText={setHAddress}
-              editable={false}
-              pointerEvents="none"
-            />
-          </Pressable>
 
           <Spacer height={10} />
           <ThemedTextInput

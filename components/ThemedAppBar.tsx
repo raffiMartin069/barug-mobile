@@ -1,8 +1,20 @@
+// components/ThemedAppBar.tsx
+import { useNotifications } from '@/hooks/useNotifications'
 import { Colors } from '@/constants/Colors'
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, useRouter } from 'expo-router'
 import React, { useState } from 'react'
-import { Image, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
+import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
+
+type Props = {
+  style?: any
+  title?: string
+  unreadCount?: number // kept for compat, but we’ll prefer the hook’s unread
+  showBack?: boolean
+  showNotif?: boolean
+  showProfile?: boolean
+  showSettings?: boolean
+}
 
 const ThemedAppBar = ({
   style = null,
@@ -12,115 +24,137 @@ const ThemedAppBar = ({
   showNotif = true,
   showProfile = true,
   showSettings = false,
-  ...props
-}) => {
+}: Props) => {
   const colorScheme = useColorScheme()
-  const theme = Colors[colorScheme] ?? Colors.light
+  const theme = Colors[colorScheme ?? 'light'] ?? Colors.light
   const navigation = useNavigation()
   const router = useRouter()
   const ACCENT = theme.link
 
-  // Toggle the mocked notification dropdown
   const [showNotifCard, setShowNotifCard] = useState(false)
 
-  // Mock payload (adjust freely or wire up later)
-  const mockNotif = {
-    id: 'notid',
-    title: 'Mock Notification',
-    headline: 'Welcome, KIMBERLY!',
-    body: 'This is a sample notification preview.',
-    time: 'Just now',
-    // Optional sample avatar; replace uri with your profile photo if desired
-    avatarUri: undefined,
-  }
+  const { items, unread, markAllRead } = useNotifications({
+    userTypeId: 1, // Resident appbar; for staff screens use 2
+    personId: 4,
+    staffId: undefined,
+  })
 
   return (
     <View style={[styles.container, { backgroundColor: theme.link }, style]}>
-      {showBack && (
-        <View style={styles.leftSection}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+      {/* Left */}
+      <View style={styles.leftSection}>
+        {showBack ? (
+          <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={20} color={theme.background} />
           </TouchableOpacity>
-        </View>
-      )}
+        ) : (
+          // keep equal space so the title stays centered
+          <View style={{ width: 24, height: 24 }} />
+        )}
+      </View>
 
-      <Text style={[styles.title, { color: theme.background }, !showBack && styles.leftSection]}>
-        {title}
-      </Text>
+      {/* Center */}
+      <View style={styles.centerSection}>
+        <Text style={[styles.title, { color: theme.background }]} numberOfLines={1} ellipsizeMode="tail">
+          {title}
+        </Text>
+      </View>
 
+      {/* Right */}
       <View style={styles.rightSection}>
+        {/* change badge to show {unread} instead of prop unreadCount */}
         {showNotif && (
-          <TouchableOpacity onPress={() => setShowNotifCard(s => !s)}>
+          <TouchableOpacity
+            onPress={() => setShowNotifCard((s) => !s)}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            style={{ padding: 6 }}
+          >
             <Ionicons name="notifications" size={20} color={theme.background} />
-            {unreadCount > 0 && (
+            {(unread ?? unreadCount) > 0 && (
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                <Text style={styles.badgeText}>
+                  {(unread ?? unreadCount) > 99 ? '99+' : (unread ?? unreadCount)}
+                </Text>
               </View>
             )}
           </TouchableOpacity>
         )}
 
         {showProfile && (
-          <TouchableOpacity onPress={() => router.push('/residentprofile')}>
+          <TouchableOpacity
+            onPress={() => router.push('/residentprofile')}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            style={{ padding: 6 }}
+          >
             <Ionicons name="person" size={20} color={theme.background} />
           </TouchableOpacity>
         )}
 
         {showSettings && (
-          <TouchableOpacity onPress={() => router.push('/settings')}>
+          <TouchableOpacity
+            onPress={() => router.push('/settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Open settings"
+            style={{ padding: 6 }}
+          >
             <Ionicons name="settings-outline" size={20} color={theme.background} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Polished mock notification dropdown */}
+      {/* Polished notification dropdown */}
       {showNotifCard && (
         <View style={[styles.notifCard, styles.cardShadow]}>
-          {/* Header row */}
           <View style={styles.notifHeaderRow}>
             <View style={styles.notifHeaderLeft}>
               <Ionicons name="notifications-outline" size={18} color={ACCENT} />
-              <Text style={styles.notifTitle}>{mockNotif.title}</Text>
+              <Text style={styles.notifTitle}>Notifications</Text>
             </View>
             <TouchableOpacity onPress={() => setShowNotifCard(false)} style={styles.closeBtn}>
               <Ionicons name="close" size={18} color="#333" />
             </TouchableOpacity>
           </View>
 
-          {/* Content row */}
-          <View style={styles.notifContentRow}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.notifHeadline, { color: '#111' }]}>{mockNotif.headline}</Text>
-              <Text style={styles.notifBody}>{mockNotif.body}</Text>
-              <Text style={styles.notifTime}>{mockNotif.time}</Text>
-            </View>
-
-            {/* Avatar (mock) */}
-            <View style={[styles.avatarRing, { borderColor: ACCENT }]}>
-              {mockNotif.avatarUri ? (
-                <Image source={{ uri: mockNotif.avatarUri }} style={styles.avatarImg} />
-              ) : (
-                <Ionicons name="person-circle" size={44} color={ACCENT} />
-              )}
-            </View>
+          {/* list preview (top 5) */}
+          <View>
+            {items.slice(0, 5).map((n) => (
+              <TouchableOpacity
+                key={n.notification_id}
+                style={{ paddingVertical: 8 }}
+                onPress={() => {
+                  setShowNotifCard(false)
+                  // router.push(n.deep_link || '/')
+                }}
+              >
+                <Text style={{ fontWeight: '700', color: '#111' }}>{n.title}</Text>
+                <Text style={{ color: '#333', marginTop: 2 }} numberOfLines={2}>
+                  {n.body}
+                </Text>
+                <Text style={{ color: '#777', fontSize: 12, marginTop: 4 }}>
+                  {new Date(n.created_at).toLocaleString()}
+                  {!n.is_read ? ' • Unread' : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {items.length === 0 && <Text style={{ color: '#666' }}>No notifications</Text>}
           </View>
 
-          {/* Actions */}
           <View style={styles.notifActions}>
             <TouchableOpacity
               style={[styles.ctaPrimary, { backgroundColor: ACCENT }]}
               onPress={() => {
-                // Example: route somewhere later
-                // router.push('/(residentmodals)/requestdoc')
                 setShowNotifCard(false)
+                router.push('/(residentmodals)/notifications')
               }}
             >
-              <Ionicons name="shield-checkmark-outline" size={16} color="#fff" />
-              <Text style={styles.ctaPrimaryText}>Go to Verification</Text>
+              <Ionicons name="list-outline" size={16} color="#fff" />
+              <Text style={styles.ctaPrimaryText}>View all</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.ctaSecondary} onPress={() => setShowNotifCard(false)}>
-              <Text style={styles.ctaSecondaryText}>Dismiss</Text>
+            <TouchableOpacity style={styles.ctaSecondary} onPress={markAllRead}>
+              <Text style={styles.ctaSecondaryText}>Mark all read</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -133,37 +167,44 @@ export default ThemedAppBar
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',          // needed for dropdown positioning
-    zIndex: 20,                    // keep above page content
+    position: 'relative',
+    zIndex: 20,
     height: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    elevation: 4,                  // Android shadow
-    shadowColor: '#000',           // iOS shadow
+    paddingHorizontal: 12,
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
-    justifyContent: 'space-between',
   },
   leftSection: {
-    flexDirection: 'row',
+    width: 36,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  centerSection: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0, // allow text to elide properly
   },
   rightSection: {
+    minWidth: 90,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    justifyContent: 'flex-end',
+    gap: 6,
   },
   title: {
-    textAlign: 'center',
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   badge: {
     position: 'absolute',
-    top: -5,
-    right: -8,
+    top: 0,
+    right: 0,
     backgroundColor: 'red',
     borderRadius: 10,
     paddingHorizontal: 5,
@@ -181,7 +222,7 @@ const styles = StyleSheet.create({
   // Dropdown card
   notifCard: {
     position: 'absolute',
-    top: 60,              // just below the app bar
+    top: 60,
     right: 12,
     width: 320,
     borderRadius: 16,
@@ -219,44 +260,6 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 6,
     marginRight: -4,
-  },
-
-  // Content
-  notifContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  notifHeadline: {
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-    marginBottom: 4,
-  },
-  notifBody: {
-    fontSize: 13,
-    color: '#333',
-  },
-  notifTime: {
-    fontSize: 12,
-    color: '#777',
-    marginTop: 8,
-  },
-
-  // Avatar
-  avatarRing: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  avatarImg: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
   },
 
   // Actions

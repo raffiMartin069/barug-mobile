@@ -133,26 +133,35 @@ export const suffixOptions = [
 // ✅ Educational Attainment Options
 export const educAttainmentOptions = [
   { label: 'No Formal Education', value: '1' },
-  { label: 'Elementary Level', value: '2' },
-  { label: 'Elementary Graduate', value: '3' },
-  { label: 'High School Level', value: '4' },
-  { label: 'High School Graduate', value: '5' },
-  { label: 'Vocational Course', value: '6' },
-  { label: 'College Level', value: '7' },
-  { label: 'College Graduate', value: '8' },
-  { label: 'Postgraduate', value: '9' },
+  { label: 'Kinder', value: '2' },
+  { label: 'Elementary Student', value: '3' },
+  { label: 'Elementary Undergrad', value: '4' },
+  { label: 'Elementary Graduate', value: '5' },
+  { label: 'High School Student', value: '6' },
+  { label: 'High School Undergrad', value: '7' },
+  { label: 'High School Graduate', value: '8' },
+  { label: 'Vocational Course', value: '9' },
+  { label: 'College Student', value: '10' },
+  { label: 'College Undergrad', value: '11' },
+  { label: 'College Graduate', value: '12' },
+  { label: 'Postgraduate', value: '13' },
 ];
 
+// ✅ Educational Attainment Map
 export const educAttainmentMap: Record<number | string, string> = {
   1: 'NO FORMAL EDUCATION',
-  2: 'ELEMENTARY LEVEL',
-  3: 'ELEMENTARY GRADUATE',
-  4: 'HIGH SCHOOL LEVEL',
-  5: 'HIGH SCHOOL GRADUATE',
-  6: 'VOCATIONAL COURSE',
-  7: 'COLLEGE LEVEL',
-  8: 'COLLEGE GRADUATE',
-  9: 'POSTGRADUATE',
+  2: 'KINDER',
+  3: 'ELEMENTARY STUDENT',
+  4: 'ELEMENTARY UNDERGRAD',
+  5: 'ELEMENTARY GRADUATE',
+  6: 'HIGH SCHOOL STUDENT',
+  7: 'HIGH SCHOOL UNDERGRAD',
+  8: 'HIGH SCHOOL GRADUATE',
+  9: 'VOCATIONAL COURSE',
+  10: 'COLLEGE STUDENT',
+  11: 'COLLEGE UNDERGRAD',
+  12: 'COLLEGE GRADUATE',
+  13: 'POSTGRADUATE'
 };
 
 // ✅ Employment Status Options

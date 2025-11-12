@@ -105,7 +105,6 @@ const ReviewInputsProfile = () => {
   // Compute gov program labels from CSV stored in govprogrm
   const govIds = useMemo(() => parseGovCsvToIds(data.govprogrm), [data.govprogrm])
   const govLabels = useMemo(() => idsToLabels(govIds), [govIds])
-  const primaryGovId = govIds[0] ?? 7 // keep compat with old single-field (7 = None)
 
   const handleSuccessOk = () => {
     closeModal()
@@ -135,16 +134,14 @@ const ReviewInputsProfile = () => {
       const performerId = 5
       const residencyPeriod = 0
 
-      const payload: ProfileResidentArgs & {
-        // add fields expected by the updated RPC without touching services/profiling.ts signature
-        p_is_student?: boolean
-        p_gov_mem_prog_ids?: number[]
-      } = {
+      const payload: ProfileResidentArgs = {
         p_performer_id: performerId,
+
         p_last_name: last,
         p_first_name: first,
         p_middle_name: data.mname?.trim() || null,
         p_suffix: data.suffix?.trim() || null,
+
         p_birthdate: birthdate,
         p_email: email,
         p_mobile_num: mobile,
@@ -158,22 +155,22 @@ const ReviewInputsProfile = () => {
         p_education_id: toIntOrNull(data.educattainment) ?? 0,
         p_employment_status_id: toIntOrNull(data.employmentstat) ?? 0,
 
-        // keep old single-value for backward-compat, but…
-        // …also send the new array + student flag (RPC will use these)
+        // NEW: send array (RPC expects integer[])
         p_gov_mem_prog_ids: govIds,
-        p_is_student: !!isStudent,
+        // Optional legacy single-value (service will convert if only this is present)
+        // p_gov_mem_prog_id: govIds[0],
 
         p_mnthly_personal_income_id: toIntOrNull(data.mnthlypersonalincome) ?? 0,
 
         // address
-        p_street: data.street?.trim() || '',
-        p_barangay: data.brgy?.trim() || '',
-        p_city: data.city?.trim() || '',
-        p_purok_sitio_name: data.purokSitio?.trim() || '',
+        // p_street: data.street?.trim() || '',
+        // p_barangay: data.brgy?.trim() || '',
+        // p_city: data.city?.trim() || '',
+        // p_purok_sitio_name: data.purokSitio?.trim() || '',
 
-        // coords
-        p_latitude: toNumberOrNull(data.latitude),
-        p_longitude: toNumberOrNull(data.longitude),
+        // // coords
+        // p_latitude: toNumberOrNull(data.latitude),
+        // p_longitude: toNumberOrNull(data.longitude),
 
         // relationships
         p_mother_person_id: toIntOrNull(data.motherId),
@@ -185,10 +182,11 @@ const ReviewInputsProfile = () => {
         p_is_business_owner: false,
         p_is_email_verified: false,
         p_is_id_valid: false,
+        // NEW: student flag now part of RPC
+        p_is_student: !!isStudent,
       }
 
-      // Call RPC (cast to any to tolerate extra fields until you update the TS type)
-      await profileResident(payload as any)
+      await profileResident(payload)
 
       resetForm()
       openModal({

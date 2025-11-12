@@ -113,7 +113,7 @@ export default function Receipt() {
                 <Spacer />
 
                 {/* ITEMS */}
-                <ThemedCard>
+                {/* <ThemedCard>
                     <View style={styles.cardHeaderRow}>
                         <ThemedText style={styles.cardTitle}>Items</ThemedText>
                         <ThemedText small muted>
@@ -137,7 +137,7 @@ export default function Receipt() {
                             <TotalsBlock lines={lines} />
                         </>
                     )}
-                </ThemedCard>
+                </ThemedCard> */}
 
                 <Spacer />
 

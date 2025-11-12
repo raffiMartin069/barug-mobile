@@ -1,43 +1,53 @@
 // services/auth.ts
-import { toE164PH } from '@/constants/phone'
-import { supabase } from '@/constants/supabase'
+import { toE164PH } from '@/constants/phone';
+import { supabase } from '@/constants/supabase';
 
-/** Send OTP via SMS */
+/** Always normalize ONCE (send) and pass the exact value around */
 export async function sendOtp(rawPhone: string) {
-  const phone = toE164PH(rawPhone)
-  if (!phone) throw new Error('Invalid phone number')
+  const phone = toE164PH(rawPhone);
+  if (!phone) throw new Error('Invalid phone number');
 
-  const { error } = await supabase.auth.signInWithOtp({
+  console.log('[SEND OTP] phone:', phone);
+
+  const { data, error } = await supabase.auth.signInWithOtp({
     phone,
-    options: { channel: 'sms' },
-  })
-  if (error) throw error
-  return phone
+    options: { channel: 'sms', shouldCreateUser: true }, // allow first-time users if desired
+  });
+
+  console.log('[SEND OTP] data:', data, 'error:', error);
+  if (error) throw error;
+
+  // Return the EXACT E.164 we used so the UI can pass it to /verify
+  return phone;
 }
 
-/** Verify OTP, then link the auth user to your person record */
-export async function verifyOtp(rawPhone: string, code: string) {
-  const phone = toE164PH(rawPhone) ?? rawPhone // tolerate pre-normalized input
+/** Do NOT re-normalize here—use the EXACT string returned by sendOtp()  */
+export async function verifyOtp(phoneE164: string, code: string) {
+  const phone = String(phoneE164).trim().replace(/\s+/g, ''); // strip accidental spaces only
+
+  // Optional: assert it still looks E.164
+  if (!/^\+\d{9,15}$/.test(phone)) {
+    throw new Error('Invalid phone for verification');
+  }
+
+  console.log('[VERIFY OTP] phone:', phone, 'code:', code);
+
   const { data, error } = await supabase.auth.verifyOtp({
     phone,
-    token: code,
-    type: 'sms',
-  })
-  if (error) throw error
+    token: String(code).trim(),
+    type: 'sms',                 // must be 'sms' for phone OTP
+  });
 
-  // Choose the correct linker, mirroring your original verify.tsx logic
-  const digits = String(phone).replace(/\D/g, '')
-  const linker =
-    digits.startsWith('63') || digits.startsWith('09') || digits.startsWith('9')
-      ? 'link_test_person_by_phone'
-      : 'link_test_person_by_temp_number'
+  console.log('[VERIFY OTP] data:', data, 'error:', error);
+  if (error) throw error;
 
-  const { error: linkErr } = await supabase.rpc(linker, { p_phone: phone })
-  if (linkErr) throw linkErr
+  // Link your person AFTER verification succeeds
+  const { error: linkErr } = await supabase.rpc('link_test_person_by_phone', { p_phone: phone });
+  if (linkErr) throw linkErr;
 
-  return data.session // access + refresh tokens if needed
+  return data.session; // tokens if you need them
 }
 
 export async function logout() {
-  await supabase.auth.signOut()
+  await supabase.auth.signOut();
 }

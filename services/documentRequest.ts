@@ -1,6 +1,48 @@
 import { supabase } from '@/constants/supabase'
 
 /* ========= Lookups ========= */
+// BASE_URL should already be defined in this file or via EXPO_PUBLIC_API_BASE_URL
+// services/documentRequest.ts
+import Constants from 'expo-constants'
+
+function getApiBase(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL
+  const fromExtra = (Constants.expoConfig?.extra as any)?.API_BASE_URL
+  const base = (fromEnv || fromExtra || '').trim().replace(/\/+$/, '')
+  if (!base) throw new Error('API base URL is not configured')
+  if (!base.startsWith('http')) throw new Error(`Bad API base: ${base}`)
+  console.log('[API_BASE]', base)   // <-- keep this visible in Metro logs
+  return base
+}
+const API_BASE = getApiBase()
+
+function okOrThrow(res: Response, body: any) {
+  if (!res.ok) throw new Error((body && (body.error || body.detail || body.message)) || `HTTP ${res.status}`)
+}
+
+export async function startDocCheckout(docId: number, opts: { success_url: string; cancel_url: string }) {
+  const r = await fetch(`${API_BASE}/payments/api/docs/${docId}/start`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(opts),
+  })
+  const j = await r.json().catch(() => ({}))
+  okOrThrow(r, j)
+  return j as { checkout_url: string; provider_session_id: string }
+}
+
+export async function confirmDocPayment(docId: number, { dev } = { dev: true }) {
+  const r = await fetch(`${API_BASE}/payments/api/docs/${docId}/confirm${dev ? '?dev=1' : ''}`, { method: 'POST' })
+  const j = await r.json().catch(() => ({}))
+  okOrThrow(r, j)
+  return j as { status: string; clearance_rec_id?: number }
+}
+
+export async function getDocStatus(docId: number) {
+  const r = await fetch(`${API_BASE}/payments/api/docs/${docId}/status`)
+  const j = await r.json().catch(() => ({}))
+  okOrThrow(r, j)
+  return j as { status: string }
+}
+
 
 export type DocType = {
   document_type_id: number
@@ -391,4 +433,110 @@ export async function getResidentFullProfile(personId: number) {
   if (error) throw error
   // This RPC returns an array; take the first row
   return (Array.isArray(data) ? data[0] : data) || null
+}
+
+
+// ────────────────────────────────────────────────────────────
+// Business Clearance helpers (add to services/documentRequest.ts)
+// ────────────────────────────────────────────────────────────
+
+/** Map doc status → UI mode */
+export type ClearanceStatus = 'NONE' | 'REQUESTED' | 'ISSUED' | 'REJECTED' | 'CANCELLED'
+export type ClearanceMode = 'NORMAL' | 'CTC' | 'BLOCKED'
+
+export function resolveClearanceMode(status: ClearanceStatus): ClearanceMode {
+  // ISSUED  → only CTC allowed
+  // REQUESTED → block new requests until the current one finishes
+  if (status === 'ISSUED') return 'CTC'
+  if (status === 'REQUESTED') return 'BLOCKED'
+  return 'NORMAL'
+}
+
+/** Minimal header (used by receipts / references) */
+export async function getDocRequestHeaderLite(docRequestId: number): Promise<{
+  doc_request_id: number
+  request_code: string | null
+  status: string
+  created_at: string | Date
+  released_at?: string | Date | null
+}> {
+  // Prefer a view if you have it; otherwise fallback is still safe
+  const { data, error } = await supabase
+    .from('v_doc_request_detail')
+    .select('*')
+    .eq('doc_request_id', docRequestId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) throw new Error('Request not found')
+
+  return {
+    doc_request_id: Number((data as any).doc_request_id),
+    request_code: (data as any).request_code ?? null,
+    status: String((data as any).status || ''),
+    created_at: (data as any).created_at,
+    released_at: (data as any).released_at ?? (data as any).issued_on ?? null,
+  }
+}
+
+/**
+ * Is there an *effective* (still-valid) Business Clearance on a given date?
+ * Tries RPC `check_business_clearance_effective_on(p_business_id, p_when)`.
+ * Fallback returns { has:false } so the UI continues to work during demos.
+ */
+export async function checkBusinessClearanceEffectiveOn(
+  businessId: number,
+  when: Date | string,
+  validMonths?: number | null
+): Promise<{ has: boolean; reference_request_id?: number | null; request_code?: string | null; issued_on?: string | null }> {
+  try {
+    const { data, error } = await supabase.rpc('check_business_clearance_effective_on', {
+      p_business_id: businessId,
+      // 👇 use the correct argument name expected by your SQL function
+      p_at: typeof when === 'string' ? when : when.toISOString(),
+      // optional: pass-through if you want to override default “until next Jan 1”
+      p_valid_months: validMonths ?? null,
+    })
+    if (error) throw error
+    const row = (Array.isArray(data) ? data[0] : data) || null
+    if (!row) return { has: false }
+    return {
+      has: !!row.has,
+      reference_request_id: row.reference_request_id ?? null,
+      request_code: row.request_code ?? null,
+      issued_on: row.issued_on ?? null,
+    }
+  } catch (e) {
+    // keep your graceful fallback
+    return { has: false }
+  }
+}
+
+
+/**
+ * Do we already have a request for this business for the given year?
+ * Expects RPC `check_business_clearance_for_year(p_business_id, p_year)`.
+ * Returns a normalized status; safe fallback is 'NONE'.
+ */
+export async function checkBusinessClearanceForYear(
+  businessId: number,
+  year: number
+): Promise<{ status: ClearanceStatus; doc_request_id?: number | null; request_code?: string | null }> {
+  try {
+    const { data, error } = await supabase.rpc('check_business_clearance_for_year', {
+      p_business_id: businessId,
+      p_year: year,
+    })
+    if (error) throw error
+    const row = (Array.isArray(data) ? data[0] : data) || null
+    if (!row) return { status: 'NONE' }
+    const status = String(row.status || 'NONE').toUpperCase() as ClearanceStatus
+    return {
+      status: (['NONE','REQUESTED','ISSUED','REJECTED','CANCELLED'].includes(status) ? status : 'NONE'),
+      doc_request_id: row.doc_request_id ?? null,
+      request_code: row.request_code ?? null,
+    }
+  } catch {
+    return { status: 'NONE' }
+  }
 }

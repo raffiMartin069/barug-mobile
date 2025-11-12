@@ -1,3 +1,4 @@
+// /(resident)/(tabs)/requestdoc.tsx
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import {
@@ -14,6 +15,9 @@ import * as DocumentPicker from 'expo-document-picker'
 import * as ImagePicker from 'expo-image-picker'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
+import * as WebBrowser from 'expo-web-browser'
+import * as ExpoLinking from 'expo-linking'
+import Constants from 'expo-constants'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -38,13 +42,58 @@ import {
   getBusinessesOwnedByPerson,
   createDocumentRequest,
   attachAuthorizationLetter,
-  computeExemptionAmount,          // server-side waiver check
-  getResidentFullProfile,          // hydrate selected "OTHER" person
+  computeExemptionAmount,
+  getResidentFullProfile,
   peso,
   type DocType,
   type Purpose,
   type BusinessLite,
 } from '@/services/documentRequest'
+
+// NEW: tiny client for PayMongo endpoints
+import { startDocCheckout, confirmDocPayment } from '@/services/payments'
+
+
+// make the auth session handoff work on iOS/Android
+WebBrowser.maybeCompleteAuthSession();
+
+// helper to open PayMongo checkout for a doc request
+async function startOnlineCheckout(docId: number) {
+  console.log('🌐 Starting online checkout for doc ID:', docId)
+  const API_BASE = (Constants.expoConfig?.extra as any)?.API_BASE_URL;
+  console.log('🔗 API_BASE:', API_BASE)
+  if (!API_BASE) throw new Error('Missing API_BASE_URL in app.json "extra".');
+
+  // Deep link back into the app to the Receipt screen
+  const returnTo = ExpoLinking.createURL('/(residentmodals)/receipt', {
+    queryParams: { id: String(docId) },
+  });
+
+  // Your own success page will redirect to `return_to` (below)
+  const successUrl = `${API_BASE}/payments/success?doc_id=${docId}&return_to=${encodeURIComponent(returnTo)}`;
+
+  const r = await fetch(`${API_BASE}/payments/api/docs/${docId}/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ success_url: successUrl }),
+  });
+  const j = await r.json();
+  if (!r.ok || !j?.checkout_url) {
+    throw new Error(j?.error || `Checkout failed (HTTP ${r.status})`);
+  }
+
+  // Open in an auth session. When the success page redirects to `returnTo`,
+  // the browser view will auto-close and control returns here.
+  const result = await WebBrowser.openAuthSessionAsync(j.checkout_url, returnTo);
+
+  // Extra safety: if the browser closed without handing back a URL,
+  // we still try to confirm and navigate.
+  if (result.type === 'success' || result.type === 'dismiss') {
+    try { await confirmDocPayment(docId, { dev: true }); } catch {}
+    // Navigate to receipt (works even if deep link already did it)
+    // No-op if you're already there.
+  }
+}
 
 /* ---------------- Types ---------------- */
 type PersonMinimal = {
@@ -114,27 +163,16 @@ const programSet = (arr?: string[] | null) =>
 
 function mapToPersonMinimal(details: any): PersonMinimal {
   const fullName = details?.full_name ?? details?.details?.full_name ?? null
-
-  const first_name =
-    details?.first_name ?? details?.details?.first_name ?? (fullName || '')
-
-  const middle_name =
-    details?.middle_name ?? details?.details?.middle_name ?? null
-
-  const last_name =
-    details?.last_name ?? details?.details?.last_name ?? ''
-
-  // address fallbacks: use composed fields OR a single 'address' string
+  const first_name = details?.first_name ?? details?.details?.first_name ?? (fullName || '')
+  const middle_name = details?.middle_name ?? details?.details?.middle_name ?? null
+  const last_name = details?.last_name ?? details?.details?.last_name ?? ''
   const composedAddress = [
     details?.haddress ?? details?.street_name ?? details?.street,
     details?.purok_sitio_name ?? details?.purok_sitio,
     details?.barangay_name ?? details?.barangay,
     details?.city_name ?? details?.city,
   ].filter(Boolean).join(', ')
-  const address =
-    composedAddress || details?.address || details?.details?.address || undefined
-
-  // mobile fallbacks
+  const address = composedAddress || details?.address || details?.details?.address || undefined
   const mobile_number =
     details?.mobile_num ??
     details?.mobile_number ??
@@ -143,15 +181,12 @@ function mapToPersonMinimal(details: any): PersonMinimal {
     details?.contact_number ??
     details?.details?.mobile_num ??
     null
-
   const rawEmp =
     details?.employment_status ?? details?.details?.employment_status ?? null
-
   const inferredStudent =
     (typeof details?.is_student === 'boolean' ? details.is_student
       : (typeof details?.details?.is_student === 'boolean' ? details.details.is_student
         : (String(rawEmp || '').toUpperCase() === 'STUDENT')))
-
   const govProgName =
     details?.gov_mem_prog_name ??
     details?.gov_program ??
@@ -160,17 +195,12 @@ function mapToPersonMinimal(details: any): PersonMinimal {
     details?.gov_mem_prog ??
     details?.details?.gov_mem_prog_name ??
     (typeof details?.gov_mem_prog_id === 'number' ? `ID: ${details.gov_mem_prog_id}` : null)
-
   const government_programs: string[] | null =
-    details?.government_programs ??
-    details?.details?.government_programs ??
-    null
+    details?.government_programs ?? details?.details?.government_programs ?? null
 
   return {
     person_id: Number(details?.person_id ?? details?.details?.person_id ?? 0),
-    first_name,
-    middle_name,
-    last_name,
+    first_name, middle_name, last_name,
     suffix: details?.suffix ?? details?.details?.suffix ?? null,
     sex: details?.sex ?? details?.details?.sex ?? null,
     birth_date: details?.birthdate ?? details?.details?.birthdate ?? null,
@@ -205,7 +235,6 @@ function StatChip({ label, tone = 'neutral' as 'neutral' | 'ok' | 'warn' }) {
   )
 }
 
-/** Client-side hint (for banner chips only) */
 function computeWaiverApplies(subject: PersonMinimal | null, purpose?: PurposeWithFeeFlags | null) {
   if (!subject || !purpose) return { applies: false, reasons: [] as string[] }
   const age = computeAge(subject.birth_date)
@@ -307,6 +336,31 @@ function AttachmentPicker({
 export default function RequestDoc() {
   const router = useRouter()
 
+  // NEW: pay choice
+  const [payChoice, setPayChoice] = useState<'ONLINE' | 'CASH'>('ONLINE')
+
+  // deep-link handler: confirm + go to receipt
+  useEffect(() => {
+    async function handleUrl(url: string) {
+      try {
+        const parsed = ExpoLinking.parse(url)
+        const path = (parsed.path || '').toLowerCase()
+        const qp = (parsed.queryParams || {}) as Record<string, any>
+        const docId = Number(qp.doc_id || qp.id || 0)
+        if (path.includes('payments') && path.includes('success') && docId > 0) {
+          // ask server to finalize (idempotent; DEV can bypass with ?dev=1)
+          try { await confirmDocPayment(docId, { dev: true }) } catch {}
+          router.replace({ pathname: '/(residentmodals)/receipt', params: { id: String(docId) } })
+        }
+      } catch { /* ignore */ }
+    }
+    // foreground events
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url))
+    // cold start
+    Linking.getInitialURL().then(u => { if (u) handleUrl(u) })
+    return () => sub.remove()
+  }, [router])
+
   // target
   const [forWhom, setForWhom] = useState<'SELF' | 'OTHER'>('SELF')
   const [otherPerson, setOtherPerson] = useState<{ id: number | null; display: string | null }>({ id: null, display: null })
@@ -352,15 +406,21 @@ export default function RequestDoc() {
   const [purposeNotes, setPurposeNotes] = useState<string>('')
 
   // waiver preview (server-backed)
-  const [exemptUnit, setExemptUnit] = useState<number>(0)    // per unit waived by DB
+  const [exemptUnit, setExemptUnit] = useState<number>(0)
   const [waiverSource, setWaiverSource] = useState<'server' | 'ui' | null>(null)
   const [checkingWaiver, setCheckingWaiver] = useState<boolean>(false)
 
   // ui state
   const [submitting, setSubmitting] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [modal, setModal] = useState<{ visible: boolean; icon?: IconKey; title?: string; message?: string; primaryText?: string; onPrimary?: () => void }>({ visible: false })
   const showModal = (opts: Partial<typeof modal>) => setModal(p => ({ ...p, visible: true, ...opts }))
   const hideModal = () => setModal(p => ({ ...p, visible: false }))
+
+  const isBusinessDocTypeName = (name?: string | null) => {
+    const n = String(name || '').toUpperCase().trim()
+    return n === BUSINESS_DOC_NAME || n.includes('BUSINESS CLEARANCE') || n.includes('BARANGAY BUSINESS')
+  }
 
   // load lookups
   useEffect(() => {
@@ -369,7 +429,7 @@ export default function RequestDoc() {
       try {
         const types = await getDocumentTypes()
         if (!live) return
-        setDocTypes(types)
+        setDocTypes((types || []).filter(t => !isBusinessDocTypeName(t.document_type_name)))
       } catch (e) { console.log('[getDocumentTypes] failed:', e) }
     })()
     return () => { live = false }
@@ -405,7 +465,6 @@ export default function RequestDoc() {
     return () => { live = false }
   }, [documentTypeId, docTypes, me?.person_id])
 
-  // derived
   const selectedPurpose = useMemo(
     () => purposes.find(p => p.document_purpose_id === (purposeId ?? -1)),
     [purposes, purposeId]
@@ -413,7 +472,11 @@ export default function RequestDoc() {
   const offenseNo = selectedPurpose?.default_offense_no ?? null
 
   const documentItems = useMemo(
-    () => docTypes.map(dt => ({ label: dt.document_type_name, value: dt.document_type_id })), [docTypes]
+    () =>
+      docTypes
+        .filter(dt => !isBusinessDocTypeName(dt.document_type_name))
+        .map(dt => ({ label: dt.document_type_name, value: dt.document_type_id })),
+    [docTypes]
   )
   const purposeItems = useMemo(
     () => purposes.map(p => ({ label: `${p.purpose_label}  •  ${peso(p.current_amount)}`, value: p.document_purpose_id })), [purposes]
@@ -422,16 +485,14 @@ export default function RequestDoc() {
     () => businesses.map(b => ({ label: b.business_name, value: b.business_id })), [businesses]
   )
 
-  // Subject (SELF or OTHER)
   const subject: PersonMinimal | null = useMemo(() => {
     if (forWhom === 'SELF') return me
     return otherPersonFull ? mapToPersonMinimal(otherPersonFull as any) : null
   }, [forWhom, me, otherPersonFull])
 
-  // Heuristic banner info
   const waiverHint = useMemo(() => computeWaiverApplies(subject, selectedPurpose), [subject, selectedPurpose])
 
-  // SERVER: check waiver per-unit via RPC (authoritative)
+  // SERVER: check waiver per-unit
   useEffect(() => {
     let live = true
     ;(async () => {
@@ -440,7 +501,6 @@ export default function RequestDoc() {
       if (!selectedPurpose || !subject?.person_id) return
       const feeItemId = Number(selectedPurpose.fee_item_id || 0)
       if (!feeItemId) {
-        // No fee item id in v1 fallback; use client hint only
         setWaiverSource(waiverHint.applies ? 'ui' : null)
         return
       }
@@ -473,6 +533,13 @@ export default function RequestDoc() {
   const netTotal = netUnit * qty
   const estimatedDisplay = useMemo(() => checkingWaiver ? 'Checking…' : peso(netTotal), [netTotal, checkingWaiver])
 
+  // Auto-select 'Pay at Office' when total is 0
+  useEffect(() => {
+    if (netTotal === 0) {
+      setPayChoice('CASH')
+    }
+  }, [netTotal])
+
   // validation
   const inlineError = useMemo(() => {
     if (!documentTypeId) return 'Please select a document.'
@@ -497,16 +564,41 @@ export default function RequestDoc() {
       showModal({ icon: 'error', title: 'Missing info', message: err, primaryText: 'OK' })
       return
     }
+    setShowConfirmModal(true)
+  }
+
+  const handleConfirmSubmit = async () => {
+    console.log('🔄 handleConfirmSubmit called')
+    console.log('📋 Current state:', {
+      payChoice,
+      documentTypeId,
+      purposeId,
+      forWhom,
+      otherPersonId: otherPerson.id,
+      authLetterUri: authLetter?.uri,
+      mePersonId: me?.person_id,
+      selectedPurpose: selectedPurpose?.document_purpose_id
+    })
+    
+    setShowConfirmModal(false)
+    console.log('✅ Modal closed, starting submission...')
 
     setSubmitting(true)
+    console.log('🚀 Submission started, submitting state set to true')
     let authUploadPath: string | null = null
 
     if (forWhom === 'OTHER' && authLetter?.uri) {
+      console.log('📎 Uploading auth letter...')
       try {
         const fileName = authLetter.name || `auth_${Date.now()}${guessExt(authLetter.type)}`
-        const { path } = await uploadAuthLetter(authLetter.uri!, fileName, { personId: Number(me?.person_id) || undefined, upsert: true })
+        const { path } = await uploadAuthLetter(authLetter.uri!, fileName, {
+          personId: Number(me?.person_id) || undefined,
+          upsert: true,
+        })
         authUploadPath = path
-      } catch {
+        console.log('✅ Auth letter uploaded:', path)
+      } catch (e) {
+        console.log('❌ Auth letter upload failed:', e)
         setSubmitting(false)
         showModal({ icon: 'error', title: 'Upload failed', message: 'Please try uploading the authorization letter again.' })
         return
@@ -516,7 +608,12 @@ export default function RequestDoc() {
     try {
       const requesterId = Number(me?.person_id)
       const subjectId = forWhom === 'SELF' ? requesterId : Number(otherPerson.id)
-      if (!requesterId || !subjectId || !selectedPurpose) throw new Error('Could not resolve IDs or purpose.')
+      console.log('🔍 IDs resolved:', { requesterId, subjectId, selectedPurposeId: selectedPurpose?.document_purpose_id })
+      
+      if (!requesterId || !subjectId || !selectedPurpose) {
+        console.log('❌ Missing required data:', { requesterId, subjectId, selectedPurpose: !!selectedPurpose })
+        throw new Error('Could not resolve IDs or purpose.')
+      }
 
       const payload = {
         requested_by: requesterId,
@@ -535,12 +632,21 @@ export default function RequestDoc() {
         }],
       }
 
+      console.log('📤 Creating document request with payload:', payload)
       const newId = await createDocumentRequest(payload as any)
+      console.log('✅ Document request created with ID:', newId)
 
-      if (forWhom === 'OTHER' && authUploadPath) {
-        await attachAuthorizationLetter({ doc_request_id: newId, file_path: authUploadPath })
+      // → ONLINE: start PayMongo, then deep-link back
+      if (payChoice === 'ONLINE') {
+        console.log('💳 Starting online checkout for doc ID:', newId)
+        await startOnlineCheckout(newId)
+        console.log('🔄 Online checkout initiated, returning...')
+        return // the user will be taken to PayMongo, then to the success page, then back to the app
       }
 
+
+      // → CASH AT BARANGAY: normal success
+      console.log('💰 Cash payment selected, showing success modal')
       setSubmitting(false)
       showModal({
         icon: 'success',
@@ -553,6 +659,7 @@ export default function RequestDoc() {
         },
       })
     } catch (e: any) {
+      console.log('❌ Submission failed:', e)
       setSubmitting(false)
       showModal({ icon: 'error', title: 'Submission failed', message: e?.message ?? 'Unable to submit request right now.' })
     }
@@ -574,27 +681,10 @@ export default function RequestDoc() {
     <ThemedView safe>
       <ThemedAppBar title="Request a Document" showNotif={false} showProfile={false} />
 
-      {/* Progress */}
-      <View style={styles.stepper}>
-        {['Requester', 'Who is this for?', 'Document', 'Purpose & copies'].map((s, i) => (
-          <View key={s} style={styles.stepItem}>
-            <View style={styles.stepDot} />
-            <ThemedText small muted numberOfLines={1} style={{ maxWidth: 98 }}>{s}</ThemedText>
-            {i < 3 && <View style={styles.stepLine} />}
-          </View>
-        ))}
-      </View>
-
       <ThemedKeyboardAwareScrollView
         contentContainerStyle={{ paddingBottom: SUBMIT_BAR_HEIGHT + 28 }}
         enableOnAndroid extraScrollHeight={24} keyboardShouldPersistTaps="handled"
       >
-        {/* Summary chip */}
-        <View style={styles.summaryChip}>
-          <Ionicons name="document-text-outline" size={16} color={BRAND} />
-          <ThemedText style={{ marginLeft: 6 }} weight="700">{summaryText}</ThemedText>
-        </View>
-
         {/* Requester */}
         <ThemedCard style={{ marginTop: 10 }}>
           <View style={styles.cardHeaderRow}>
@@ -622,7 +712,6 @@ export default function RequestDoc() {
                   <Row label="Birthdate" value={me.birth_date || '—'} />
                   <Row label="Email" value={me.email || '—'} />
                   <Row label="Address" value={me.address || '—'} multiline />
-                  <Row label="Gov’t Program" value={me.government_program || '—'} />
                   <Row label="Resident ID" value={me.person_id} />
                 </>
               )}
@@ -659,9 +748,9 @@ export default function RequestDoc() {
                 onSelect={async (p) => {
                   const id = Number(p.person_id)
                   setOtherPerson({ id, display: p.full_name })
-                  setOtherPersonFull(p)                  // optimistic fill (immediate UI)
+                  setOtherPersonFull(p)
                   try {
-                    const full = await getResidentFullProfile(id) // hydrate
+                    const full = await getResidentFullProfile(id)
                     if (full) setOtherPersonFull(full as any)
                   } catch (e) {
                     console.log('[getResidentFullProfile] failed:', e)
@@ -699,67 +788,6 @@ export default function RequestDoc() {
 
         {/* Subject Details */}
         <Spacer height={12} />
-        <ThemedCard>
-          <View style={[styles.cardHeaderRow, { marginBottom: 6 }]}>
-            <RowTitle icon="id-card-outline" title="Subject Details" />
-            {subject && (
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <StatChip
-                  label={isSenior(computeAge(subject?.birth_date)) ? 'Senior (60+)' : 'Not senior'}
-                  tone={isSenior(computeAge(subject?.birth_date)) ? 'ok' : 'neutral'}
-                />
-                <StatChip
-                  label={subject?.is_student ? 'Student' : 'Not student'}
-                  tone={subject?.is_student ? 'ok' : 'neutral'}
-                />
-              </View>
-            )}
-          </View>
-
-          {!subject ? (
-            <ThemedText muted>
-              {forWhom === 'SELF' ? 'Loading…' : 'Pick a person above to see their details.'}
-            </ThemedText>
-          ) : (
-            <View style={styles.detailsWrap}>
-              <Row label="Name" value={niceName(subject)} />
-              <Row label="Mobile" value={subject.mobile_number || '—'} />
-              <Row label="Birthdate" value={subject.birth_date || '—'} />
-              <Row label="Address" value={subject.address || '—'} multiline />
-              {!!subject.government_program && <Row label="Gov’t Program" value={subject.government_program} />}
-              <Row label="Resident ID" value={subject.person_id} />
-            </View>
-          )}
-
-          {/* Waiver guidance */}
-          <Spacer height={10} />
-          {selectedPurpose ? (
-            (waiverHint.applies || (waiverSource === 'server' && exemptUnit > 0)) ? (
-              <View style={styles.bannerOk}>
-                <Ionicons name="pricetag-outline" size={18} color="#065f46" />
-                <ThemedText style={styles.bannerText}>
-                  Likely <ThemedText weight="800">WAIVED</ThemedText> for this document.
-                </ThemedText>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                  {waiverHint.reasons.map(r => <StatChip key={r} label={r} tone="ok" />)}
-                </View>
-                <ThemedText small muted style={{ marginTop: 6 }}>
-                  Treasurer will validate during review.
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={styles.bannerNeutral}>
-                <Ionicons name="information-circle-outline" size={18} color="#334155" />
-                <ThemedText style={styles.bannerText}>No automatic waiver detected for this purpose.</ThemedText>
-              </View>
-            )
-          ) : (
-            <View style={styles.bannerNeutral}>
-              <Ionicons name="help-buoy-outline" size={18} color="#334155" />
-              <ThemedText style={styles.bannerText}>Select a purpose to see waiver guidance.</ThemedText>
-            </View>
-          )}
-        </ThemedCard>
 
         {/* Document & Purpose */}
         <Spacer height={12} />
@@ -797,17 +825,83 @@ export default function RequestDoc() {
               selectedPurpose
                 ? (waiverSource
                     ? (netUnit === 0
-                        ? `Base ${peso(unit)} × ${qty} − Waiver ${peso(exemptUnit)} × ${qty} = ₱0.00`
-                        : `Base ${peso(unit)} − Waiver ${peso(exemptUnit)} = ${peso(netUnit)} • Qty ${qty}`)
+                        ? `Base ${peso(unit)} × ${qty} − Waiver ${peso(exemptUnit)} × ${qty}`
+                        : `Base ${peso(unit)} − Waiver ${peso(exemptUnit)} = ${peso(netUnit)}`)
                     : `Base ${peso(unit)} × ${qty}`)
                 : undefined
             }
           />
 
+          {/* Payment Method Selection */}
+          <Spacer height={16} />
+          <View style={styles.paymentHeader}>
+            <ThemedText weight="700" style={styles.paymentHeaderTitle}>Choose Payment Method</ThemedText>
+            <ThemedText small muted style={styles.paymentHeaderSubtitle}>Select how you'd like to pay for this document</ThemedText>
+          </View>
+          
+          <View style={styles.paymentContainer}>
+            <TouchableOpacity 
+              style={[styles.paymentOption, payChoice === 'ONLINE' && styles.paymentOptionSelected, netTotal === 0 && styles.paymentOptionDisabled]}
+              onPress={() => netTotal > 0 && setPayChoice('ONLINE')}
+              activeOpacity={netTotal > 0 ? 0.8 : 1}
+              disabled={netTotal === 0}
+            >
+              <View style={styles.paymentContent}>
+                <View style={[styles.paymentIcon, netTotal === 0 && styles.paymentIconDisabled]}>
+                  <Ionicons name="card" size={22} color={netTotal === 0 ? '#9ca3af' : '#10b981'} />
+                </View>
+                <View style={styles.paymentInfo}>
+                  <View style={styles.paymentTitleRow}>
+                    <ThemedText weight="700" style={[styles.paymentTitle, netTotal === 0 && styles.paymentTitleDisabled]}>GCash Payment</ThemedText>
+                    {netTotal > 0 && (
+                      <View style={styles.recommendedBadge}>
+                        <ThemedText style={styles.recommendedText}>RECOMMENDED</ThemedText>
+                      </View>
+                    )}
+                  </View>
+                  <ThemedText small style={[styles.paymentSubtitle, netTotal === 0 && styles.paymentSubtitleDisabled]}>
+                    {netTotal === 0 ? 'Not available for free documents' : 'Pay instantly with your mobile wallet'}
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={[styles.paymentRadio, payChoice === 'ONLINE' && styles.paymentRadioSelected, netTotal === 0 && styles.paymentRadioDisabled]}>
+                {payChoice === 'ONLINE' && <View style={styles.paymentRadioDot} />}
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.paymentOption, payChoice === 'CASH' && styles.paymentOptionSelected]}
+              onPress={() => setPayChoice('CASH')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.paymentContent}>
+                <View style={styles.paymentIcon}>
+                  <Ionicons name="business" size={22} color={BRAND} />
+                </View>
+                <View style={styles.paymentInfo}>
+                  <View style={styles.paymentTitleRow}>
+                    <ThemedText weight="700" style={styles.paymentTitle}>Pay at Barangay Office</ThemedText>
+                    {netTotal === 0 && (
+                      <View style={styles.freeBadge}>
+                        <ThemedText style={styles.freeText}>FREE</ThemedText>
+                      </View>
+                    )}
+                  </View>
+                  <ThemedText small style={styles.paymentSubtitle}>
+                    {netTotal === 0 ? 'No payment required - just pick up your document' : 'Visit the barangay hall to pay and collect'}
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={[styles.paymentRadio, payChoice === 'CASH' && styles.paymentRadioSelected]}>
+                {payChoice === 'CASH' && <View style={styles.paymentRadioDot} />}
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <Spacer height={12} />
-          <ThemedText weight="600">Copies</ThemedText>
+          {/* <ThemedText weight="600">Copies</ThemedText>
           <Spacer height={6} />
-          <QuantityPicker value={quantity} onChange={setQuantity} />
+          <QuantityPicker value={quantity} onChange={setQuantity} /> */}
 
           <Spacer height={12} />
           <ThemedText weight="600">Notes to Treasurer/Clerk (optional)</ThemedText>
@@ -819,7 +913,7 @@ export default function RequestDoc() {
             multiline
           />
 
-          {/* Business picker */}
+          {/* Safety: Business picker (won’t show because business doc is filtered out) */}
           {docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name === BUSINESS_DOC_NAME && (
             <>
               <Spacer height={12} />
@@ -852,6 +946,98 @@ export default function RequestDoc() {
           <ThemedText btn>Submit Request</ThemedText>
         </ThemedButton>
       </View>
+
+      {/* Confirmation Modal */}
+      <Modal visible={showConfirmModal} transparent animationType="fade" onRequestClose={() => setShowConfirmModal(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.confirmModalCard}>
+            {/* Header */}
+            <View style={styles.confirmHeader}>
+              <View style={styles.confirmIconWrap}>
+                <Ionicons name="document-text" size={28} color="#fff" />
+              </View>
+              <ThemedText style={styles.confirmTitle}>Confirm Request</ThemedText>
+              <ThemedText style={styles.confirmSubtitle}>Review your document request details</ThemedText>
+            </View>
+            
+            {/* Content */}
+            <View style={styles.confirmContent}>
+              {/* Document Info */}
+              <View style={styles.infoSection}>
+                <ThemedText style={styles.sectionLabel}>Document Details</ThemedText>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Type:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{docTypes.find(d => d.document_type_id === documentTypeId)?.document_type_name}</ThemedText>
+                </View>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Purpose:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{selectedPurpose?.purpose_label}</ThemedText>
+                </View>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>For:</ThemedText>
+                  <ThemedText style={styles.infoValue}>{forWhom === 'SELF' ? 'Myself' : otherPerson.display}</ThemedText>
+                </View>
+                <View style={styles.infoRow}>
+                  <ThemedText style={styles.infoLabel}>Payment:</ThemedText>
+                  <View style={styles.paymentBadge}>
+                    <Ionicons name={payChoice === 'ONLINE' ? 'card' : 'business'} size={14} color={payChoice === 'ONLINE' ? '#059669' : '#d97706'} />
+                    <ThemedText style={[styles.paymentText, { color: payChoice === 'ONLINE' ? '#059669' : '#d97706' }]}>
+                      {payChoice === 'ONLINE' ? 'GCash' : 'Pay at Office'}
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+
+              {/* Fee Summary */}
+              <View style={styles.feeSection}>
+                <ThemedText style={styles.sectionLabel}>Fee Summary</ThemedText>
+                <View style={styles.feeBreakdown}>
+                  <View style={styles.feeRow}>
+                    <ThemedText style={styles.feeLabel}>Base Fee</ThemedText>
+                    <ThemedText style={styles.feeValue}>{peso(unit)}</ThemedText>
+                  </View>
+                  <View style={styles.feeRow}>
+                    <ThemedText style={styles.feeLabel}>Quantity</ThemedText>
+                    <ThemedText style={styles.feeValue}>×{qty}</ThemedText>
+                  </View>
+                  {waiverSource && exemptUnit > 0 && (
+                    <View style={styles.feeRow}>
+                      <ThemedText style={[styles.feeLabel, { color: '#059669' }]}>Waiver</ThemedText>
+                      <ThemedText style={[styles.feeValue, { color: '#059669' }]}>-{peso(exemptUnit * qty)}</ThemedText>
+                    </View>
+                  )}
+                  <View style={styles.feeDivider} />
+                  <View style={styles.totalRow}>
+                    <ThemedText style={styles.totalLabel}>Total Amount</ThemedText>
+                    <ThemedText style={styles.totalValue}>{peso(netTotal)}</ThemedText>
+                  </View>
+                </View>
+              </View>
+            </View>
+            
+            {/* Actions */}
+            <View style={styles.confirmActions}>
+              <ThemedButton 
+                submit={false}
+                onPress={() => setShowConfirmModal(false)}
+                style={styles.cancelBtn}
+              >
+                <ThemedText non_btn>Cancel</ThemedText>
+              </ThemedButton>
+              
+              <ThemedButton 
+                onPress={handleConfirmSubmit}
+                disabled={submitting}
+                loading={submitting}
+                style={styles.submitBtn}
+              >
+                <ThemedText btn>{payChoice === 'ONLINE' ? 'Pay with GCash' : 'Submit Request'}</ThemedText>
+              </ThemedButton>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
       {/* modal */}
       <Modal visible={modal.visible} transparent animationType="fade" onRequestClose={hideModal}>
@@ -897,6 +1083,149 @@ function QuantityPicker({ value, onChange }: { value: number; onChange: (n: numb
 
 /* ---------------- Styles ---------------- */
 const styles = StyleSheet.create({
+  // Confirmation Modal Styles
+  confirmModalCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    margin: 20,
+    maxWidth: 400,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  confirmHeader: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    backgroundColor: BRAND,
+  },
+  confirmIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  confirmSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+  confirmContent: {
+    padding: 20,
+  },
+  infoSection: {
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 12,
+  },
+  paymentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  paymentText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  feeSection: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    padding: 16,
+  },
+  feeBreakdown: {
+    gap: 8,
+  },
+  feeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  feeLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  feeValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '600',
+  },
+  feeDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 8,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  totalLabel: {
+    fontSize: 16,
+    color: '#1f2937',
+    fontWeight: '700',
+  },
+  totalValue: {
+    fontSize: 18,
+    color: BRAND,
+    fontWeight: '800',
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    padding: 20,
+    paddingTop: 0,
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+  },
+  submitBtn: {
+    flex: 2,
+  },
+
   sectionTitle: { fontSize: 16, fontWeight: '800' },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   loadingRow: { flexDirection: 'row', alignItems: 'center' },
@@ -905,28 +1234,16 @@ const styles = StyleSheet.create({
   rowLabel: { width: 120, color: '#6b7280' },
   rowValue: { flex: 1 },
 
-  stepper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 6, paddingBottom: 4 },
-  stepItem: { flexDirection: 'row', alignItems: 'center' },
-  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: BRAND, marginRight: 6 },
-  stepLine: { width: 28, height: 2, backgroundColor: 'rgba(49,1,1,0.25)', marginHorizontal: 8, borderRadius: 1 },
-
-  summaryChip: {
-    marginHorizontal: 16, marginTop: 6, marginBottom: 2,
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: '#eee', backgroundColor: '#fafafa',
-    flexDirection: 'row', alignItems: 'center'
-  },
-
   hintText: { marginTop: 6, color: '#6b7280' },
   errorText: { color: '#C0392B', marginTop: 6 },
 
   iconPill: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(49,1,1,0.08)', alignItems: 'center', justifyContent: 'center' },
 
   feeRow: {
-    borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12,
-    paddingVertical: 8, paddingHorizontal: 12,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fafafa',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
 
   dropzone: { borderWidth: 1, borderStyle: 'dashed', borderColor: '#d1d5db', padding: 14, borderRadius: 14, alignItems: 'center', backgroundColor: '#fcfcfc' },
@@ -941,27 +1258,155 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
 
-  // Chips / banners
   chip: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 9999, borderWidth: 1 },
   chipOk: { backgroundColor: '#dcfce7', borderColor: '#86efac' },
   chipWarn: { backgroundColor: '#fff7ed', borderColor: '#fdba74' },
   chipNeutral: { backgroundColor: '#f1f5f9', borderColor: '#cbd5e1' },
 
-  bannerOk: {
-    borderWidth: 1, borderColor: '#86efac', backgroundColor: '#f0fdf4',
-    borderRadius: 12, padding: 10, marginTop: 4,
-  },
-  bannerNeutral: {
-    borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc',
-    borderRadius: 12, padding: 10, marginTop: 4,
-  },
+  bannerOk: { borderWidth: 1, borderColor: '#86efac', backgroundColor: '#f0fdf4', borderRadius: 12, padding: 10, marginTop: 4 },
+  bannerNeutral: { borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#f8fafc', borderRadius: 12, padding: 10, marginTop: 4 },
   bannerText: { marginLeft: 6 },
 
-  // modal
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 20 },
   modalCard: { width: '100%', maxWidth: 380, backgroundColor: '#fff', borderRadius: 16, padding: 20, alignItems: 'center' },
   iconWrap: { width: 60, height: 60, borderRadius: 30, backgroundColor: BRAND, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   modalTitle: { textAlign: 'center', marginTop: 4 },
   modalMsg: { textAlign: 'center', opacity: 0.8, marginTop: 6, marginBottom: 14 },
   modalBtn: { marginTop: 4, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 12, backgroundColor: BRAND },
+
+  paymentHeader: {
+    marginBottom: 16,
+  },
+  paymentHeaderTitle: {
+    fontSize: 17,
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  paymentHeaderSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  paymentContainer: {
+    gap: 12,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  paymentOptionSelected: {
+    borderColor: BRAND,
+    backgroundColor: '#fef7f0',
+    shadowColor: BRAND,
+    shadowOpacity: 0.15,
+  },
+  paymentOptionDisabled: {
+    backgroundColor: '#f9fafb',
+    borderColor: '#e5e7eb',
+    shadowOpacity: 0.02,
+  },
+  paymentContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  paymentIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  paymentIconDisabled: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  paymentTitle: {
+    fontSize: 16,
+    color: '#1f2937',
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  paymentTitleDisabled: {
+    color: '#9ca3af',
+  },
+  paymentSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    lineHeight: 18,
+  },
+  paymentSubtitleDisabled: {
+    color: '#9ca3af',
+  },
+  paymentRadio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  paymentRadioSelected: {
+    borderColor: BRAND,
+  },
+  paymentRadioDisabled: {
+    borderColor: '#e5e7eb',
+  },
+  paymentRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: BRAND,
+  },
+  recommendedBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  recommendedText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#166534',
+    letterSpacing: 0.5,
+  },
+  freeBadge: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  freeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#92400e',
+    letterSpacing: 0.5,
+  },
 })

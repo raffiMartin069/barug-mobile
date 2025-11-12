@@ -121,9 +121,6 @@ const HouseholdList = () => {
 
   // ---------- bottom sheet + member states ----------
   const [open, setOpen] = useState(false);
-  // const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(
-  //   null
-  // );
 
   const [removeOpen, setRemoveOpen] = useState(false)
 
@@ -170,8 +167,6 @@ const HouseholdList = () => {
     setMemberId(Number(mem.id.split("-")[0]));
     setFamilyId(Number(fam.familyNum.split("-")[1]));
     setHouseholdId(Number(fam.familyNum.split("-")[0]));
-    // refactored:
-    // navigation works with /memberprofile but it does not mount the component which causes console.logs or useEffect not to execute.
     router.push({
       pathname: "/(bhwmodals)/(family)/memberprofile",
     });
@@ -183,6 +178,17 @@ const HouseholdList = () => {
       pathname: "/(bhwmodals)/(family)/addmember",
     });
   }
+
+  // NEW: update family head handler (used by the new button)
+  const onPressUpdateFamilyHead = (fam: Family) => {
+    // keep your existing ID parsing convention
+    setFamilyId(Number(fam.familyNum.split('-')[1]));
+    setHouseholdId(Number(fam.familyNum.split('-')[0]));
+    router.push({
+      pathname: "/(bhwmodals)/(family)/updatehead",
+      params: { familyNum: fam.familyNum },
+    });
+  };
 
   const { removeMember, loading, error } = useMemberRemoval()
 
@@ -741,7 +747,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
-    zIndex: 1, // lower than dropdown's zIndex so menu can overlay if needed
+    zIndex: 1,
   },
   sectionTitle: { fontWeight: "700", flexShrink: 1 },
   filtersWrap: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
