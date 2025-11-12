@@ -8,10 +8,34 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { Colors } from '@/constants/Colors'
+import { PostpartumVisitException } from '@/exception/PostpartumVisitException'
 import type { PostpartumScheduleDisplay } from '@/repository/MaternalRepository'
 import { MaternalService } from '@/services/MaternalService'
+import { useAccountRole } from '@/store/useAccountRole'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Animated, Easing, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Alert, Animated, Easing, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native'
+
+// Default friendly messages for known RPC error codes returned by the postpartum RPC.
+// The repository currently throws PostpartumVisitException with the RPC message; we
+// try to extract a code from the error or the message and map it to a friendly text.
+const POSTPARTUM_ERROR_MESSAGES: Record<string, string> = {
+    P6060: 'Postpartum header is missing. Create a postpartum header for this patient before saving a check.',
+    P6256: 'No postpartum header found. Please create a postpartum record first.',
+    P6057: 'Invalid data provided. Please review the entries and try again.',
+    P6167: 'Required postpartum data is missing. Please complete all required fields.',
+    P6168: 'The postpartum record is in an invalid state for this action.',
+    P6124: 'Unable to save due to a data conflict. Try again.',
+    P6169: 'A postpartum visit for today already exists.',
+    P6171: 'A postpartum row for today already exists. You can open the existing record instead.',
+}
+
+function getFriendlyPostpartumMessage(err: any) {
+    if (!err) return 'An error occurred while saving the postpartum check.'
+    // prefer an explicit code property if present
+    const code = err?.code ?? (typeof err?.message === 'string' ? (err.message.match(/P\d{4}/)?.[0]) : null)
+    if (code && POSTPARTUM_ERROR_MESSAGES[code]) return POSTPARTUM_ERROR_MESSAGES[code]
+    return err?.message ?? 'An error occurred while saving the postpartum check.'
+}
 
 const PostpartumTab = () => {
     const [loading, setLoading] = useState<boolean>(true)
@@ -20,6 +44,8 @@ const PostpartumTab = () => {
     const [error, setError] = useState<string | null>(null)
 
     const service = useMemo(() => new MaternalService(), [])
+    const roleStore = useAccountRole()
+    const [saving, setSaving] = useState(false)
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [searchText, setSearchText] = useState<string>('')
     const [sortBy, setSortBy] = useState<'name' | 'earliest' | 'oldest'>('earliest')
@@ -89,18 +115,68 @@ const PostpartumTab = () => {
         setFeedingTypeId(null)
     }
 
-    const onSaveCheck = useCallback(() => {
-        // placeholder for persistence - currently just log and close
-        console.log('save check', { lochial, bpSys, bpDia, feedingTypeId, selected })
-        // reset and close
-        setModalVisible(false)
-        setSelected(null)
-        setShowCheckForm(false)
-        setLochial('')
-        setBpSys('')
-        setBpDia('')
-        setFeedingTypeId(null)
-    }, [lochial, bpSys, bpDia, feedingTypeId, selected])
+    const onSaveCheck = useCallback(async () => {
+        if (!selected) return
+        const maternalRecordId = Number(selected.maternal_record_id)
+        if (!Number.isFinite(maternalRecordId)) return
+
+    const staffId = roleStore.staffId ?? (roleStore.getProfile ? roleStore.getProfile('resident')?.staff_id ?? null : null)
+    // fallback for testing when session doesn't provide a staff id
+    const staffIdFinal = staffId ?? 15
+    if (staffId == null) console.warn('[Postpartum] using fallback staffId=15 for testing')
+
+        const bpSysN = bpSys && String(bpSys).trim() ? Number(bpSys) : null
+        const bpDiaN = bpDia && String(bpDia).trim() ? Number(bpDia) : null
+
+        try {
+            setSaving(true)
+            const res = await service.createOrGetTodayPostpartumVisit({
+                maternalRecordId,
+                staffId: staffIdFinal,
+                lochial: lochial ?? null,
+                bpSystolic: bpSysN,
+                bpDiastolic: bpDiaN,
+                feedingTypeId: feedingTypeId ?? null,
+            })
+            console.log('createOrGetTodayPostpartumVisit result', res)
+
+            await load()
+
+            setModalVisible(false)
+            setSelected(null)
+            setShowCheckForm(false)
+            setLochial('')
+            setBpSys('')
+            setBpDia('')
+            setFeedingTypeId(null)
+        } catch (err: any) {
+            console.error('save postpartum check', err)
+            if (err instanceof PostpartumVisitException) {
+                // show alert to user with the domain-friendly message and Retry/Close actions
+                const friendly = getFriendlyPostpartumMessage(err)
+
+                Alert.alert(
+                    'Unable to save postpartum check',
+                    friendly,
+                    [
+                        {
+                            text: 'Retry',
+                            onPress: () => onSaveCheck(),
+                        },
+                        {
+                            text: 'Close',
+                            style: 'cancel',
+                        },
+                    ],
+                    { cancelable: true }
+                )
+            } else {
+                setError(err?.message ?? String(err))
+            }
+        } finally {
+            setSaving(false)
+        }
+    }, [selected, lochial, bpSys, bpDia, feedingTypeId, roleStore, service, load])
 
     const renderItem = ({ item }: { item: PostpartumScheduleDisplay }) => {
         // prefer full patient name; repository provides `person_name` when available
@@ -243,8 +319,8 @@ const PostpartumTab = () => {
                     onClose={onClose}
                     footer={
                         showCheckForm ? (
-                            <Pressable onPress={onSaveCheck} style={styles.modalCheckBtn} accessibilityRole="button">
-                                <ThemedText style={styles.modalCheckText}>Save Check</ThemedText>
+                            <Pressable onPress={onSaveCheck} style={[styles.modalCheckBtn, saving ? { opacity: 0.6 } : null]} accessibilityRole="button" disabled={saving}>
+                                {saving ? (<ActivityIndicator color="#fff" />) : (<ThemedText style={styles.modalCheckText}>Save Check</ThemedText>)}
                             </Pressable>
                         ) : null
                     }

@@ -1,4 +1,5 @@
 import { supabase } from '@/constants/supabase'
+import { PostpartumVisitException } from '@/exception/PostpartumVisitException'
 import Normalizers from '@/lib/supabase-normalizers'
 import {
 	ChildHealthRecord,
@@ -138,8 +139,6 @@ export class MaternalRepository {
 			}
 		}
 
-		console.log('Person IDs to resolve for postpartum schedules:', Array.from(recordPersonMap.values()))
-
 		// collect person_ids to fetch names (resolve via maternal record mapping)
 		const personIds = Array.from(
 			new Set(
@@ -153,8 +152,6 @@ export class MaternalRepository {
 			)
 		)
 
-		console.log('Fetching person names for IDs:', personIds)
-
 		const personMap = new Map<number, any>()
 		if (personIds.length) {
 			const { data: persons, error: personErr } = await supabase
@@ -167,14 +164,11 @@ export class MaternalRepository {
 			}
 		}
 
-		console.log('Person details fetched for postpartum schedules:', personMap)
-
 		// map to compact display objects
 		// Resolve person_id using the earlier record -> person mapping (recordPersonMap).
 		// Avoid coercing `null` to 0 (Number(null) === 0) which previously caused an invalid
 		// person_id=0 to be emitted and prevented name lookups.
 		const results: PostpartumScheduleDisplay[] = pending.map((r: any) => {
-			console.log('Mapping postpartum schedule row:', r)
 			const recId = Number(r.maternal_record_id)
 			const rawPersonId = Number.isFinite(recId) ? (recordPersonMap.get(recId) ?? null) : null
 			const personId = rawPersonId == null ? null : Number(rawPersonId)
@@ -205,9 +199,46 @@ export class MaternalRepository {
 			}
 		})
 
-		console.log('Pending postpartum schedules found:', results)
-
 		return results
+	}
+
+	/**
+	 * Call RPC to get or create today's postpartum visit for a maternal record.
+	 * RPC: _get_or_create_today_postpartum_visit
+	 * params: p_maternal_record_id, p_staff_id, p_lochial_discharges,
+	 * p_bp_systolic, p_bp_diastolic, p_feeding_type_id
+	 */
+	async createOrGetTodayPostpartumVisit(params: {
+		p_maternal_record_id: number
+		p_staff_id: number | null
+		p_lochial_discharges?: string | null
+		p_bp_systolic?: number | null
+		p_bp_diastolic?: number | null
+		p_feeding_type_id?: number | null
+	}): Promise<any> {
+		const rpcParams = {
+			p_maternal_record_id: params.p_maternal_record_id,
+			p_staff_id: params.p_staff_id ?? null,
+			p_lochial_discharges: params.p_lochial_discharges ?? null,
+			p_bp_systolic: params.p_bp_systolic ?? null,
+			p_bp_diastolic: params.p_bp_diastolic ?? null,
+			p_feeding_type_id: params.p_feeding_type_id ?? null,
+		}
+
+		try {
+			const { data, error } = await supabase.rpc('_get_or_create_today_postpartum_visit', rpcParams)
+			if (error) {
+				// If the RPC returned a known domain error code, wrap it in our custom exception
+				if (error.code && PostpartumVisitException.getErrorCodes().has(error.code)) {
+					console.warn('Postpartum RPC error code detected:', error.code, error.message)
+					throw new PostpartumVisitException(error.message ?? 'Postpartum visit error')
+				}
+				throw error
+			}
+			return data
+		} catch (err) {
+			throw err
+		}
 	}
 	async getPostpartumScheduleByPersonId(personId: number): Promise<MaternalScheduleGroup<PostpartumSchedule>> {
 		const recordIds = await this.getMaternalRecordIds(personId)
