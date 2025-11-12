@@ -19,6 +19,8 @@ const PostpartumTab = () => {
     const [error, setError] = useState<string | null>(null)
 
     const service = useMemo(() => new MaternalService(), [])
+    const [searchQuery, setSearchQuery] = useState<string>('')
+    const [sortBy, setSortBy] = useState<'name' | 'earliest' | 'oldest'>('earliest')
     // form state for "Check" action
     const [showCheckForm, setShowCheckForm] = useState(false)
     const [lochial, setLochial] = useState<string>('')
@@ -118,10 +120,63 @@ const PostpartumTab = () => {
         )
     }
 
+    const displayedItems = useMemo(() => {
+        const q = (searchQuery ?? '').trim().toLowerCase()
+        let filtered = items.filter((it) => {
+            if (!q) return true
+            const name = (it.person_name ?? '').toLowerCase()
+            const id = String(it.maternal_record_id ?? '')
+            const purpose = (it.visit_purpose ?? it.notes ?? '').toLowerCase()
+            return name.includes(q) || id.includes(q) || purpose.includes(q)
+        })
+
+        const byDate = (a: PostpartumScheduleDisplay, b: PostpartumScheduleDisplay) => {
+            const da = a.scheduled_date ? Date.parse(a.scheduled_date) : 0
+            const db = b.scheduled_date ? Date.parse(b.scheduled_date) : 0
+            return da - db
+        }
+
+        if (sortBy === 'name') {
+            filtered = filtered.sort((a, b) => {
+                const an = (a.person_name ?? '').toLowerCase()
+                const bn = (b.person_name ?? '').toLowerCase()
+                return an.localeCompare(bn)
+            })
+        } else if (sortBy === 'earliest') {
+            filtered = filtered.sort(byDate)
+        } else if (sortBy === 'oldest') {
+            filtered = filtered.sort((a, b) => byDate(b, a))
+        }
+
+        return filtered
+    }, [items, searchQuery, sortBy])
+
     return (
         <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
             <ThemedAppBar title="Postpartum" />
             <ThemedView style={styles.container}>
+                {/* Search and sort controls */}
+                <View style={styles.controlsStack}>
+                    <ThemedTextInput
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        placeholder="Search name, record # or purpose"
+                    />
+
+                    <View style={{ height: 8 }} />
+
+                    <CustomDropdown
+                        items={[
+                            { label: 'Name (A–Z)', value: 'name' },
+                            { label: 'Earliest', value: 'earliest' },
+                            { label: 'Newest', value: 'oldest' },
+                        ]}
+                        value={sortBy}
+                        setValue={(v: any) => setSortBy(v)}
+                        placeholder="Sort"
+                    />
+                </View>
+
                 <View style={styles.content}>
                     {loading ? (
                         <View style={styles.loader}>
@@ -135,7 +190,7 @@ const PostpartumTab = () => {
                         </ThemedView>
                     ) : (
                         <FlatList
-                            data={items}
+                            data={displayedItems}
                             keyExtractor={(i) => String(i.schedule_id)}
                             renderItem={renderItem}
                             ListEmptyComponent={renderEmpty}
@@ -218,6 +273,17 @@ export default PostpartumTab
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    controlsStack: {
+        paddingHorizontal: 12,
+        paddingTop: 12,
+        paddingBottom: 6,
+    },
+    searchInput: {
+        marginBottom: 6,
+    },
+    sortRow: {
+        width: 200,
     },
     safeArea: {
         flex: 1,
