@@ -63,6 +63,17 @@ const BhwLayout = () => {
                 )}}
             />
 
+            <Tabs.Screen
+                name='(tabs)/postpartum'
+                options={{title: 'Postpartum', tabBarIcon: ({focused}) => (
+                    <Ionicons
+                    name={focused ? 'heart' : 'heart-outline'}
+                    size={20}
+                    color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+                    />
+                )}}
+            />
+
         </Tabs>
     </>
   )

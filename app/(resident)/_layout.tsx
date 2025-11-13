@@ -86,6 +86,17 @@ const ResidentLayout = () => {
           )}}
         />
 
+        <Tabs.Screen
+          name='(tabs)/maternal_tracker'
+          options={{title:'Maternal Tracker', tabBarIcon: ({focused}) => (
+            <Ionicons
+              name={focused ? 'medical' : 'medical-outline'}
+              size={20}
+              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+            />
+          )}}
+        />
+
         </Tabs>
     </>
   )
