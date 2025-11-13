@@ -1,98 +1,68 @@
 // app/(resident)/barangaycases.tsx
+import dayjs from 'dayjs';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
-import dayjs from 'dayjs';
-import { Link, useRouter } from 'expo-router';
-
-// If your ThemedIcon already wraps Ionicons, keep using it.
-// Otherwise you can import Ionicons directly like this:
-// import { Ionicons } from '@expo/vector-icons';
 
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedCard from '@/components/ThemedCard';
-import ThemedDivider from '@/components/ThemedDivider';
 import ThemedIcon from '@/components/ThemedIcon';
-import ThemedItemCard from '@/components/ThemedItemCard';
 import ThemedText from '@/components/ThemedText';
 import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
 
-import { useAccountRole } from '@/store/useAccountRole';
 import {
+  bucketCaseStatus,
   CaseHistoryUI,
   getPersonBarangayCaseHistoryUI,
-  bucketCaseStatus,
 } from '@/services/barangayCases';
+import { useAccountRole } from '@/store/useAccountRole';
 
-/* ================================
-   SYSTEM THEME (brand-locked)
-   ================================ */
-const BRAND = '#6d2932';       // maroon
-const BRAND_700 = '#5a222a';   // deep maroon
-const GOLD = '#D4AF37';        // gold accent
-const INK = '#0f172a';         // dark text
-const MUTED = '#64748b';       // muted text
-const CARD = '#ffffff';
-const WASH = '#faf9f8';
-const RING = 'rgba(109,41,50,.14)';
+const BRAND = '#6d2932';
+const BRAND_LIGHT = '#8b4a56';
+const NEUTRAL_50 = '#fafafa';
+const NEUTRAL_100 = '#f5f5f5';
+const NEUTRAL_200 = '#e5e5e5';
+const NEUTRAL_400 = '#a3a3a3';
+const NEUTRAL_600 = '#525252';
+const NEUTRAL_800 = '#262626';
+const NEUTRAL_900 = '#171717';
 
-/* ================================
-   Status Buckets
-   ================================ */
 type StatusBucket = ReturnType<typeof bucketCaseStatus>;
 
-const STATUS_UI: Record<StatusBucket, { label: string; bg: string; fg: string; icon: string }> = {
-  pending:      { label: 'Pending',      bg: '#fff7ed', fg: '#9a3412', icon: 'time-outline' },            // warm light
-  under_review: { label: 'Under Review', bg: '#eef2ff', fg: '#3730a3', icon: 'search-outline' },          // indigo
-  settled:      { label: 'Settled',      bg: '#ecfdf5', fg: '#065f46', icon: 'checkmark-circle-outline' },// green
-  arbitrated:   { label: 'Arbitrated',   bg: '#ecfeff', fg: '#155e75', icon: 'scale-outline' },           // cyan
-  dismissed:    { label: 'Dismissed',    bg: '#f3f4f6', fg: '#374151', icon: 'close-circle-outline' },    // gray
+const STATUS_CONFIG: Record<StatusBucket, { bg: string; fg: string; icon: string }> = {
+  pending: { bg: '#fef3c7', fg: '#92400e', icon: 'time-outline' },
+  under_review: { bg: '#e0e7ff', fg: '#3730a3', icon: 'eye-outline' },
+  settled: { bg: '#d1fae5', fg: '#065f46', icon: 'checkmark-circle-outline' },
+  arbitrated: { bg: '#dbeafe', fg: '#1e40af', icon: 'scale-outline' },
+  dismissed: { bg: '#f3f4f6', fg: '#374151', icon: 'close-circle-outline' },
 };
 
-const STATUS_FILTERS =
-  [{ key: 'all', label: 'All', icon: 'list-outline' } as const].concat(
-    (Object.keys(STATUS_UI) as StatusBucket[]).map((k) => ({
-      key: k,
-      label: STATUS_UI[k].label,
-      icon: STATUS_UI[k].icon,
-    }))
-  );
-type StatusFilterKey = 'all' | StatusBucket;
-
-/* ================================
-   Screen
-   ================================ */
 const BarangayCases = () => {
   const router = useRouter();
   const { currentRole, getProfile, ensureLoaded } = useAccountRole();
 
   const [personId, setPersonId] = useState<number | null>(null);
-
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilterKey>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | StatusBucket>('all');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'COMPLAINANT' | 'RESPONDENT'>('ALL');
-  const [sortLatestFirst, setSortLatestFirst] = useState(true);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState<CaseHistoryUI[]>([]);
 
-  /* person_id resolution (same pattern as your Blotter History) */
   useEffect(() => {
     let live = true;
     (async () => {
       const resident = getProfile?.('resident');
       const fromResident = resident?.person_id;
-
       const roleProfile = currentRole ? getProfile?.(currentRole) : null;
       const fromRole = roleProfile?.person_id;
 
@@ -102,35 +72,26 @@ const BarangayCases = () => {
           const fresh = await ensureLoaded?.('resident');
           fromEnsure = fresh?.person_id ?? null;
         } catch (e) {
-          console.warn('[BarangayCases] ensureLoaded(resident) failed:', e);
+          console.warn('[BarangayCases] ensureLoaded failed:', e);
         }
       }
 
       const resolved = fromResident ?? fromRole ?? fromEnsure ?? null;
-      console.log('[BarangayCases] Resolved person_id:', resolved, { currentRole, fromResident, fromRole, fromEnsure });
-
       if (live) setPersonId(resolved);
     })();
-    return () => {
-      live = false;
-    };
+    return () => { live = false; };
   }, [currentRole, getProfile, ensureLoaded]);
 
-  /* Fetch data via RPC service */
   const loadCases = useCallback(async () => {
     if (!personId) {
-      console.warn('[BarangayCases] No person_id. Skipping fetch.');
       setRows([]);
       setLoading(false);
       return;
     }
     setLoading(true);
-    console.log('[BarangayCases] Fetching case history for person_id =', personId, '…');
 
     try {
       const ui = await getPersonBarangayCaseHistoryUI(personId);
-      console.log('[BarangayCases] RPC returned rows:', ui?.length ?? 0);
-      if (ui?.length) console.log('[BarangayCases] Sample row:', ui[0]);
       setRows(ui || []);
     } catch (error) {
       console.error('[BarangayCases] Failed to load cases:', error);
@@ -150,321 +111,245 @@ const BarangayCases = () => {
     setRefreshing(false);
   }, [loadCases]);
 
-  /* Search + filters + sort */
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-
-    const passStatus = (b: StatusBucket) => statusFilter === 'all' || statusFilter === b;
-    const passRole = (role: string | undefined) => roleFilter === 'ALL' || role === roleFilter;
-
-    const items = rows.filter((r) => {
-      const matchesQ =
-        !q ||
+    return rows.filter((r) => {
+      const matchesSearch = !q || 
         r.case_no.toLowerCase().includes(q) ||
         r.title.toLowerCase().includes(q) ||
         (r.complainants || '').toLowerCase().includes(q) ||
-        (r.respondents || '').toLowerCase().includes(q) ||
-        (r.role || '').toLowerCase().includes(q) ||
-        (r.case_nature || '').toLowerCase().includes(q) ||
-        (r.complaint_title || '').toLowerCase().includes(q);
-
-      return matchesQ && passStatus(r.status_bucket) && passRole(r.role);
+        (r.respondents || '').toLowerCase().includes(q);
+      
+      const matchesStatus = statusFilter === 'all' || r.status_bucket === statusFilter;
+      const matchesRole = roleFilter === 'ALL' || r.role === roleFilter;
+      
+      return matchesSearch && matchesStatus && matchesRole;
     });
+  }, [rows, search, statusFilter, roleFilter]);
 
-    items.sort((a, b) => {
-      const aTs = dayjs(a.last_progress_date || a.filed_date).valueOf();
-      const bTs = dayjs(b.last_progress_date || b.filed_date).valueOf();
-      return sortLatestFirst ? bTs - aTs : aTs - bTs;
-    });
-
-    return items;
-  }, [rows, search, statusFilter, roleFilter, sortLatestFirst]);
-
-  /* Stats */
-  const total = rows.length;
-  const byBucketCount = useMemo(() => {
-    const out: Record<StatusBucket, number> = {
-      pending: 0,
-      under_review: 0,
-      settled: 0,
-      arbitrated: 0,
-      dismissed: 0,
-    };
+  const stats = useMemo(() => {
+    const statusCounts: Record<string, number> = {};
     rows.forEach((r) => {
-      out[r.status_bucket] = (out[r.status_bucket] ?? 0) + 1;
+      const status = r.settlement_status || 'PENDING';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
-    return out;
+    return statusCounts;
   }, [rows]);
 
-  /* Card Renderer */
   const renderCaseCard = (c: CaseHistoryUI) => {
-    const ui = STATUS_UI[c.status_bucket];
-    const parties = `${c.complainants || '(No complainant)'} vs. ${c.respondents || '(No respondent)'}`;
-    const filedAt = `${dayjs(c.filed_date).format('MMM DD, YYYY')} • ${c.filed_time}`;
-    const meta2 = c.last_progress
-      ? `${c.last_progress} • ${c.last_progress_date ? dayjs(c.last_progress_date).format('MMM DD, YYYY, h:mm A') : ''}`
-      : `Filed: ${filedAt}`;
+    const config = STATUS_CONFIG[c.status_bucket];
+    const parties = `${c.complainants || 'No complainant'} vs. ${c.respondents || 'No respondent'}`;
 
     return (
-      <View key={c.id} style={{ marginBottom: 14 }}>
-        <ThemedItemCard
-          title={c.title || '(No title)'}
-          subtitle={parties}
-          meta1={`Case #: ${c.case_no}`}
-          meta2={meta2}
-          meta3={c.role ? `Your Role: ${c.role}` : undefined}
-          showPill
-          pillLabel={ui.label}
-          pillBgColor={ui.bg}
-          pillTextColor={ui.fg}
-          pillSize="sm"
-          leftIcon={
-            <ThemedIcon
-              name="briefcase-outline"
-              size={18}
-              containerSize={28}
-              bgColor="rgba(109,41,50,.10)"
-            />
-          }
-          rightIcon={
-            <ThemedIcon
-              name={ui.icon}
-              size={16}
-              containerSize={24}
-              bgColor="transparent"
-            />
-          }
-          route={{ pathname: '/cases/details/[id]', params: { id: c.id } }} // adjust to your actual case route
-        />
-      </View>
+      <TouchableOpacity
+        key={c.id}
+        style={styles.caseCard}
+        onPress={() => router.push(`/(residentmodals)/(brgycases)/brgycasesdetails/${c.id}`)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.cardLeft}>
+            <View style={[styles.statusIndicator, { backgroundColor: config.fg }]} />
+            <View style={styles.cardContent}>
+              <ThemedText style={styles.caseTitle} numberOfLines={2}>{c.title}</ThemedText>
+              <ThemedText style={styles.caseNumber}>Case #{c.case_no}</ThemedText>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+            <ThemedText style={[styles.statusText, { color: config.fg }]}>
+              {c.settlement_status || 'PENDING'}
+            </ThemedText>
+          </View>
+        </View>
+
+        <ThemedText style={styles.parties} numberOfLines={2}>{parties}</ThemedText>
+
+        <View style={styles.cardFooter}>
+          <View style={styles.metaItem}>
+            <ThemedIcon name="calendar-outline" size={12} containerSize={16} bgColor="transparent" />
+            <ThemedText style={styles.metaText}>
+              Filed {dayjs(c.filed_date).format('MMM DD, YYYY')}
+            </ThemedText>
+          </View>
+          {c.role && (
+            <View style={[styles.roleTag, { backgroundColor: `${BRAND}15` }]}>
+              <ThemedText style={[styles.roleText, { color: BRAND }]}>{c.role}</ThemedText>
+            </View>
+          )}
+        </View>
+
+        {c.last_progress && (
+          <View style={styles.progressSection}>
+            <ThemedText style={styles.progressLabel}>Latest Progress:</ThemedText>
+            <ThemedText style={styles.progressText}>{c.last_progress}</ThemedText>
+          </View>
+        )}
+      </TouchableOpacity>
     );
   };
 
-  /* Header & Controls */
-  const ListHeader = () => (
-    <>
-      {/* HERO */}
-      <View style={styles.heroOuter}>
-        <View style={styles.hero}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <ThemedIcon
-              name="briefcase-outline"
-              size={22}
-              containerSize={36}
-              bgColor="rgba(0,0,0,.18)"
-            />
-            <ThemedText style={styles.heroTitle}>\d*s</ThemedText>
-          </View>
-          <ThemedText style={styles.heroSubtitle}>
-            A clean overview of your active and historical cases.
-          </ThemedText>
-
-          <Spacer height={12} />
-
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{total}</ThemedText>
-              <ThemedText style={styles.statLabel}>Total</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{byBucketCount.pending}</ThemedText>
-              <ThemedText style={styles.statLabel}>Pending</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{byBucketCount.under_review}</ThemedText>
-              <ThemedText style={styles.statLabel}>Under Review</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{byBucketCount.settled}</ThemedText>
-              <ThemedText style={styles.statLabel}>Settled</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{byBucketCount.arbitrated}</ThemedText>
-              <ThemedText style={styles.statLabel}>Arbitrated</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>{byBucketCount.dismissed}</ThemedText>
-              <ThemedText style={styles.statLabel}>Dismissed</ThemedText>
-            </View>
-          </View>
+  if (loading) {
+    return (
+      <ThemedView safe style={styles.container}>
+        <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={BRAND} />
+          <ThemedText style={styles.loadingText}>Loading cases...</ThemedText>
         </View>
-      </View>
-
-      {/* CONTROLS */}
-      <View style={styles.controlsWrap}>
-        <ThemedTextInput
-          placeholder="Search case no., parties, title, nature, or role…"
-          value={search}
-          onChangeText={setSearch}
-        />
-
-        <Spacer height={10} />
-
-        {/* Status + Role chips (sticky-look via card) */}
-        <ThemedCard style={styles.filterBar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipRow}>
-              {STATUS_FILTERS.map((f) => {
-                const selected = f.key === statusFilter;
-                return (
-                  <TouchableOpacity
-                    key={f.key}
-                    activeOpacity={0.88}
-                    onPress={() => setStatusFilter(f.key as StatusFilterKey)}
-                    style={[styles.chip, selected && styles.chipSelected]}
-                  >
-                    <ThemedIcon
-                      name={f.icon}
-                      size={14}
-                      containerSize={20}
-                      bgColor="transparent"
-                    />
-                    <ThemedText
-                      style={[styles.chipText, selected && styles.chipTextSelected]}
-                    >
-                      {f.label}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {(['ALL', 'COMPLAINANT', 'RESPONDENT'] as const).map((opt) => {
-                const selected = opt === roleFilter;
-                return (
-                  <TouchableOpacity
-                    key={opt}
-                    activeOpacity={0.88}
-                    onPress={() => setRoleFilter(opt)}
-                    style={[styles.chipAlt, selected && styles.chipAltSelected]}
-                  >
-                    <ThemedIcon
-                      name={
-                        opt === 'ALL'
-                          ? 'people-outline'
-                          : opt === 'COMPLAINANT'
-                          ? 'person-circle-outline'
-                          : 'shield-outline'
-                      }
-                      size={14}
-                      containerSize={20}
-                      bgColor="transparent"
-                    />
-                    <ThemedText
-                      style={[styles.chipAltText, selected && styles.chipAltTextSelected]}
-                    >
-                      {opt === 'ALL' ? 'All Roles' : opt}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <TouchableOpacity
-                onPress={() => setSortLatestFirst((s) => !s)}
-                activeOpacity={0.9}
-                style={styles.sortChip}
-              >
-                <ThemedIcon
-                  name={sortLatestFirst ? 'swap-vertical-outline' : 'swap-vertical'}
-                  size={14}
-                  containerSize={20}
-                  bgColor="transparent"
-                />
-                <ThemedText style={styles.sortChipText}>
-                  {sortLatestFirst ? 'Newest first' : 'Oldest first'}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </ThemedCard>
-      </View>
-
-      {/* SECTION HEADER */}
-      <View style={{ paddingHorizontal: 16, marginTop: 10 }}>
-        <ThemedCard style={styles.sectionCard}>
-          <View style={styles.row}>
-            <ThemedText style={styles.title}>Your Cases</ThemedText>
-            <ThemedText link>
-              <Link href={'/'}>Back</Link>
-            </ThemedText>
-          </View>
-          <Spacer height={8} />
-          <ThemedDivider />
-          <Spacer height={6} />
-        </ThemedCard>
-      </View>
-    </>
-  );
+      </ThemedView>
+    );
+  }
 
   return (
-    <ThemedView style={{ flex: 1, backgroundColor: WASH }} safe>
-      <ThemedAppBar title="\d*s" showNotif={false} showProfile={false} />
+    <ThemedView safe style={styles.container}>
+      <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
 
-      <KeyboardAvoidingView>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={BRAND} />
-            <ThemedText style={{ marginTop: 12, color: MUTED }}>
-              Loading cases…
-            </ThemedText>
-          </View>
-        ) : filtered.length === 0 ? (
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 70 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BRAND]} />
-            }
-            showsVerticalScrollIndicator={false}
-          >
-            <Spacer />
-            <ListHeader />
-            <View style={{ paddingHorizontal: 16 }}>
-              <ThemedCard style={styles.emptyCard}>
-                <ThemedIcon
-                  name="briefcase-outline"
-                  size={48}
-                  containerSize={64}
-                  bgColor="rgba(109,41,50,.10)"
-                />
-                <ThemedText style={styles.emptyTitle}>No cases found</ThemedText>
-                <ThemedText style={styles.emptyText}>
-                  {statusFilter === 'all'
-                    ? "You don't have any \d*s yet."
-                    : `No ${STATUS_UI[statusFilter as StatusBucket]?.label || 'matching'} cases found.`}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BRAND]} />}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <ThemedCard style={styles.headerCard}>
+            <View style={styles.headerTop}>
+              <View style={styles.headerLeft}>
+                <View style={styles.iconContainer}>
+                  <ThemedIcon name="briefcase-outline" size={20} containerSize={40} bgColor={BRAND} />
+                </View>
+                <View style={styles.headerTextContainer}>
+                  <ThemedText style={styles.headerTitle}>Barangay Cases</ThemedText>
+                  <ThemedText style={styles.headerSubtitle}>Track and manage your legal cases</ThemedText>
+                  <View style={styles.totalCasesContainer}>
+                    <ThemedIcon name="folder-outline" size={16} containerSize={20} bgColor="transparent" />
+                    <ThemedText style={styles.totalCasesText}>{rows.length} Total Cases</ThemedText>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <View style={styles.statsSection}>
+              <ThemedText style={styles.statsTitle}>Case Status Overview</ThemedText>
+              <View style={styles.statsGrid}>
+                {Object.entries(stats).map(([status, count]) => {
+                  const bucketStatus = bucketCaseStatus(status);
+                  const config = STATUS_CONFIG[bucketStatus];
+                  return (
+                    <View key={status} style={styles.statCard}>
+                      <View style={styles.statHeader}>
+                        <View style={[styles.statIconContainer, { backgroundColor: config.bg }]}>
+                          <ThemedIcon name={config.icon} size={12} containerSize={24} bgColor="transparent" />
+                        </View>
+                        <ThemedText style={styles.statCount}>{count}</ThemedText>
+                      </View>
+                      <ThemedText style={styles.statLabel} numberOfLines={2}>{status}</ThemedText>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </ThemedCard>
+        </View>
+
+        {/* Search & Filters */}
+        <View style={styles.filtersSection}>
+          <ThemedTextInput
+            placeholder="Search cases, parties, or case numbers..."
+            value={search}
+            onChangeText={setSearch}
+            style={styles.searchInput}
+          />
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
+            <View style={styles.filtersRow}>
+              <TouchableOpacity
+                style={[styles.filterChip, statusFilter === 'all' && styles.filterChipSelected]}
+                onPress={() => setStatusFilter('all')}
+              >
+                <ThemedIcon name="apps-outline" size={14} containerSize={18} bgColor="transparent" />
+                <ThemedText style={[styles.filterText, statusFilter === 'all' && styles.filterTextSelected]}>
+                  All
                 </ThemedText>
-                <TouchableOpacity
-                  style={styles.fileReportButton}
-                  onPress={() => router.push('/(residentmodals)/fileblotterreport')}
-                >
-                  <ThemedIcon name="add" size={16} containerSize={20} />
-                  <ThemedText style={styles.fileReportButtonText}>File New Report</ThemedText>
-                </TouchableOpacity>
-              </ThemedCard>
+              </TouchableOpacity>
+
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => {
+                const selected = statusFilter === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.filterChip, selected && styles.filterChipSelected]}
+                    onPress={() => setStatusFilter(key as StatusBucket)}
+                  >
+                    <ThemedIcon name={config.icon} size={14} containerSize={18} bgColor="transparent" />
+                    <ThemedText style={[styles.filterText, selected && styles.filterTextSelected]}>
+                      {key.replace('_', ' ')}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </ScrollView>
-        ) : (
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: 70 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[BRAND]} />
-            }
-            showsVerticalScrollIndicator={false}
-          >
-            <Spacer />
-            <ListHeader />
-            <View style={{ paddingHorizontal: 16 }}>
-              {filtered.map((c) => renderCaseCard(c))}
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleFiltersScroll}>
+            <View style={styles.filtersRow}>
+              {(['ALL', 'COMPLAINANT', 'RESPONDENT'] as const).map((role) => {
+                const selected = role === roleFilter;
+                return (
+                  <TouchableOpacity
+                    key={role}
+                    style={[styles.roleChip, selected && styles.roleChipSelected]}
+                    onPress={() => setRoleFilter(role)}
+                  >
+                    <ThemedIcon
+                      name={role === 'ALL' ? 'people-outline' : role === 'COMPLAINANT' ? 'person-outline' : 'shield-outline'}
+                      size={14}
+                      containerSize={18}
+                      bgColor="transparent"
+                    />
+                    <ThemedText style={[styles.roleFilterText, selected && styles.roleFilterTextSelected]}>
+                      {role === 'ALL' ? 'All Roles' : role}
+                    </ThemedText>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </ScrollView>
-        )}
-      </KeyboardAvoidingView>
+        </View>
+
+        {/* Cases List */}
+        <View style={styles.casesSection}>
+          {filtered.length === 0 ? (
+            <ThemedCard style={styles.emptyCard}>
+              <ThemedIcon name="folder-open-outline" size={48} containerSize={64} bgColor={NEUTRAL_100} />
+              <ThemedText style={styles.emptyTitle}>No cases found</ThemedText>
+              <ThemedText style={styles.emptyText}>
+                {statusFilter === 'all' ? "You don't have any cases yet." : `No cases found for the selected filter.`}
+              </ThemedText>
+              <TouchableOpacity
+                style={styles.newReportButton}
+                onPress={() => router.push('/(residentmodals)/fileblotterreport')}
+              >
+                <ThemedIcon name="add-outline" size={16} containerSize={20} bgColor="transparent" />
+                <ThemedText style={styles.newReportText}>File New Report</ThemedText>
+              </TouchableOpacity>
+            </ThemedCard>
+          ) : (
+            filtered.map(renderCaseCard)
+          )}
+        </View>
+
+        <Spacer height={100} />
+      </ScrollView>
 
       {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => router.push('/(residentmodals)/fileblotterreport')}
-        activeOpacity={0.92}
+        activeOpacity={0.8}
       >
-        <ThemedIcon name="add" size={22} containerSize={44} bgColor={GOLD} />
+        <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={BRAND} />
       </TouchableOpacity>
     </ThemedView>
   );
@@ -472,158 +357,122 @@ const BarangayCases = () => {
 
 export default BarangayCases;
 
-/* ================================
-   Styles
-   ================================ */
 const styles = StyleSheet.create({
-  heroOuter: { paddingHorizontal: 16 },
-  hero: {
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: RING,
-    backgroundColor: CARD,
-    overflow: 'hidden',
-  },
+  container: { flex: 1, backgroundColor: NEUTRAL_50 },
+  scrollView: { flex: 1 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { marginTop: 12, color: NEUTRAL_600, fontSize: 14 },
 
-  heroTitle: {
-    paddingLeft: 10,
-    fontSize: 20,
-    fontWeight: '900',
-    color: BRAND,
-    letterSpacing: 0.2,
-  },
-  heroSubtitle: { marginTop: 6, color: MUTED },
+  headerSection: { paddingHorizontal: 8, paddingVertical: 16 },
+  headerCard: { borderRadius: 12, padding: 16, borderWidth: 1, borderColor: NEUTRAL_200, backgroundColor: '#fff' },
+  headerTop: { marginBottom: 12 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center' },
+  iconContainer: { marginRight: 12 },
+  headerTextContainer: { flex: 1 },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: NEUTRAL_900, marginBottom: 2 },
+  headerSubtitle: { fontSize: 13, color: NEUTRAL_600, marginBottom: 8 },
+  totalCasesContainer: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  totalCasesText: { fontSize: 12, fontWeight: '600', color: BRAND },
+  divider: { height: 1, backgroundColor: NEUTRAL_200, marginBottom: 12 },
+  statsSection: {},
+  statsTitle: { fontSize: 14, fontWeight: '600', color: NEUTRAL_900, marginBottom: 8 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statCard: { flex: 1, minWidth: 120, backgroundColor: NEUTRAL_50, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: NEUTRAL_200 },
+  statHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  statIconContainer: { width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  statCount: { fontSize: 16, fontWeight: '700', color: NEUTRAL_900 },
+  statLabel: { fontSize: 10, color: NEUTRAL_600, fontWeight: '500', lineHeight: 12 },
 
-  statsRow: {
-    marginTop: 10,
+  filtersSection: { paddingHorizontal: 16, marginBottom: 16 },
+  searchInput: { marginBottom: 12 },
+  filtersScroll: { marginBottom: 8 },
+  roleFiltersScroll: {},
+  filtersRow: { flexDirection: 'row', gap: 8, paddingRight: 16 },
+  filterChip: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: NEUTRAL_100,
+    borderWidth: 1,
+    borderColor: NEUTRAL_200,
+  },
+  filterChipSelected: { backgroundColor: BRAND, borderColor: BRAND },
+  filterText: { fontSize: 12, fontWeight: '600', color: NEUTRAL_600, textTransform: 'capitalize' },
+  filterTextSelected: { color: '#fff' },
+  roleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: `${BRAND}10`,
+    borderWidth: 1,
+    borderColor: `${BRAND}30`,
+  },
+  roleChipSelected: { backgroundColor: BRAND_LIGHT, borderColor: BRAND_LIGHT },
+  roleFilterText: { fontSize: 12, fontWeight: '600', color: BRAND },
+  roleFilterTextSelected: { color: '#fff' },
+
+  casesSection: { paddingHorizontal: 16 },
+  caseCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  statItem: { alignItems: 'center', minWidth: 84 },
-  statNumber: { fontSize: 18, fontWeight: '900', color: BRAND },
-  statLabel: { fontSize: 11, marginTop: 2, color: MUTED },
-
-  controlsWrap: { paddingHorizontal: 16, marginTop: 12 },
-
-  filterBar: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: RING,
-    backgroundColor: CARD,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
-
-  chipRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    marginRight: 8,
-    backgroundColor: '#ffffff',
-  },
-  chipSelected: {
-    borderColor: GOLD,
-    shadowColor: GOLD,
+    borderColor: NEUTRAL_200,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  chipText: { fontSize: 12, color: '#374151', fontWeight: '700' },
-  chipTextSelected: { color: BRAND, fontWeight: '900' },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  cardLeft: { flexDirection: 'row', alignItems: 'flex-start', flex: 1 },
+  statusIndicator: { width: 4, height: 40, borderRadius: 2, marginRight: 12 },
+  cardContent: { flex: 1 },
+  caseTitle: { fontSize: 16, fontWeight: '600', color: NEUTRAL_900, marginBottom: 4 },
+  caseNumber: { fontSize: 12, color: NEUTRAL_600 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusText: { fontSize: 11, fontWeight: '600' },
+  parties: { fontSize: 14, color: NEUTRAL_600, lineHeight: 20, marginBottom: 12 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: 12, color: NEUTRAL_600 },
+  roleTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  roleText: { fontSize: 10, fontWeight: '600' },
+  progressSection: { paddingTop: 8, borderTopWidth: 1, borderTopColor: NEUTRAL_100 },
+  progressLabel: { fontSize: 11, color: NEUTRAL_600, marginBottom: 2 },
+  progressText: { fontSize: 12, color: NEUTRAL_800, fontWeight: '500' },
 
-  chipAlt: {
+  emptyCard: { alignItems: 'center', padding: 32, borderRadius: 12, borderWidth: 1, borderColor: NEUTRAL_200 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: NEUTRAL_900, marginTop: 12 },
+  emptyText: { fontSize: 14, color: NEUTRAL_600, textAlign: 'center', marginTop: 4, marginHorizontal: 16 },
+  newReportButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#dfe3f0',
-    marginRight: 8,
-    backgroundColor: '#eef2ff',
-  },
-  chipAltSelected: {
-    borderColor: '#3730a3',
-    backgroundColor: '#fff',
-    shadowColor: '#3730a3',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  chipAltText: { fontSize: 12, color: '#3730a3', fontWeight: '800' },
-  chipAltTextSelected: { color: INK },
-
-  sortChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
-  },
-  sortChipText: { fontSize: 12, fontWeight: '800', color: INK },
-
-  sectionCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: RING,
-    backgroundColor: CARD,
-  },
-
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 16, fontWeight: '900', color: INK },
-
-  // EMPTY / LOADING
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyCard: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: RING,
-    backgroundColor: CARD,
-  },
-  emptyTitle: { fontSize: 18, fontWeight: '900', marginTop: 12, color: INK },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 6,
-    marginHorizontal: 24,
-    color: MUTED,
-  },
-  fileReportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    gap: 8,
     backgroundColor: BRAND,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 8,
     marginTop: 16,
   },
-  fileReportButtonText: { color: '#fff', fontWeight: '900', marginLeft: 6 },
+  newReportText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 
-  // FAB
-  fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 999 },
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
 });

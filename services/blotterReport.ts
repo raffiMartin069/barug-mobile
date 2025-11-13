@@ -216,6 +216,76 @@ export type PersonBlotterHistoryRow = {
   linked_case_num: string | null;
 };
 
+export type BlotterReportDetail = {
+  blotter_report_id: number;
+  incident_subject: string | null;
+  incident_desc: string | null;
+  incident_date: string;
+  incident_time: string;
+  date_time_reported: string;
+  incident_address_id: number | null;
+  reported_by_id: number | null;
+  reported_by_name: string | null;
+  complainant_names: string | null;
+  respondent_names: string | null;
+  status_name: string | null;
+  status_date: string | null;
+  status_remarks: string | null;
+  evidence_count: number;
+};
+
+/**
+ * Get detailed information for a single blotter report
+ */
+export async function getBlotterReportDetail(reportId: number): Promise<BlotterReportDetail | null> {
+  console.log('[BlotterDetail] → fetching via RPC fn_blotter_report_detail', { p_blotter_report_id: reportId });
+
+  const { data, error } = await supabase.rpc('fn_blotter_report_detail', {
+    p_blotter_report_id: reportId,
+  });
+
+  if (error) {
+    console.error('[BlotterDetail] RPC error:', error);
+    throw new Error(error.message);
+  }
+
+  const result = Array.isArray(data) ? data[0] : data;
+  console.log('[BlotterDetail] ✓ fetched detail:', result);
+  return result || null;
+}
+
+export type CaseTimelineEvent = {
+  blotter_case_id: number;
+  event_at: string;
+  event_at_pretty: string;
+  event_kind: 'REPORT' | 'CASE' | 'FORM' | 'HEARING' | 'CONCILIATION' | 'PROGRESS' | 'PAYMENT' | 'STATUS' | 'MEDIA';
+  event_title: string;
+  event_subtitle: string;
+  source_table: string;
+  source_id: number;
+  form_code: string | null;
+  form_name: string | null;
+};
+
+/**
+ * Get case timeline events
+ */
+export async function getCaseTimeline(caseId: number): Promise<CaseTimelineEvent[]> {
+  console.log('[CaseTimeline] → fetching via RPC fn_blotter_case_timeline', { p_blotter_case_id: caseId });
+
+  const { data, error } = await supabase.rpc('fn_blotter_case_timeline', {
+    p_blotter_case_id: caseId,
+  });
+
+  if (error) {
+    console.error('[CaseTimeline] RPC error:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('[CaseTimeline] ✓ fetched', data?.length || 0, 'events');
+  return data || [];
+}
+
 /**
  * Read a person's blotter report history using your RPC:
  *   select * from fn_person_blotter_report_history(p_person_id)

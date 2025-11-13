@@ -33,7 +33,7 @@ type BlotterReportUI = {
   incident_date: string;  // 'YYYY-MM-DD'
   incident_time: string;  // 'HH:mm'
   created_at: string;     // ISO
-  status: UiStatus;
+  status: string;         // Raw status_name from DB
   respondents?: string[];
   location?: string;
   role?: 'COMPLAINANT' | 'RESPONDENT';
@@ -61,6 +61,7 @@ function mapDbStatusToUi(statusName: string | null): UiStatus {
   if (s.includes('SETTLED') || s.includes('RESOLVED')) return 'resolved';
   if (s.includes('DISMISS')) return 'dismissed';
   if (s.includes('FOR CASE FILING') || s.includes('PENDING')) return 'pending';
+  if (s.includes('ESCALATED TO CASE') || s.includes('UNDER INVESTIGATION') || s.includes('INVESTIGATING')) return 'under_investigation';
   return 'under_investigation';
 }
 
@@ -193,7 +194,7 @@ export default function BlotterReportHistory() {
       incident_date: r.incident_date,
       incident_time: (r.incident_time || '').slice(0, 5), // 'HH:mm'
       created_at: r.date_time_reported,
-      status: mapDbStatusToUi(r.status_name),
+      status: r.status_name || 'PENDING',
       role: r.role_in_report,
       linked_case_num: r.linked_case_num,
     }));
@@ -201,8 +202,8 @@ export default function BlotterReportHistory() {
 
   const filteredReports = reports.filter((report) => {
     if (filter === 'all') return true;
-    if (filter === 'pending') return report.status === 'pending';
-    if (filter === 'resolved') return report.status === 'resolved';
+    if (filter === 'pending') return mapDbStatusToUi(report.status) === 'pending';
+    if (filter === 'resolved') return mapDbStatusToUi(report.status) === 'resolved';
     return true;
   });
 
@@ -238,10 +239,10 @@ export default function BlotterReportHistory() {
             )}
           </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors[item.status] }]}>
-          <ThemedIcon name={getStatusIcon(item.status)} size={12} containerSize={16} bgColor="transparent" />
+        <View style={[styles.statusBadge, { backgroundColor: statusColors[mapDbStatusToUi(item.status)] }]}>
+          <ThemedIcon name={getStatusIcon(mapDbStatusToUi(item.status))} size={12} containerSize={16} bgColor="transparent" />
           <ThemedText style={styles.statusText}>
-            {statusLabels[item.status]}
+            {item.status}
           </ThemedText>
         </View>
       </View>
@@ -259,9 +260,8 @@ export default function BlotterReportHistory() {
         <TouchableOpacity
           style={styles.viewButton}
           onPress={() => {
-            // Update to your actual details screen route
             console.log('[BlotterHistory] Navigate to details for report_id:', item.id);
-            router.push(`/(residentmodals)/blotter-report/${item.id}`);
+            router.push(`/(residentmodals)/blotter-report-detail?reportId=${item.id}`);
           }}
         >
           <ThemedText style={styles.viewButtonText}>View Details</ThemedText>
@@ -294,13 +294,13 @@ export default function BlotterReportHistory() {
             </View>
             <View style={styles.statItem}>
               <ThemedText style={styles.statNumber}>
-                {reports.filter((r) => r.status === 'pending').length}
+                {reports.filter((r) => mapDbStatusToUi(r.status) === 'pending').length}
               </ThemedText>
               <ThemedText muted style={styles.statLabel}>Pending</ThemedText>
             </View>
             <View style={styles.statItem}>
               <ThemedText style={styles.statNumber}>
-                {reports.filter((r) => r.status === 'resolved').length}
+                {reports.filter((r) => mapDbStatusToUi(r.status) === 'resolved').length}
               </ThemedText>
               <ThemedText muted style={styles.statLabel}>Resolved</ThemedText>
             </View>

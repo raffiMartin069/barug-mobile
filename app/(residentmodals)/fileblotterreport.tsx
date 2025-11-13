@@ -244,51 +244,68 @@ export default function FileBlotterReport() {
       return;
     }
 
-    // 🔑 complainant/reporting person = current resident
-    const complainantId = Number(me?.person_id) || null;
+    // Show confirmation dialog first
+    Alert.alert(
+      'Confirm Submission',
+      'Do you really want to submit this blotter report?\n\nBy proceeding, you confirm that all information provided is factual, accurate, and complete. False reporting may result in legal consequences.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Submit Report',
+          style: 'default',
+          onPress: async () => {
+            // 🔑 complainant/reporting person = current resident
+            const complainantId = Number(me?.person_id) || null;
 
-    const payload = {
-      incidentSubject: subject.trim(),
-      incidentDesc: desc.trim(),
-      incidentDate: date,
-      incidentTime: time,
+            const payload = {
+              incidentSubject: subject.trim(),
+              incidentDesc: desc.trim(),
+              incidentDate: date,
+              incidentTime: time,
 
-      // If you ever have a chosen address_id from the map picker, pass it here; else keep null:
-      incidentAddressId: null,
+              // If you ever have a chosen address_id from the map picker, pass it here; else keep null:
+              incidentAddressId: null,
 
-      // Send raw map fields + coords so the service can create addresss
-      mapStreet: streetParam || null,
-      mapPurok: purokParam || null,
-      mapBarangay: brgyParam || null,
-      mapCity: cityParam || null,
-      incidentLat: lat ? parseFloat(lat) : null,
-      incidentLng: lng ? parseFloat(lng) : null,
+              // Send raw map fields + coords so the service can create addresss
+              mapStreet: streetParam || null,
+              mapPurok: purokParam || null,
+              mapBarangay: brgyParam || null,
+              mapCity: cityParam || null,
+              incidentLat: lat ? parseFloat(lat) : null,
+              incidentLng: lng ? parseFloat(lng) : null,
 
-      // Set complainant to the logged-in resident
-      complainantId,
-      // Use the same ID for "reported_by" (service forwards this to RPC)
-      reportedByPersonId: complainantId,
+              // Set complainant to the logged-in resident
+              complainantId,
+              // Use the same ID for "reported_by" (service forwards this to RPC)
+              reportedByPersonId: complainantId,
 
-      respondentIds: respondents.map((r) => Number(r.person_id)),
-      evidenceUris: [], // attachments disabled by design
-    } as const;
+              respondentIds: respondents.map((r) => Number(r.person_id)),
+              evidenceUris: [], // attachments disabled by design
+            } as const;
 
-    setBusy(true);
-    try {
-      await createBlotterReport(payload as any);
-      Alert.alert('Submitted', 'Your blotter report was sent successfully.', [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
-    } catch (e: any) {
-      const msg =
-        e?.data?.detail ||
-        e?.data?.error ||
-        e?.message ||
-        'Please try again.';
-      Alert.alert('Submit failed', msg);
-    } finally {
-      setBusy(false);
-    }
+            setBusy(true);
+            try {
+              await createBlotterReport(payload as any);
+              Alert.alert('Submitted', 'Your blotter report was sent successfully.', [
+                { text: 'OK', onPress: () => router.back() },
+              ]);
+            } catch (e: any) {
+              const msg =
+                e?.data?.detail ||
+                e?.data?.error ||
+                e?.message ||
+                'Please try again.';
+              Alert.alert('Submit failed', msg);
+            } finally {
+              setBusy(false);
+            }
+          }
+        }
+      ]
+    );
   }
 
   const goPickIncidentAddress = () => {
