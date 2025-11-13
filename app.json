@@ -8,39 +8,37 @@
     "scheme": "barug",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "extra": {
-      "API_BASE_URL": "https://ca09c6d501c9.ngrok-free.app"
+      "API_BASE_URL": "https://ca09c6d501c9.ngrok-free.app",
+      "router": {},
+      "eas": {
+        "projectId": "ea2ce743-fd38-441e-953d-d0e64e8e4356"
+      }
     },
-
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "package": "com.myorg.barugapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,  
-      "useNextNotificationsApi": true,  
-      "googleServicesFile": null      
+      "edgeToEdgeEnabled": true,
+      "useNextNotificationsApi": true,
+      "googleServicesFile": null
     },
-
     "notification": {
-      "icon": "./assets/images/icon.png", 
+      "icon": "./assets/images/icon.png",
       "color": "#310101",
       "androidMode": "default",
       "androidCollapsedTitle": "New notifications"
     },
-
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -55,11 +53,9 @@
       "expo-web-browser",
       "expo-notifications"
     ],
-
     "experiments": {
       "typedRoutes": true
     },
-
     "sdkVersion": "53.0.0"
   }
 }
