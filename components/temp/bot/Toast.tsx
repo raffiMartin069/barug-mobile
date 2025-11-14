@@ -1,6 +1,6 @@
-import { Colors } from '@/constants/Colors'
 import React, { useEffect, useRef, useState } from 'react'
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native'
+import { Animated, StyleSheet, Text, View, Platform } from 'react-native'
+import { Colors } from '@/constants/Colors'
 
 type ToastListener = (msg: string) => void
 
