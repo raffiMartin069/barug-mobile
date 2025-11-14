@@ -71,22 +71,28 @@ export const chatStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     bubble: {
-        maxWidth: '80%',
+        flex: 1,
+        maxWidth: '100%',
+        minWidth: 120,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 14,
+        flexShrink: 1,
+        flexWrap: 'wrap',
+        overflow: 'hidden',
     },
     userBubble: {
         backgroundColor: CHATBOT_COLORS.userBubble,
-        alignSelf: 'flex-end',
     },
     botBubble: {
         backgroundColor: CHATBOT_COLORS.botBubble,
-        alignSelf: 'flex-start',
     },
     bubbleText: {
         fontSize: 15,
         lineHeight: 20,
+        flexShrink: 1,
+        flexWrap: 'wrap',
+        maxWidth: '100%',
     },
     timeText: {
         marginTop: 4,
