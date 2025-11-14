@@ -8,11 +8,30 @@ import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useRouter } from 'expo-router'
-import React from 'react'
-import { KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import React, { useEffect } from 'react'
+import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const BusinessHome = () => {
   const router = useRouter()
+
+  // Handle hardware back button
+  useEffect(() => {
+    const backAction = () => {
+      if (router.canGoBack()) {
+        router.back()
+        return true
+      }
+      
+      Alert.alert('Exit App', 'Do you want to exit the app?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() }
+      ])
+      return true
+    }
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction)
+    return () => backHandler.remove()
+  }, [router])
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe>

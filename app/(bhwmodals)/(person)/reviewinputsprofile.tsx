@@ -20,7 +20,7 @@ import { profileResident, type ProfileResidentArgs } from '@/services/profiling'
 import { useResidentFormStore } from '@/store/forms'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Alert, StyleSheet, View } from 'react-native'
 
 function toYYYYMMDD(input?: unknown) {
   if (input === null || input === undefined) return ''
@@ -112,98 +112,115 @@ const ReviewInputsProfile = () => {
   }
 
   const handleSubmit = async () => {
-    try {
-      setSubmitting(true)
+    const first = data.fname?.trim()
+    const last = data.lname?.trim()
+    const birthdate = toYYYYMMDD(data.dob)
+    const mobile = data.mobnum?.trim()
+    const email = data.email?.trim() || null
 
-      const first = data.fname?.trim()
-      const last = data.lname?.trim()
-      const birthdate = toYYYYMMDD(data.dob)
-      const mobile = data.mobnum?.trim()
-      const email = data.email?.trim() || null
-
-      if (!first || !last || !birthdate || !mobile) {
-        openModal({
-          title: 'Missing required info',
-          message: 'First, Last, Date of Birth, and Mobile are required.',
-          variant: 'warn',
-        })
-        return
-      }
-
-      // TODO: replace with actual logged-in staff/BHW person_id
-      const performerId = 5
-      const residencyPeriod = 0
-
-      const payload: ProfileResidentArgs = {
-        p_performer_id: performerId,
-
-        p_last_name: last,
-        p_first_name: first,
-        p_middle_name: data.mname?.trim() || null,
-        p_suffix: data.suffix?.trim() || null,
-
-        p_birthdate: birthdate,
-        p_email: email,
-        p_mobile_num: mobile,
-        p_residency_period: residencyPeriod,
-        p_occupation: data.occupation?.trim() || '',
-
-        p_sex_id: toIntOrNull(data.gender) ?? 0,
-        p_civil_status_id: toIntOrNull(data.civilStatus) ?? 0,
-        p_nationality_id: toIntOrNull(data.nationality) ?? 0,
-        p_religion_id: toIntOrNull(data.religion) ?? 0,
-        p_education_id: toIntOrNull(data.educattainment) ?? 0,
-        p_employment_status_id: toIntOrNull(data.employmentstat) ?? 0,
-
-        // NEW: send array (RPC expects integer[])
-        p_gov_mem_prog_ids: govIds,
-        // Optional legacy single-value (service will convert if only this is present)
-        // p_gov_mem_prog_id: govIds[0],
-
-        p_mnthly_personal_income_id: toIntOrNull(data.mnthlypersonalincome) ?? 0,
-
-        // address
-        // p_street: data.street?.trim() || '',
-        // p_barangay: data.brgy?.trim() || '',
-        // p_city: data.city?.trim() || '',
-        // p_purok_sitio_name: data.purokSitio?.trim() || '',
-
-        // // coords
-        // p_latitude: toNumberOrNull(data.latitude),
-        // p_longitude: toNumberOrNull(data.longitude),
-
-        // relationships
-        p_mother_person_id: toIntOrNull(data.motherId),
-        p_father_person_id: toIntOrNull(data.fatherId),
-        p_guardian_person_ids: toIntArray(data.guardianId ? [data.guardianId] : []),
-        p_child_person_ids: toIntArray(data.childIds),
-
-        // flags
-        p_is_business_owner: false,
-        p_is_email_verified: false,
-        p_is_id_valid: false,
-        // NEW: student flag now part of RPC
-        p_is_student: !!isStudent,
-      }
-
-      await profileResident(payload)
-
-      resetForm()
+    if (!first || !last || !birthdate || !mobile) {
       openModal({
-        title: 'Success',
-        message: 'Resident profile submitted successfully.',
-        variant: 'success',
-        onOk: handleSuccessOk,
+        title: 'Missing required info',
+        message: 'First, Last, Date of Birth, and Mobile are required.',
+        variant: 'warn',
       })
-    } catch (err: any) {
-      openModal({
-        title: 'Submission failed',
-        message: err?.message ?? 'Unexpected error',
-        variant: 'error',
-      })
-    } finally {
-      setSubmitting(false)
+      return
     }
+
+    // Show confirmation dialog first
+    Alert.alert(
+      'Confirm Submission',
+      'Do you really want to add this resident profile?\n\nBy proceeding, you confirm that all information provided is factual, accurate, and complete. Incorrect data may affect service delivery and legal processes.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Submit Profile',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setSubmitting(true)
+
+              // TODO: replace with actual logged-in staff/BHW person_id
+              const performerId = 5
+              const residencyPeriod = 0
+
+              const payload: ProfileResidentArgs = {
+                p_performer_id: performerId,
+
+                p_last_name: last,
+                p_first_name: first,
+                p_middle_name: data.mname?.trim() || null,
+                p_suffix: data.suffix?.trim() || null,
+
+                p_birthdate: birthdate,
+                p_email: email,
+                p_mobile_num: mobile,
+                p_residency_period: residencyPeriod,
+                p_occupation: data.occupation?.trim() || '',
+
+                p_sex_id: toIntOrNull(data.gender) ?? 0,
+                p_civil_status_id: toIntOrNull(data.civilStatus) ?? 0,
+                p_nationality_id: toIntOrNull(data.nationality) ?? 0,
+                p_religion_id: toIntOrNull(data.religion) ?? 0,
+                p_education_id: toIntOrNull(data.educattainment) ?? 0,
+                p_employment_status_id: toIntOrNull(data.employmentstat) ?? 0,
+
+                // NEW: send array (RPC expects integer[])
+                p_gov_mem_prog_ids: govIds,
+                // Optional legacy single-value (service will convert if only this is present)
+                // p_gov_mem_prog_id: govIds[0],
+
+                p_mnthly_personal_income_id: toIntOrNull(data.mnthlypersonalincome) ?? 0,
+
+                // address
+                // p_street: data.street?.trim() || '',
+                // p_barangay: data.brgy?.trim() || '',
+                // p_city: data.city?.trim() || '',
+                // p_purok_sitio_name: data.purokSitio?.trim() || '',
+
+                // // coords
+                // p_latitude: toNumberOrNull(data.latitude),
+                // p_longitude: toNumberOrNull(data.longitude),
+
+                // relationships
+                p_mother_person_id: toIntOrNull(data.motherId),
+                p_father_person_id: toIntOrNull(data.fatherId),
+                p_guardian_person_ids: toIntArray(data.guardianId ? [data.guardianId] : []),
+                p_child_person_ids: toIntArray(data.childIds),
+
+                // flags
+                p_is_business_owner: false,
+                p_is_email_verified: false,
+                p_is_id_valid: false,
+                // NEW: student flag now part of RPC
+                p_is_student: !!isStudent,
+              }
+
+              await profileResident(payload)
+
+              resetForm()
+              openModal({
+                title: 'Success',
+                message: 'Resident profile submitted successfully.',
+                variant: 'success',
+                onOk: handleSuccessOk,
+              })
+            } catch (err: any) {
+              openModal({
+                title: 'Submission failed',
+                message: err?.message ?? 'Unexpected error',
+                variant: 'error',
+              })
+            } finally {
+              setSubmitting(false)
+            }
+          }
+        }
+      ]
+    )
   }
 
   return (

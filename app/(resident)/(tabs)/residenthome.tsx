@@ -10,8 +10,11 @@
   import { useAccountRole } from '@/store/useAccountRole'
   import AsyncStorage from '@react-native-async-storage/async-storage'
   import { useRouter } from 'expo-router'
-  import React, { useEffect, useMemo, useState } from 'react'
-  import { ActivityIndicator, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+  import React, { useEffect, useMemo, useState, useCallback } from 'react'
+  import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+  import { fetchMyDocRequests, type DocRequestListItem } from '@/services/documentRequest'
+  import { getPersonBlotterReportHistory } from '@/services/blotterReport'
+  import dayjs from 'dayjs'
 
   const ResidentHome = () => {
     const router = useRouter()
@@ -25,6 +28,84 @@
 
     const [loading, setLoading] = useState(!cached)
     const [details, setDetails] = useState<any | null>(cached ?? null)
+    const [recentActivities, setRecentActivities] = useState<any[]>([])
+    const [activitiesLoading, setActivitiesLoading] = useState(true)
+
+    // Handle hardware back button
+    useEffect(() => {
+      const backAction = () => {
+        if (router.canGoBack()) {
+          router.back()
+          return true
+        }
+        
+        Alert.alert('Exit App', 'Do you want to exit the app?', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() }
+        ])
+        return true
+      }
+
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction)
+      return () => backHandler.remove()
+    }, [router])
+
+    // Load recent activities (both document requests and blotter reports)
+    const loadRecentActivities = useCallback(async (personId: number) => {
+      try {
+        setActivitiesLoading(true)
+        const [docRequests, blotterReports] = await Promise.all([
+          fetchMyDocRequests(personId, { limit: 3 }).catch(() => []),
+          getPersonBlotterReportHistory(personId).catch(() => [])
+        ])
+
+        const activities = []
+
+        // Add document requests
+        docRequests.forEach(req => {
+          activities.push({
+            type: 'document',
+            title: 'Document Request',
+            subtitle: req.doc_types?.join(', ') || 'Document Request',
+            date: req.created_at,
+            dateOnly: dayjs(req.created_at).format('MMMM DD, YYYY'),
+            timeOnly: dayjs(req.created_at).format('h:mm A'),
+            reference: `#${req.request_code}`,
+            status: req.status || 'PENDING',
+            icon: 'newspaper',
+            iconColor: '#6b4c3b',
+            iconBg: '#f2e5d7',
+            amount: req.amount_due
+          })
+        })
+
+        // Add blotter reports (last 3)
+        blotterReports.slice(0, 3).forEach(report => {
+          activities.push({
+            type: 'blotter',
+            title: 'Blotter Report',
+            subtitle: report.incident_subject || 'Report Filed',
+            date: report.date_time_reported,
+            dateOnly: dayjs(report.date_time_reported).format('MMMM DD, YYYY'),
+            timeOnly: dayjs(report.date_time_reported).format('h:mm A'),
+            reference: `Report #${report.blotter_report_id}`,
+            status: report.status_name || 'PENDING',
+            icon: 'receipt',
+            iconColor: '#4a5c6a',
+            iconBg: '#dfe3e6'
+          })
+        })
+
+        // Sort by date (most recent first) and take top 3
+        activities.sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf())
+        setRecentActivities(activities.slice(0, 3))
+      } catch (error) {
+        console.error('[ResidentHome] Failed to load activities:', error)
+        setRecentActivities([])
+      } finally {
+        setActivitiesLoading(false)
+      }
+    }, [])
 
     // 🔄 Ensure data is loaded (fetches only if missing/stale; TTL handled in store)
     useEffect(() => {
@@ -32,25 +113,16 @@
       ;(async () => {
         const fresh = await roleStore.ensureLoaded('resident')
         if (!live) return
-        if (fresh) setDetails(fresh)
-        setLoading(false)
-
-        // 🧪 debug: inspect persisted store once you land here
-        try {
-          const raw = await AsyncStorage.getItem('role-store-v1')
-          if (raw) {
-            const parsed = JSON.parse(raw)
-            console.log('[ResidentHome] role-store-v1:', parsed)
-          } else {
-            console.log('[ResidentHome] role-store-v1: <empty>')
+        if (fresh) {
+          setDetails(fresh)
+          if (fresh.person_id) {
+            loadRecentActivities(fresh.person_id)
           }
-        } catch (e) {
-          console.log('[ResidentHome] failed to read role-store-v1:', e)
         }
+        setLoading(false)
       })()
       return () => { live = false }
-      // it's fine to depend on the stable store functions/role
-    }, [role, roleStore.ensureLoaded])
+    }, [role, roleStore.ensureLoaded, loadRecentActivities])
 
     const fullName = useMemo(() => {
       const fn = [details?.first_name, details?.middle_name, details?.last_name, details?.suffix]
@@ -92,8 +164,7 @@
                 Welcome, {details?.first_name ?? fullName}!
               </ThemedText>
               <ThemedImage
-                // if you store a URL in profile_picture, you can switch to { uri: details?.profile_picture }
-                src={details?.profile_picture ? { uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png' } : require('@/assets/images/default-image.jpg')}
+                src={details?.profile_picture ? { uri: details.profile_picture } : require('@/assets/images/default-image.jpg')}
                 size={50}
               />
             </View>
@@ -133,72 +204,71 @@
             )}
 
             <ThemedCard>
-              <ThemedText style={styles.text} subtitle={true}>Activities</ThemedText>
-
-              <View style={styles.activityItem}>
-                <ThemedIcon
-                  name={'newspaper'}
-                  iconColor={'#6b4c3b'}
-                  bgColor={'#f2e5d7'}
-                  shape='square'
-                  containerSize={50}
-                  size={20}
-                />
-                <View style={styles.activityDetails}>
-                  <ThemedText style={styles.activityTitle}>Document Request</ThemedText>
-                  <ThemedText style={styles.activitySubtext}>Requested on: June 10, 2023</ThemedText>
-                  <ThemedText style={styles.activitySubtext}>Reference #: BRG-2023-0042</ThemedText>
-                </View>
-                <View style={[styles.badge, { backgroundColor: '#c8e6c9' }]}>
-                  <ThemedText style={styles.badgeText}>Approved</ThemedText>
-                </View>
-              </View>
+              <ThemedText style={styles.text} subtitle={true}>Recent Activities</ThemedText>
               
-              <Spacer height={15} />
-              <ThemedDivider />
-              <Spacer height={15} />
+              {activitiesLoading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                  <ActivityIndicator size="small" color="#6d2932" />
+                  <ThemedText style={{ marginTop: 8, fontSize: 12, color: '#666' }}>Loading activities...</ThemedText>
+                </View>
+              ) : recentActivities.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                  <ThemedIcon name="time-outline" size={24} containerSize={40} bgColor="#f3f4f6" />
+                  <ThemedText style={{ marginTop: 8, fontSize: 14, color: '#666' }}>No recent activities</ThemedText>
+                  <ThemedText style={{ fontSize: 12, color: '#999', textAlign: 'center', marginTop: 4 }}>Your recent reports and cases will appear here</ThemedText>
+                </View>
+              ) : (
+                recentActivities.map((activity, index) => {
+                  const getStatusColor = (status: string, type: string) => {
+                    const s = status.toUpperCase()
+                    if (type === 'document') {
+                      if (s.includes('FOR_TREASURER_REVIEW')) return '#fde68a'
+                      if (s.includes('PAID')) return '#dbeafe'
+                      if (s.includes('FOR_PRINTING')) return '#e0e7ff'
+                      if (s.includes('RELEASED')) return '#d1fae5'
+                      if (s.includes('DECLINED')) return '#fecaca'
+                    } else {
+                      if (s.includes('PENDING')) return '#ffe082'
+                      if (s.includes('SETTLED') || s.includes('RESOLVED')) return '#c8e6c9'
+                      if (s.includes('ESCALATED')) return '#b3e5fc'
+                      if (s.includes('DISMISSED')) return '#ffcdd2'
+                    }
+                    return '#e0e0e0'
+                  }
 
-              <View style={styles.activityItem}>
-                <ThemedIcon
-                  name={'receipt'}
-                  iconColor={'#4a5c6a'}
-                  bgColor={'#dfe3e6'}
-                  shape='square'
-                  containerSize={50}
-                  size={20}
-                />
-                <View style={styles.activityDetails}>
-                  <ThemedText style={styles.activityTitle}>Blotter Report</ThemedText>
-                  <ThemedText style={styles.activitySubtext}>Filed on: June 15, 2023</ThemedText>
-                  <ThemedText style={styles.activitySubtext}>Reference #: BLT-2023-0018</ThemedText>
-                </View>
-                <View style={[styles.badge, { backgroundColor: '#ffe082' }]}>
-                  <ThemedText style={styles.badgeText}>Processing</ThemedText>
-                </View>
-              </View>
-
-              <Spacer height={15} />
-              <ThemedDivider />
-              <Spacer height={15} />
-
-              <View style={styles.activityItem}>
-                <ThemedIcon
-                  name={'folder-open'}
-                  iconColor={'#4e6151'}
-                  bgColor={'#dce5dc'}
-                  shape='square'
-                  containerSize={50}
-                  size={20}
-                />
-                <View style={styles.activityDetails}>
-                  <ThemedText style={styles.activityTitle}>Barangay Case</ThemedText>
-                  <ThemedText style={styles.activitySubtext}>Hearing Date: June 25, 2023</ThemedText>
-                  <ThemedText style={styles.activitySubtext}>Case #: BC-2023-0007</ThemedText>
-                </View>
-                <View style={[styles.badge, { backgroundColor: '#b3e5fc' }]}>
-                  <ThemedText style={styles.badgeText}>Scheduled</ThemedText>
-                </View>
-              </View>
+                  return (
+                    <React.Fragment key={index}>
+                      <View style={styles.activityItem}>
+                        <ThemedIcon
+                          name={activity.icon}
+                          iconColor={activity.iconColor}
+                          bgColor={activity.iconBg}
+                          shape='square'
+                          containerSize={50}
+                          size={20}
+                        />
+                        <View style={styles.activityDetails}>
+                          <ThemedText style={styles.activityTitle}>{activity.title}</ThemedText>
+                          <ThemedText style={styles.activitySubtext}>{activity.subtitle}</ThemedText>
+                          <ThemedText style={styles.activitySubtext}>Filed on: {activity.dateOnly}</ThemedText>
+                          <ThemedText style={styles.activitySubtext}>Time Filed: {activity.timeOnly}</ThemedText>
+                          <ThemedText style={styles.activitySubtext}>{activity.reference}</ThemedText>
+                        </View>
+                        <View style={[styles.badge, { backgroundColor: getStatusColor(activity.status, activity.type) }]}>
+                          <ThemedText style={styles.badgeText}>{activity.status}</ThemedText>
+                        </View>
+                      </View>
+                      {index < recentActivities.length - 1 && (
+                        <>
+                          <Spacer height={15} />
+                          <ThemedDivider />
+                          <Spacer height={15} />
+                        </>
+                      )}
+                    </React.Fragment>
+                  )
+                })
+              )}
             </ThemedCard>
             <Spacer height={20} />
 
