@@ -53,7 +53,6 @@ export const chatStyles = StyleSheet.create({
     listContent: {
         padding: 12,
         flexGrow: 1,
-        alignItems: 'stretch',
     },
     row: {
         flexDirection: 'row',
@@ -72,7 +71,7 @@ export const chatStyles = StyleSheet.create({
         justifyContent: 'center',
     },
     bubble: {
-        maxWidth: '78%',
+        maxWidth: '80%',
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 14,

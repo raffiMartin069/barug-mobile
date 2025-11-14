@@ -7,9 +7,7 @@ export const Composer: React.FC<{
     onChange: (t: string) => void;
     onSend: () => void;
     disabled?: boolean;
-    isProcessing?: boolean;
-    onStop?: () => void;
-}> = ({ value, onChange, onSend, disabled, isProcessing, onStop }) => {
+}> = ({ value, onChange, onSend, disabled }) => {
     const scheme = useColorScheme() ?? 'light';
     const themeBg = scheme === 'dark' ? CHATBOT_COLORS.darkBg : CHATBOT_COLORS.lightBg;
     const themeText = scheme === 'dark' ? CHATBOT_COLORS.textDark : CHATBOT_COLORS.textLight;
@@ -29,17 +27,17 @@ export const Composer: React.FC<{
                 accessibilityLabel="Message input"
             />
             <Pressable
-                onPress={isProcessing ? onStop : onSend}
-                disabled={isProcessing ? false : (!value.trim() || disabled)}
+                onPress={onSend}
+                disabled={!value.trim() || disabled}
                 style={({ pressed }) => [
                     chatStyles.sendButton,
                     { opacity: pressed ? 0.9 : 1 },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={isProcessing ? 'Stop response' : 'Send message'}
+                accessibilityLabel="Send message"
             >
-                <View style={[chatStyles.sendFab, { backgroundColor: isProcessing ? '#b91c1c' : (!value.trim() || disabled ? '#a8a8a8' : CHATBOT_COLORS.primary) }]}> 
-                    <Ionicons name={isProcessing ? 'square' : 'send'} size={20} color="#fff" />
+                <View style={[chatStyles.sendFab, { backgroundColor: !value.trim() || disabled ? '#a8a8a8' : CHATBOT_COLORS.primary }]}>
+                    <Ionicons name="send" size={20} color="#fff" />
                 </View>
             </Pressable>
         </View>
