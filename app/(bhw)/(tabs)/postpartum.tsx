@@ -2,6 +2,7 @@ import CenteredModal from '@/components/maternal/CenteredModal'
 import CustomDropdown from '@/components/maternal/CustomDropdown'
 import MaternalCard from '@/components/maternal/MaternalCard'
 import Spacer from '@/components/Spacer'
+import { showToast } from '@/components/Toast'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
@@ -142,6 +143,13 @@ const PostpartumTab = () => {
 
             await load()
 
+            // show success toast
+            try {
+                showToast('Postpartum check saved')
+            } catch {
+                // silent if toast not available
+            }
+
             setModalVisible(false)
             setSelected(null)
             setShowCheckForm(false)
@@ -260,33 +268,39 @@ const PostpartumTab = () => {
                             value={searchText}
                             onChangeText={setSearchText}
                             placeholder="Search name, record # or purpose"
-                            style={{ flex: 1 }}
+                            style={{ flex: 1, paddingRight: 56, paddingLeft: 18 }}
                         />
                         {searchPending ? (
-                            <Animated.View style={[styles.searchSpinner, { opacity: spinnerOpacity }]}>
+                            <Animated.View pointerEvents="none" style={[styles.searchSpinner, { opacity: spinnerOpacity }]}> 
                                 <ActivityIndicator size="small" color={Colors.primary} />
                             </Animated.View>
                         ) : null}
+                        <View pointerEvents="box-none" style={styles.searchIcon}>
+                            <ThemedIcon name="search" size={16} iconColor="#6b7280" containerSize={32} />
+                        </View>
 
-                        {searchText ? (
-                            <Pressable onPress={() => { setSearchText(''); setSearchQuery('') }} style={styles.clearBtn} accessibilityRole="button">
-                                <ThemedIcon name="close" size={14} iconColor="#fff" bgColor={Colors.primary} containerSize={28} />
-                            </Pressable>
-                        ) : null}
+                        {/* clear button removed - using inline icons inside input */}
                     </View>
 
                     <View style={{ height: 8 }} />
 
-                    <CustomDropdown
-                        items={[
-                            { label: 'Name (A–Z)', value: 'name' },
-                            { label: 'Earliest', value: 'earliest' },
-                            { label: 'Newest', value: 'oldest' },
-                        ]}
-                        value={sortBy}
-                        setValue={(v: any) => setSortBy(v)}
-                        placeholder="Sort"
-                    />
+                    <View style={styles.sortRowContainer}>
+                        <View style={styles.dropdownWithIcon}>
+                            <CustomDropdown
+                                items={[
+                                    { label: 'Name (A–Z)', value: 'name' },
+                                    { label: 'Earliest', value: 'earliest' },
+                                    { label: 'Newest', value: 'oldest' },
+                                ]}
+                                value={sortBy}
+                                setValue={(v: any) => setSortBy(v)}
+                                placeholder="Sort"
+                            />
+                            <Pressable style={styles.dropdownIcon} accessibilityRole="button">
+                                <ThemedIcon name="funnel" size={14} iconColor="#6b7280" containerSize={32} />
+                            </Pressable>
+                        </View>
+                    </View>
                 </View>
 
                 <View style={styles.content}>
@@ -401,6 +415,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+        position: 'relative',
     },
     clearBtn: {
         marginLeft: 8,
@@ -413,9 +428,7 @@ const styles = StyleSheet.create({
         color: Colors.primary,
         fontWeight: '700',
     },
-    searchSpinner: {
-        marginLeft: 8,
-    },
+    
     safeArea: {
         flex: 1,
         backgroundColor: '#fff',
@@ -521,5 +534,45 @@ const styles = StyleSheet.create({
     errorDetails: {
         marginTop: 6,
         color: '#991b1b',
+    },
+    sortRowContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    filterButton: {
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    dropdownWithIcon: {
+        flex: 1,
+        position: 'relative',
+        marginLeft: 0,
+    },
+    dropdownIcon: {
+        position: 'absolute',
+        right: 8,
+        top: '50%',
+        marginTop: -16,
+        zIndex: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    searchIcon: {
+        position: 'absolute',
+        right: 8,
+        top: '50%',
+        marginTop: -16,
+        zIndex: 5,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    searchSpinner: {
+        position: 'absolute',
+        left: 8,
+        top: '50%',
+        marginTop: -10,
+        zIndex: 6,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 })

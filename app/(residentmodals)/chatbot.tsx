@@ -9,9 +9,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatBotMessageType } from '@/types/chatbotMessageType';
 import { CHATBOT_COLORS, CHATBOT_HEADER_HEIGHT, chatStyles } from '@/constants/temp/bot/chatbot';
-import { TopBar } from '@/components/temp/bot/topBar';
-import { Bubble } from '@/components/temp/bot/bubble';
-import { Composer } from '@/components/temp/bot/composer';
+import { TopBar } from '@/components/bot/topBar';
+import { Bubble } from '@/components/bot/bubble';
+import { Composer } from '@/components/bot/composer';
 import { useAssistant } from '@/hooks/useAssistant';
 
 function getGreeting() {
