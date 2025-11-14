@@ -1,6 +1,6 @@
 import { CHATBOT_COLORS, chatStyles } from "@/constants/temp/bot/chatbot";
 import { Ionicons } from "@expo/vector-icons";
-import { useColorScheme, View, TextInput, Pressable } from "react-native";
+import { Pressable, TextInput, useColorScheme, View } from "react-native";
 
 export const Composer: React.FC<{
     value: string;
