@@ -11,7 +11,7 @@
   import AsyncStorage from '@react-native-async-storage/async-storage'
   import { useRouter } from 'expo-router'
   import React, { useEffect, useMemo, useState, useCallback } from 'react'
-  import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+  import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View, RefreshControl } from 'react-native'
   import { fetchMyDocRequests, type DocRequestListItem } from '@/services/documentRequest'
   import { getPersonBlotterReportHistory } from '@/services/blotterReport'
   import dayjs from 'dayjs'
@@ -30,6 +30,7 @@
     const [details, setDetails] = useState<any | null>(cached ?? null)
     const [recentActivities, setRecentActivities] = useState<any[]>([])
     const [activitiesLoading, setActivitiesLoading] = useState(true)
+    const [refreshing, setRefreshing] = useState(false)
 
     // Handle hardware back button
     useEffect(() => {
@@ -107,6 +108,19 @@
       }
     }, [])
 
+    const onRefresh = useCallback(async () => {
+      setRefreshing(true)
+      try {
+        if (details?.person_id) {
+          await loadRecentActivities(details.person_id)
+        }
+      } catch (error) {
+        console.error('[ResidentHome] Refresh failed:', error)
+      } finally {
+        setRefreshing(false)
+      }
+    }, [details?.person_id, loadRecentActivities])
+
     // 🔄 Ensure data is loaded (fetches only if missing/stale; TTL handled in store)
     useEffect(() => {
       let live = true
@@ -158,7 +172,18 @@
         />
 
         <KeyboardAvoidingView>
-          <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            contentContainerStyle={{ paddingBottom: 50 }} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#310101']}
+                tintColor={'#310101'}
+              />
+            }
+          >
             <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
               <ThemedText title={true}>
                 Welcome, {details?.first_name ?? fullName}!

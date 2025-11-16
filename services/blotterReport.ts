@@ -267,6 +267,40 @@ export type CaseTimelineEvent = {
   form_name: string | null;
 };
 
+export type CaseMediationHearing = {
+  hearing_no: number;
+  source: string;
+  notice_sid: number;
+  notice_created_at: string;
+  hearing_date: string | null;
+  hearing_time: string | null;
+  hearing_held: boolean;
+  held_at: string | null;
+  held_remarks: string | null;
+  complainant_attended: string;
+  respondent_attended: string;
+  settlement_outcome: string;
+};
+
+/**
+ * Get case mediation hearings
+ */
+export async function getCaseMediationHearings(caseId: number): Promise<CaseMediationHearing[]> {
+  console.log('[CaseMediationHearings] → fetching via RPC fn_case_mediation_hearings', { p_case_id: caseId });
+
+  const { data, error } = await supabase.rpc('fn_case_mediation_hearings', {
+    p_case_id: caseId,
+  });
+
+  if (error) {
+    console.error('[CaseMediationHearings] RPC error:', error);
+    throw new Error(error.message);
+  }
+
+  console.log('[CaseMediationHearings] ✓ fetched', data?.length || 0, 'hearings');
+  return data || [];
+}
+
 /**
  * Get case timeline events
  */
