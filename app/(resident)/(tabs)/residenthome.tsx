@@ -1,20 +1,20 @@
   // app/(resident)/(tabs)/residenthome.tsx
   import Spacer from '@/components/Spacer'
-import ThemedAppBar from '@/components/ThemedAppBar'
-import ThemedCard from '@/components/ThemedCard'
-import ThemedDivider from '@/components/ThemedDivider'
-import ThemedIcon from '@/components/ThemedIcon'
-import ThemedImage from '@/components/ThemedImage'
-import ThemedText from '@/components/ThemedText'
-import ThemedView from '@/components/ThemedView'
-import { supabase } from '@/constants/supabase'
-import { getPersonBlotterReportHistory } from '@/services/blotterReport'
-import { fetchMyDocRequests } from '@/services/documentRequest'
-import { useAccountRole } from '@/store/useAccountRole'
-import dayjs from 'dayjs'
-import { useRouter } from 'expo-router'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+  import ThemedAppBar from '@/components/ThemedAppBar'
+  import ThemedCard from '@/components/ThemedCard'
+  import ThemedDivider from '@/components/ThemedDivider'
+  import ThemedIcon from '@/components/ThemedIcon'
+  import ThemedImage from '@/components/ThemedImage'
+  import ThemedText from '@/components/ThemedText'
+  import ThemedView from '@/components/ThemedView'
+  import { useAccountRole } from '@/store/useAccountRole'
+  import AsyncStorage from '@react-native-async-storage/async-storage'
+  import { useRouter } from 'expo-router'
+  import React, { useEffect, useMemo, useState, useCallback } from 'react'
+  import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+  import { fetchMyDocRequests, type DocRequestListItem } from '@/services/documentRequest'
+  import { getPersonBlotterReportHistory } from '@/services/blotterReport'
+  import dayjs from 'dayjs'
 
   const ResidentHome = () => {
     const router = useRouter()
@@ -30,10 +30,6 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
     const [details, setDetails] = useState<any | null>(cached ?? null)
     const [recentActivities, setRecentActivities] = useState<any[]>([])
     const [activitiesLoading, setActivitiesLoading] = useState(true)
-    const [refreshing, setRefreshing] = useState(false)
-    const [idValidationRequest, setIdValidationRequest] = useState<any | null>(null)
-    const [idValidationLoading, setIdValidationLoading] = useState(false)
-    const [profileImage, setProfileImage] = useState<string | null>(null)
 
     // Handle hardware back button
     useEffect(() => {
@@ -111,57 +107,6 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
       }
     }, [])
 
-    // Load profile image
-    const loadProfileImage = useCallback(async (personId: number) => {
-      try {
-        const { data, error } = await supabase
-          .from('person')
-          .select('person_img')
-          .eq('person_id', personId)
-          .single()
-        
-        if (error) throw error
-        setProfileImage(data?.person_img || null)
-      } catch (error) {
-        console.error('[ResidentHome] Failed to load profile image:', error)
-        setProfileImage(null)
-      }
-    }, [])
-
-    // Load ID validation request status
-    const loadIdValidationRequest = useCallback(async (personId: number) => {
-      try {
-        setIdValidationLoading(true)
-        const { data, error } = await supabase.rpc('get_id_validation_requests')
-        if (error) throw error
-        
-        const userRequest = data?.find((req: any) => req.requester_person_id === personId)
-        setIdValidationRequest(userRequest || null)
-      } catch (error) {
-        console.error('[ResidentHome] Failed to load ID validation request:', error)
-        setIdValidationRequest(null)
-      } finally {
-        setIdValidationLoading(false)
-      }
-    }, [])
-
-    const onRefresh = useCallback(async () => {
-      setRefreshing(true)
-      try {
-        if (details?.person_id) {
-          await Promise.all([
-            loadRecentActivities(details.person_id),
-            loadIdValidationRequest(details.person_id),
-            loadProfileImage(details.person_id)
-          ])
-        }
-      } catch (error) {
-        console.error('[ResidentHome] Refresh failed:', error)
-      } finally {
-        setRefreshing(false)
-      }
-    }, [details?.person_id, loadRecentActivities, loadIdValidationRequest, loadProfileImage])
-
     // 🔄 Ensure data is loaded (fetches only if missing/stale; TTL handled in store)
     useEffect(() => {
       let live = true
@@ -172,14 +117,12 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
           setDetails(fresh)
           if (fresh.person_id) {
             loadRecentActivities(fresh.person_id)
-            loadIdValidationRequest(fresh.person_id)
-            loadProfileImage(fresh.person_id)
           }
         }
         setLoading(false)
       })()
       return () => { live = false }
-    }, [role, roleStore.ensureLoaded, loadRecentActivities, loadProfileImage])
+    }, [role, roleStore.ensureLoaded, loadRecentActivities])
 
     const fullName = useMemo(() => {
       const fn = [details?.first_name, details?.middle_name, details?.last_name, details?.suffix]
@@ -231,19 +174,10 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
               <ThemedText title={true}>
                 Welcome, {details?.first_name ?? fullName}!
               </ThemedText>
-              <View style={styles.profileImageContainer}>
-                <ThemedImage
-                  src={
-                    profileImage
-                      ? { uri: profileImage.startsWith('http') 
-                          ? profileImage 
-                          : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
-                      : require('@/assets/images/default-image.jpg')
-                  }
-                  size={62}
-                  style={styles.profileImage}
-                />
-              </View>
+              <ThemedImage
+                src={details?.profile_picture ? { uri: details.profile_picture } : require('@/assets/images/default-image.jpg')}
+                size={50}
+              />
             </View>
 
             <Spacer height={5} />

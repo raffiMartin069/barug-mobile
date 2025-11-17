@@ -9,9 +9,9 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatBotMessageType } from '@/types/chatbotMessageType';
 import { CHATBOT_COLORS, CHATBOT_HEADER_HEIGHT, chatStyles } from '@/constants/temp/bot/chatbot';
-import { TopBar } from '@/components/temp/bot/topBar';
-import { Bubble } from '@/components/temp/bot/bubble';
-import { Composer } from '@/components/temp/bot/composer';
+import { TopBar } from '@/components/bot/topBar';
+import { Bubble } from '@/components/bot/bubble';
+import { Composer } from '@/components/bot/composer';
 import { useAssistant } from '@/hooks/useAssistant';
 
 function getGreeting() {
@@ -28,11 +28,11 @@ const ChatBot: React.FC = () => {
 
     const welcomedRef = useRef(false);
 
-    const { message, setMessage, msgs, setMsgs, listRef, loadingTimersRef, handleSend } = useAssistant();
+    const { message, setMessage, msgs, setMsgs, listRef, loadingTimersRef, handleSend, stopAll } = useAssistant();
 
     useEffect(() => {
         if (welcomedRef.current) return;
-        welcomedRef.current = true;
+        welcomedRef.current = true; 
 
         const welcomeMsg: ChatBotMessageType = {
             id: `welcome_${Date.now()}`,
@@ -77,7 +77,7 @@ const ChatBot: React.FC = () => {
                         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
                     />
 
-                    <Composer value={message} onChange={setMessage} onSend={handleSend} />
+                    <Composer value={message} onChange={setMessage} onSend={handleSend} isProcessing={msgs.some(m => !!m.loading)} onStop={stopAll} />
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
