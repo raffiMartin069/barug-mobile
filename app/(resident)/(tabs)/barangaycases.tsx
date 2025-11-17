@@ -26,7 +26,7 @@ import {
 } from '@/services/barangayCases';
 import { useAccountRole } from '@/store/useAccountRole';
 
-const BRAND = '#6d2932';
+const BRAND = '#310101';
 const BRAND_LIGHT = '#8b4a56';
 const NEUTRAL_50 = '#fafafa';
 const NEUTRAL_100 = '#f5f5f5';
@@ -371,14 +371,7 @@ const BarangayCases = () => {
         <Spacer height={100} />
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(residentmodals)/fileblotterreport')}
-        activeOpacity={0.8}
-      >
-        <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={BRAND} />
-      </TouchableOpacity>
+
     </ThemedView>
   );
 };

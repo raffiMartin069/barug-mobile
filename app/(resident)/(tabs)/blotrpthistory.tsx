@@ -40,7 +40,7 @@ type BlotterReportUI = {
   linked_case_num?: string | null;
 };
 
-const accent = '#6d2932';
+const accent = '#310101';
 const statusColors: Record<UiStatus, string> = {
   pending: '#f59e0b',
   under_investigation: '#3b82f6',
@@ -390,6 +390,15 @@ export default function BlotterReportHistory() {
           />
         )}
       </View>
+      
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/(residentmodals)/fileblotterreport')}
+        activeOpacity={0.8}
+      >
+        <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={accent} />
+      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -537,4 +546,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   recordsButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
 });
