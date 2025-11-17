@@ -203,6 +203,20 @@ const BarangayCases = () => {
   return (
     <ThemedView safe style={styles.container}>
       <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
+      
+      {/* My Records Button */}
+      {/* <View style={styles.recordsButtonContainer}>
+        <TouchableOpacity
+          style={styles.recordsButton}
+          onPress={() => router.push({
+            pathname: '/resident-records',
+            params: { personId: personId }
+          })}
+        >
+          <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
+          <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
+        </TouchableOpacity>
+      </View> */}
 
       <ScrollView
         style={styles.scrollView}
@@ -251,6 +265,20 @@ const BarangayCases = () => {
               </View>
             </View>
           </ThemedCard>
+        </View>
+
+        {/* My Records Button */}
+        <View style={styles.recordsButtonContainer}>
+          <TouchableOpacity
+            style={styles.recordsButton}
+            onPress={() => router.push({
+              pathname: '/resident-records',
+              params: { personId: personId }
+            })}
+          >
+            <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
+            <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
+          </TouchableOpacity>
         </View>
 
         {/* Search & Filters */}
@@ -475,4 +503,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  
+  recordsButtonContainer: { paddingHorizontal: 16, paddingBottom: 8, paddingTop: 3 },
+  recordsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#310101',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+  },
+  recordsButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 });

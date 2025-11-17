@@ -7,12 +7,41 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { supabase } from '@/constants/supabase'
+import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
-import React, { useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const BusinessHome = () => {
   const router = useRouter()
+  const { getProfile } = useAccountRole()
+  const profile = getProfile('business')
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+
+  // Load profile image
+  const loadProfileImage = useCallback(async (personId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('person')
+        .select('person_img')
+        .eq('person_id', personId)
+        .single()
+      
+      if (error) throw error
+      setProfileImage(data?.person_img || null)
+    } catch (error) {
+      console.error('[BusinessHome] Failed to load profile image:', error)
+      setProfileImage(null)
+    }
+  }, [])
+
+  // Load profile image when component mounts
+  useEffect(() => {
+    if (profile?.person_id) {
+      loadProfileImage(profile.person_id)
+    }
+  }, [profile?.person_id, loadProfileImage])
 
   // Handle hardware back button
   useEffect(() => {
@@ -42,8 +71,20 @@ const BusinessHome = () => {
 
           {/* Header */}
           <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
-            <ThemedText title>Welcome, Owner!</ThemedText>
-            <ThemedImage src={require('@/assets/images/default-image.jpg')} size={60} />
+            <ThemedText title>Welcome, {profile?.first_name || 'Owner'}!</ThemedText>
+            <View style={styles.profileImageContainer}>
+              <ThemedImage
+                src={
+                  profileImage
+                    ? { uri: profileImage.startsWith('http') 
+                        ? profileImage 
+                        : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
+                    : require('@/assets/images/default-image.jpg')
+                }
+                size={62}
+                style={styles.profileImage}
+              />
+            </View>
           </View>
 
           <Spacer height={5} />
@@ -247,5 +288,26 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#333',
+  },
+  profileImageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: '#561C24',
+    backgroundColor: '#fff',
+    shadowColor: '#561C24',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
   },
 })

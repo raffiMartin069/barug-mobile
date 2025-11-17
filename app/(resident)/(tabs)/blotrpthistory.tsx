@@ -338,6 +338,22 @@ export default function BlotterReportHistory() {
 
         <Spacer height={16} />
 
+        {/* My Records Button */}
+        <View style={styles.recordsButtonContainer}>
+          <TouchableOpacity
+            style={styles.recordsButton}
+            onPress={() => router.push({
+              pathname: '/resident-records',
+              params: { personId: personId }
+            })}
+          >
+            <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
+            <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        <Spacer height={16} />
+
         {/* Reports List */}
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -509,4 +525,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   fileReportButtonText: { color: '#fff', fontWeight: '600', marginLeft: 6 },
+  
+  recordsButtonContainer: { paddingHorizontal: 16, paddingBottom: 8, paddingTop: 3 },
+  recordsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#310101',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+  },
+  recordsButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 });
