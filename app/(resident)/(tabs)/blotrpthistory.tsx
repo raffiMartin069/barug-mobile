@@ -40,7 +40,7 @@ type BlotterReportUI = {
   linked_case_num?: string | null;
 };
 
-const accent = '#6d2932';
+const accent = '#310101';
 const statusColors: Record<UiStatus, string> = {
   pending: '#f59e0b',
   under_investigation: '#3b82f6',
@@ -338,6 +338,22 @@ export default function BlotterReportHistory() {
 
         <Spacer height={16} />
 
+        {/* My Records Button */}
+        <View style={styles.recordsButtonContainer}>
+          <TouchableOpacity
+            style={styles.recordsButton}
+            onPress={() => router.push({
+              pathname: '/resident-records',
+              params: { personId: personId }
+            })}
+          >
+            <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
+            <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
+          </TouchableOpacity>
+        </View>
+
+        <Spacer height={16} />
+
         {/* Reports List */}
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -374,6 +390,15 @@ export default function BlotterReportHistory() {
           />
         )}
       </View>
+      
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/(residentmodals)/fileblotterreport')}
+        activeOpacity={0.8}
+      >
+        <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={accent} />
+      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -509,4 +534,28 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   fileReportButtonText: { color: '#fff', fontWeight: '600', marginLeft: 6 },
+  
+  recordsButtonContainer: { paddingHorizontal: 16, paddingBottom: 8, paddingTop: 3 },
+  recordsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#310101',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+  },
+  recordsButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  
+  fab: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
 });

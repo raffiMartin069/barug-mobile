@@ -15,7 +15,7 @@
   import { Ionicons } from '@expo/vector-icons'
   import AsyncStorage from '@react-native-async-storage/async-storage'
   import { useLocalSearchParams, useRouter } from 'expo-router'
-  import React, { useEffect, useMemo, useState } from 'react'
+  import React, { useCallback, useEffect, useMemo, useState } from 'react'
   import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
   export const options = { href: null }
@@ -143,6 +143,7 @@
 
     const [profile, setProfile] = useState<any | null>(initial)
     const [loading, setLoading] = useState(!initial)
+    const [profileImage, setProfileImage] = useState<string | null>(null)
 
     // Staff profile for optional display
     const staffProfile = getProfile('staff')
@@ -189,10 +190,32 @@
       return () => { live = false }
     }, [role, ensureLoaded])
 
+    // Load profile image
+    const loadProfileImage = useCallback(async (personId: number) => {
+      try {
+        const { data, error } = await supabase
+          .from('person')
+          .select('person_img')
+          .eq('person_id', personId)
+          .single()
+        
+        if (error) throw error
+        setProfileImage(data?.person_img || null)
+      } catch (error) {
+        console.error('[ResidentProfile] Failed to load profile image:', error)
+        setProfileImage(null)
+      }
+    }, [])
+
     // Log every time profile changes
     useEffect(() => {
-      if (profile) debugProfileAt('render-profile', profile)
-    }, [profile])
+      if (profile) {
+        debugProfileAt('render-profile', profile)
+        if (profile.person_id) {
+          loadProfileImage(profile.person_id)
+        }
+      }
+    }, [profile, loadProfileImage])
 
     const fullName = useMemo(() => {
       const fn = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix]
@@ -248,11 +271,16 @@
         {
           primaryText: 'Sign out',
           onPrimary: async () => {
-            try { await AsyncStorage.removeItem(UNLOCKED_SESSION_KEY) } catch {}
-            try { await supabase.auth.signOut() } finally {
+            try {
+              await AsyncStorage.removeItem(UNLOCKED_SESSION_KEY)
+              await supabase.auth.signOut()
+            } catch (error) {
+              console.error('Logout error:', error)
+            } finally {
               clearAll()
-              router.dismissAll()
-              router.replace('/(auth)/phone')
+              setTimeout(() => {
+                router.push('/(auth)/phone')
+              }, 100)
             }
           },
           secondaryText: 'Cancel',
@@ -297,8 +325,9 @@
         
         if (error) throw error
         
-        // Update local profile state
-        setProfile(prev => ({ ...prev, person_img: imageUrl }))
+        // Update local profile state and refresh from server
+        const fresh = await ensureLoaded('resident')
+        if (fresh) setProfile(fresh)
         
         console.log('Profile picture updated successfully')
       } catch (error) {
@@ -327,14 +356,19 @@
           <ThemedCard style={[styles.cardPad, styles.shadow]}>
             <View style={{ alignItems: 'center' }}>
               <Pressable onPress={handlePictureTap}>
-                <ThemedImage
-                  src={
-                    profile?.person_img
-                      ? { uri: profile.person_img }
-                      : require('@/assets/images/default-image.jpg')
-                  }
-                  size={50}
-                />
+                <View style={styles.profileImageContainer}>
+                  <ThemedImage
+                    src={
+                      profileImage
+                        ? { uri: profileImage.startsWith('http') 
+                            ? profileImage 
+                            : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
+                        : require('@/assets/images/default-image.jpg')
+                    }
+                    size={82}
+                    style={styles.profileImage}
+                  />
+                </View>
               </Pressable>
 
               <Spacer height={10} />
@@ -366,6 +400,21 @@
             />
             <InfoRow label="Civil Status:" value={profile?.civil_status ?? '—'} />
             <InfoRow label="Nationality:" value={profile?.nationality ?? '—'} />
+            <InfoRow 
+              label="ID Status:" 
+              value={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons 
+                    name={profile?.is_id_valid ? 'checkmark-circle' : 'close-circle'} 
+                    size={16} 
+                    color={profile?.is_id_valid ? '#22C55E' : '#EF4444'} 
+                  />
+                  <ThemedText style={{ color: profile?.is_id_valid ? '#22C55E' : '#EF4444', fontWeight: '600' }}>
+                    {profile?.is_id_valid ? 'Verified' : 'Not Verified'}
+                  </ThemedText>
+                </View>
+              } 
+            />
 
             {!isStaff ? (
               <InfoRow label="Religion:" value={profile?.religion ?? '—'} />
@@ -418,8 +467,15 @@
                 <InfoRow label="Educational Attainment:" value={profile?.education ?? '—'} />
                 <InfoRow label="Employment Status:" value={profile?.employment_status ?? '—'} />
                 <InfoRow label="Occupation:" value={profile?.occupation ?? '—'} />
-                <InfoRow label="Monthly Personal Income:" value={peso(profile?.personal_monthly_income)} />
-                <InfoRow label="Government Program:" value={profile?.gov_program ?? '—'} />
+                <InfoRow label="Monthly Personal Income:" value={profile?.personal_monthly_income ?? '—'} />
+                <InfoRow 
+                  label="Government Programs:" 
+                  value={
+                    profile?.government_programs?.length > 0 
+                      ? profile.government_programs.join(', ') 
+                      : '—'
+                  } 
+                />
               </ThemedCard>
 
               <Spacer height={18} />
@@ -577,4 +633,25 @@
     linkTitle: { fontSize: 16, fontWeight: '700' },
     linkSub: { color: 'gray', flexWrap: 'wrap' },
     actionsPad: { paddingHorizontal: 15 },
+    profileImageContainer: {
+      width: 90,
+      height: 90,
+      borderRadius: 45,
+      borderWidth: 2,
+      borderColor: '#561C24',
+      backgroundColor: '#fff',
+      shadowColor: '#561C24',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    profileImage: {
+      width: 82,
+      height: 82,
+      borderRadius: 41,
+    },
   })

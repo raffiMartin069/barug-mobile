@@ -158,7 +158,18 @@
         />
 
         <KeyboardAvoidingView>
-          <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            contentContainerStyle={{ paddingBottom: 50 }} 
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#310101']}
+                tintColor={'#310101'}
+              />
+            }
+          >
             <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
               <ThemedText title={true}>
                 Welcome, {details?.first_name ?? fullName}!
@@ -176,23 +187,43 @@
               <>
                 <TouchableOpacity
                   activeOpacity={0.85}
-                  onPress={() => router.push('/(bhwmodals)/(person)/validid')}
+                  onPress={() => {
+                    if (idValidationRequest) {
+                      // Show validation details modal or navigate to status page
+                      router.push({
+                        pathname: '/(bhwmodals)/(person)/validationstatus',
+                        params: { personId: details.person_id }
+                      })
+                    } else {
+                      // Navigate to ID submission
+                      router.push('/(bhwmodals)/(person)/validid')
+                    }
+                  }}
                 >
                   <ThemedCard style={styles.verifyCard}>
                     <View style={styles.verifyRow}>
                       <ThemedIcon
-                        name="shield-checkmark"
-                        iconColor="#7c2d12"
-                        bgColor="#fde68a"
+                        name={idValidationRequest ? "time" : "shield-checkmark"}
+                        iconColor={idValidationRequest?.latest_status === 'REJECTED' ? "#dc2626" : "#7c2d12"}
+                        bgColor={idValidationRequest?.latest_status === 'REJECTED' ? "#fecaca" : "#fde68a"}
                         shape="square"
                         containerSize={50}
                         size={20}
                       />
                       <View style={{ flex: 1, paddingHorizontal: 8 }}>
-                        <ThemedText style={styles.verifyTitle}>Full Verification</ThemedText>
-                        <ThemedText style={styles.verifySubtext}>
-                          Please submit a valid ID to access the Request Document feature.
+                        <ThemedText style={styles.verifyTitle}>
+                          {idValidationRequest ? 'ID Verification Status' : 'Full Verification'}
                         </ThemedText>
+                        <ThemedText style={styles.verifySubtext}>
+                          {idValidationRequest 
+                            ? `Status: ${idValidationRequest.latest_status}${idValidationRequest.latest_status === 'REJECTED' ? ' - Tap to resubmit' : ''}` 
+                            : 'Please submit a valid ID to access the Request Document feature.'}
+                        </ThemedText>
+                        {idValidationRequest?.latest_remarks && (
+                          <ThemedText style={[styles.verifySubtext, { color: '#dc2626', marginTop: 2 }]}>
+                            Reason: {idValidationRequest.latest_remarks}
+                          </ThemedText>
+                        )}
                       </View>
                       <ThemedIcon name="chevron-forward" bgColor="transparent" size={20} />
                     </View>
@@ -323,4 +354,25 @@
     verifyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     verifyTitle: { fontWeight: 'bold', fontSize: 16 },
     verifySubtext: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    profileImageContainer: {
+      width: 70,
+      height: 70,
+      borderRadius: 35,
+      borderWidth: 2,
+      borderColor: '#561C24',
+      backgroundColor: '#fff',
+      shadowColor: '#561C24',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      elevation: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    profileImage: {
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+    },
   })
