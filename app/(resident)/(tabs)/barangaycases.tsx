@@ -26,7 +26,7 @@ import {
 } from '@/services/barangayCases';
 import { useAccountRole } from '@/store/useAccountRole';
 
-const BRAND = '#310101';
+const BRAND = '#6d2932';
 const BRAND_LIGHT = '#8b4a56';
 const NEUTRAL_50 = '#fafafa';
 const NEUTRAL_100 = '#f5f5f5';
@@ -203,20 +203,6 @@ const BarangayCases = () => {
   return (
     <ThemedView safe style={styles.container}>
       <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
-      
-      {/* My Records Button */}
-      {/* <View style={styles.recordsButtonContainer}>
-        <TouchableOpacity
-          style={styles.recordsButton}
-          onPress={() => router.push({
-            pathname: '/resident-records',
-            params: { personId: personId }
-          })}
-        >
-          <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
-          <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
-        </TouchableOpacity>
-      </View> */}
 
       <ScrollView
         style={styles.scrollView}
@@ -265,20 +251,6 @@ const BarangayCases = () => {
               </View>
             </View>
           </ThemedCard>
-        </View>
-
-        {/* My Records Button */}
-        <View style={styles.recordsButtonContainer}>
-          <TouchableOpacity
-            style={styles.recordsButton}
-            onPress={() => router.push({
-              pathname: '/resident-records',
-              params: { personId: personId }
-            })}
-          >
-            <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
-            <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
-          </TouchableOpacity>
         </View>
 
         {/* Search & Filters */}
@@ -371,7 +343,14 @@ const BarangayCases = () => {
         <Spacer height={100} />
       </ScrollView>
 
-
+      {/* FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/(residentmodals)/fileblotterreport')}
+        activeOpacity={0.8}
+      >
+        <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={BRAND} />
+      </TouchableOpacity>
     </ThemedView>
   );
 };
@@ -496,16 +475,4 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  
-  recordsButtonContainer: { paddingHorizontal: 16, paddingBottom: 8, paddingTop: 3 },
-  recordsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#310101',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 8,
-  },
-  recordsButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 });

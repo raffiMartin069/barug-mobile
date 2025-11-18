@@ -10,7 +10,7 @@ import ThemedView from '@/components/ThemedView'
 import { supabase } from '@/constants/supabase'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const BusinessHome = () => {
@@ -42,6 +42,25 @@ const BusinessHome = () => {
       loadProfileImage(profile.person_id)
     }
   }, [profile?.person_id, loadProfileImage])
+
+  // Handle hardware back button
+  useEffect(() => {
+    const backAction = () => {
+      if (router.canGoBack()) {
+        router.back()
+        return true
+      }
+      
+      Alert.alert('Exit App', 'Do you want to exit the app?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() }
+      ])
+      return true
+    }
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction)
+    return () => backHandler.remove()
+  }, [router])
 
   // Handle hardware back button
   useEffect(() => {

@@ -7,14 +7,13 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { supabase } from '@/constants/supabase'
 import { getPersonBlotterReportHistory } from '@/services/blotterReport'
 import { fetchMyDocRequests } from '@/services/documentRequest'
 import { useAccountRole } from '@/store/useAccountRole'
 import dayjs from 'dayjs'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
   const ResidentHome = () => {
     const router = useRouter()
@@ -30,10 +29,6 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
     const [details, setDetails] = useState<any | null>(cached ?? null)
     const [recentActivities, setRecentActivities] = useState<any[]>([])
     const [activitiesLoading, setActivitiesLoading] = useState(true)
-    const [refreshing, setRefreshing] = useState(false)
-    const [idValidationRequest, setIdValidationRequest] = useState<any | null>(null)
-    const [idValidationLoading, setIdValidationLoading] = useState(false)
-    const [profileImage, setProfileImage] = useState<string | null>(null)
 
     // Handle hardware back button
     useEffect(() => {
@@ -176,14 +171,12 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
           setDetails(fresh)
           if (fresh.person_id) {
             loadRecentActivities(fresh.person_id)
-            loadIdValidationRequest(fresh.person_id)
-            loadProfileImage(fresh.person_id)
           }
         }
         setLoading(false)
       })()
       return () => { live = false }
-    }, [role, roleStore.ensureLoaded, loadRecentActivities, loadProfileImage])
+    }, [role, roleStore.ensureLoaded, loadRecentActivities])
 
     const fullName = useMemo(() => {
       const fn = [details?.first_name, details?.middle_name, details?.last_name, details?.suffix]
@@ -235,19 +228,10 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
               <ThemedText title={true}>
                 Welcome, {details?.first_name ?? fullName}!
               </ThemedText>
-              <View style={styles.profileImageContainer}>
-                <ThemedImage
-                  src={
-                    profileImage
-                      ? { uri: profileImage.startsWith('http') 
-                          ? profileImage 
-                          : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
-                      : require('@/assets/images/default-image.jpg')
-                  }
-                  size={62}
-                  style={styles.profileImage}
-                />
-              </View>
+              <ThemedImage
+                src={details?.profile_picture ? { uri: details.profile_picture } : require('@/assets/images/default-image.jpg')}
+                size={50}
+              />
             </View>
 
             <Spacer height={5} />

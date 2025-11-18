@@ -10,6 +10,7 @@ export const useAssistant = () => {
     const [msgs, setMsgs] = useState<ChatBotMessageType[]>([]);
     const listRef = useRef<FlatList<ChatBotMessageType>>(null);
     const loadingTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+    const controllersRef = useRef<Record<string, AbortController>>({});
 
     const handleSend = useCallback(() => {
         const t = message.trim();
@@ -47,11 +48,19 @@ export const useAssistant = () => {
         }, 1000);
         loadingTimersRef.current[loadingId] = interval;
 
+        // Create an AbortController so the request can be cancelled by the user
+        const controller = new AbortController();
+        controllersRef.current[loadingId] = controller;
+
         const finalize = () => {
             const timer = loadingTimersRef.current[loadingId];
             if (timer) {
                 clearInterval(timer);
                 delete loadingTimersRef.current[loadingId];
+            }
+            const ctrl = controllersRef.current[loadingId];
+            if (ctrl) {
+                delete controllersRef.current[loadingId];
             }
         };
 
@@ -61,6 +70,7 @@ export const useAssistant = () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query: t }),
+                    signal: controller.signal,
                 });
 
                 let res: any = null;
@@ -93,17 +103,36 @@ export const useAssistant = () => {
                 // Replace loading bubble with the real bot answer
                 setMsgs(prev => prev.map(m => (m.id === loadingId ? botMsg : m)));
                 requestAnimationFrame(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Error sending message:', error);
                 finalize();
-                // Remove loading bubble on error
+                // Remove loading bubble on error or abort
                 setMsgs(prev => prev.filter(m => m.id !== loadingId));
+                if (error.name === 'AbortError') {
+                    // user cancelled, no alert necessary
+                    return;
+                }
                 Alert.alert('Error', 'Something went wrong. Please try again.');
             }
         };
         sendMessage();
     }, [message]);
 
-    return { message, setMessage, msgs, setMsgs, listRef, loadingTimersRef, handleSend };
+    const stopAll = useCallback(() => {
+        // Abort any in-flight requests
+        Object.values(controllersRef.current).forEach(ctrl => {
+            try { ctrl.abort(); } catch (_) { }
+        });
+        controllersRef.current = {};
+
+        // Clear any loading timers
+        Object.values(loadingTimersRef.current).forEach(timer => clearInterval(timer));
+        loadingTimersRef.current = {};
+
+        // Remove loading placeholders from messages
+        setMsgs(prev => prev.filter(m => !m.id?.toString().startsWith('loading_')));
+    }, []);
+
+    return { message, setMessage, msgs, setMsgs, listRef, loadingTimersRef, handleSend, stopAll };
 
 }

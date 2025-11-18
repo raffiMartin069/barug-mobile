@@ -5,41 +5,12 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { supabase } from '@/constants/supabase'
-import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native'
 
 const BhwHome = () => {
   const router = useRouter()
-  const { getProfile } = useAccountRole()
-  const profile = getProfile('staff')
-  const [profileImage, setProfileImage] = useState<string | null>(null)
-
-  // Load profile image
-  const loadProfileImage = useCallback(async (personId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('person')
-        .select('person_img')
-        .eq('person_id', personId)
-        .single()
-      
-      if (error) throw error
-      setProfileImage(data?.person_img || null)
-    } catch (error) {
-      console.error('[BhwHome] Failed to load profile image:', error)
-      setProfileImage(null)
-    }
-  }, [])
-
-  // Load profile image when component mounts
-  useEffect(() => {
-    if (profile?.person_id) {
-      loadProfileImage(profile.person_id)
-    }
-  }, [profile?.person_id, loadProfileImage])
 
   // Handle hardware back button
   useEffect(() => {
