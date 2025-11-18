@@ -20,7 +20,7 @@ const Businesses= () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
 
-  const { businesses, getBusinesses} = useFetchBusiness();
+  const { businesses, getBusinesses, setSelectedBusiness} = useFetchBusiness();
 
   const { currentRole,ensureLoaded } = useAccountRole()
   const role = currentRole ?? 'no role'
@@ -49,11 +49,15 @@ const Businesses= () => {
     );
   });
 
+  // ← updated: set selected business then navigate and pass id as string
   const openBusiness = (b: typeof businesses[0]) => {
-    // navigate to a business detail screen — create this screen separately
+    // store selected business in hook/store (optional, useful for detail screen)
+    if (setSelectedBusiness) setSelectedBusiness(b);
+
+    // navigator: pass id as string — expo-router expects string params
     router.push({
       pathname: "/(businessmodals)/businessdetails",
-      params: { id: b.business_id },
+      params: { id: String(b.business_id) },
     });
   };
 
