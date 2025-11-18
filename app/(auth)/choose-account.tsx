@@ -5,7 +5,7 @@ import { useAccountRole } from '@/store/useAccountRole'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Image,
@@ -37,22 +37,19 @@ export default function ChooseAccount() {
   const cached = store.getProfile('resident')
   const [details, setDetails] = useState<any | null>(cached ?? null)
   const [loading, setLoading] = useState(!cached)
+  const hasFetched = useRef(false)
 
-  // Ensure we have a fresh resident profile (store handles TTL)
+  // Ensure we have a fresh resident profile (force refresh to check role_id) - fetch once
   useEffect(() => {
+    if (hasFetched.current) return
+    hasFetched.current = true
+    
     let live = true
       ; (async () => {
         try {
-          const fresh = await store.ensureLoaded('resident')
+          const fresh = await store.ensureLoaded('resident', { force: true })
           if (!live) return
           if (fresh) setDetails(fresh)
-
-          // If we learned staff_id here and store doesn't have it yet, set it
-          if (fresh?.is_staff && fresh?.staff_id && store.staffId !== fresh.staff_id) {
-            store.setStaff(fresh.staff_id)
-            // But keep currentRole resident to start
-            store.setResident()
-          }
 
           // Debug: show persisted role-store snapshot
           try {
@@ -64,7 +61,7 @@ export default function ChooseAccount() {
         }
       })()
     return () => { live = false }
-  }, [store])
+  }, [])
 
   const fullName = useMemo(() => {
     if (!details) return undefined
@@ -77,6 +74,15 @@ export default function ChooseAccount() {
   const options: Option[] = useMemo(() => {
     const list: Option[] = []
 
+    console.log('[ChooseAccount] Building options with details:', {
+      person_id: details?.person_id,
+      is_business_owner: details?.is_business_owner,
+      is_staff: details?.is_staff,
+      is_bhw: details?.is_bhw,
+      staff_id: details?.staff_id,
+      store_staffId: store.staffId,
+    })
+
     if (details?.person_id) {
       list.push({
         label: 'Login as Resident',
@@ -84,6 +90,7 @@ export default function ChooseAccount() {
         subtitle: fullName,
         icon: 'person',
       })
+      console.log('[ChooseAccount] Added Resident option')
     }
 
     if (details?.is_business_owner) {
@@ -93,17 +100,22 @@ export default function ChooseAccount() {
         subtitle: 'BUSINESS OWNER',
         icon: 'briefcase',
       })
+      console.log('[ChooseAccount] Added Business Owner option')
     }
 
-    if ((details?.is_staff && (details?.staff_id || store.staffId))) {
+    if (details?.is_bhw && (details?.staff_id || store.staffId)) {
       list.push({
         label: 'Login as Staff',
         type: 'staff',
-        subtitle: `STAFF ID: ${details?.staff_id ?? store.staffId}`,
+        subtitle: `BARANGAY HEALTH WORKER`,
         icon: 'shield-checkmark',
       })
+      console.log('[ChooseAccount] Added Staff (BHW) option')
+    } else if (details?.is_staff) {
+      console.log('[ChooseAccount] User is staff but NOT BHW - staff option NOT added')
     }
 
+    console.log('[ChooseAccount] Total options available:', list.length)
     return list
   }, [details, fullName, store.staffId])
 

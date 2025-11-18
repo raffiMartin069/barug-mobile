@@ -157,6 +157,15 @@
       return fn || '—'
     }, [staffProfile])
 
+    // Check if user has multiple roles available
+    const hasMultipleRoles = useMemo(() => {
+      let roleCount = 0
+      if (profile?.person_id) roleCount++
+      if (profile?.is_business_owner) roleCount++
+      if (profile?.is_bhw && (profile?.staff_id || staffId)) roleCount++
+      return roleCount > 1
+    }, [profile, staffId])
+
     // Boot logs
     useEffect(() => {
       console.log('[ResidentProfile] BOOT', {
@@ -557,35 +566,21 @@
                 </View>
               </ThemedCard>
 
-              <Spacer />
-
-              {/* OTHER SERVICES */}
-              <ThemedCard style={styles.cardPad}>
-                <ThemedText style={styles.sectionTitle} title>Other Services</ThemedText>
-                <Spacer height={6} />
-                <ThemedDivider />
-                <Spacer height={2} />
-                <Pressable onPress={() => router.push('/businessinfo')} style={styles.linkRow}>
-                  <View style={{ flexShrink: 1 }}>
-                    <ThemedText style={styles.linkTitle}>Business Profile</ThemedText>
-                    <ThemedText style={styles.linkSub}>Apply for a Business Profile</ThemedText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} />
-                </Pressable>
-              </ThemedCard>
-
               <Spacer height={12} />
             </>
           )}
 
           {/* Switch Account / Logout */}
-          <View style={styles.actionsPad}>
-            <ThemedButton submit={false} onPress={confirmSwitchAccount}>
-              <ThemedText non_btn>Switch Account</ThemedText>
-            </ThemedButton>
-          </View>
-
-          <Spacer height={8} />
+          {hasMultipleRoles && (
+            <>
+              <View style={styles.actionsPad}>
+                <ThemedButton submit={false} onPress={confirmSwitchAccount}>
+                  <ThemedText non_btn>Switch Account</ThemedText>
+                </ThemedButton>
+              </View>
+              <Spacer height={8} />
+            </>
+          )}
 
           <View style={styles.actionsPad}>
             <ThemedButton submit={false} onPress={confirmLogout} style={{ backgroundColor: COLOR.primary }}>

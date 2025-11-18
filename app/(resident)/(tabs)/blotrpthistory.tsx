@@ -48,7 +48,7 @@ const statusColors: Record<UiStatus, string> = {
   dismissed: '#6b7280',
 };
 const statusLabels: Record<UiStatus, string> = {
-  pending: 'Pending',
+  pending: 'For Case Filing',
   under_investigation: 'Under Review',
   resolved: 'Resolved',
   dismissed: 'Dismissed',
@@ -92,7 +92,7 @@ export default function BlotterReportHistory() {
   const [rawRows, setRawRows] = useState<PersonBlotterHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending'>('all');
 
   // Resolve personId once on mount (or when role changes)
   useEffect(() => {
@@ -203,7 +203,6 @@ export default function BlotterReportHistory() {
   const filteredReports = reports.filter((report) => {
     if (filter === 'all') return true;
     if (filter === 'pending') return mapDbStatusToUi(report.status) === 'pending';
-    if (filter === 'resolved') return mapDbStatusToUi(report.status) === 'resolved';
     return true;
   });
 
@@ -296,13 +295,7 @@ export default function BlotterReportHistory() {
               <ThemedText style={styles.statNumber}>
                 {reports.filter((r) => mapDbStatusToUi(r.status) === 'pending').length}
               </ThemedText>
-              <ThemedText muted style={styles.statLabel}>Pending</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>
-                {reports.filter((r) => mapDbStatusToUi(r.status) === 'resolved').length}
-              </ThemedText>
-              <ThemedText muted style={styles.statLabel}>Resolved</ThemedText>
+              <ThemedText muted style={styles.statLabel}>For Case Filing</ThemedText>
             </View>
           </View>
         </ThemedCard>
@@ -311,7 +304,7 @@ export default function BlotterReportHistory() {
 
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
-          {(['all', 'pending', 'resolved'] as const).map((filterOption) => (
+          {(['all', 'pending'] as const).map((filterOption) => (
             <TouchableOpacity
               key={filterOption}
               style={[
@@ -326,11 +319,7 @@ export default function BlotterReportHistory() {
                   filter === filterOption && styles.filterTabTextActive,
                 ]}
               >
-                {filterOption === 'all'
-                  ? 'All'
-                  : filterOption === 'pending'
-                  ? 'Pending'
-                  : 'Resolved'}
+                {filterOption === 'all' ? 'All' : 'For Case Filing'}
               </ThemedText>
             </TouchableOpacity>
           ))}

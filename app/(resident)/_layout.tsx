@@ -1,4 +1,5 @@
 import { Colors } from '@/constants/Colors'
+import { useAccountRole } from '@/store/useAccountRole'
 import { Ionicons } from '@expo/vector-icons'
 import { Tabs } from 'expo-router'
 import React from 'react'
@@ -7,6 +8,9 @@ import { Platform, StyleSheet, TouchableNativeFeedback, TouchableOpacity, useCol
 const ResidentLayout = () => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
+  const roleStore = useAccountRole()
+  const profile = roleStore.getProfile('resident')
+  const hasMaternalRecord = profile?.has_maternal_record === true
 
   return (
     <>
@@ -88,13 +92,17 @@ const ResidentLayout = () => {
 
         <Tabs.Screen
           name='(tabs)/maternal_tracker'
-          options={{title:'Maternal Tracker', tabBarIcon: ({focused}) => (
-            <Ionicons
-              name={focused ? 'medical' : 'medical-outline'}
-              size={20}
-              color={focused ? theme.tabIconSelected : theme.tabIconDefault}
-            />
-          )}}
+          options={{
+            title:'Maternal Tracker',
+            href: hasMaternalRecord ? '/(resident)/(tabs)/maternal_tracker' : null,
+            tabBarIcon: ({focused}) => (
+              <Ionicons
+                name={focused ? 'medical' : 'medical-outline'}
+                size={20}
+                color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+              />
+            )
+          }}
         />
 
         </Tabs>

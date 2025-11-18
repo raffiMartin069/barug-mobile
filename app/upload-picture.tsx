@@ -130,16 +130,21 @@ export default function UploadPicture() {
         <Spacer height={32} />
         
         <View style={styles.imageContainer}>
-          <ThemedImage
-            src={
-              selectedImage 
-                ? { uri: selectedImage }
-                : profile?.person_img 
-                ? { uri: profile.person_img }
-                : require('@/assets/images/default-image.jpg')
-            }
-            size={120}
-          />
+          <View style={styles.profileImageContainer}>
+            <ThemedImage
+              src={
+                selectedImage 
+                  ? { uri: selectedImage }
+                  : profile?.person_img 
+                  ? { uri: profile.person_img.startsWith('http')
+                      ? profile.person_img
+                      : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profile.person_img}` }
+                  : require('@/assets/images/default-image.jpg')
+              }
+              size={120}
+              style={styles.profileImage}
+            />
+          </View>
         </View>
 
         <Spacer height={24} />
@@ -181,6 +186,27 @@ const styles = StyleSheet.create({
   imageContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  profileImageContainer: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 2,
+    borderColor: '#561C24',
+    backgroundColor: '#fff',
+    shadowColor: '#561C24',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
   button: {
     width: '100%',

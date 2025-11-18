@@ -13,18 +13,76 @@ export async function fetchResidentPlus() {
   if (me.error) throw me.error
 
   const personId = me.data?.person_id
-  if (!personId) return { details: null, is_staff: false, staff_id: null }
+  if (!personId) return { details: null, is_staff: false, staff_id: null, is_bhw: false }
 
   const res = await supabase.rpc('get_specific_resident_full_profile', { p_person_id: personId })
   if (res.error) throw res.error
 
   const details = Array.isArray(res.data) ? res.data[0] : res.data
+  
+  console.log('[fetchResidentPlus] Checking staff status:', {
+    is_staff: details?.is_staff,
+    staff_id: details?.staff_id,
+  })
+  
+  // Check if staff has role_id = 9 (Barangay Health Worker)
+  let is_bhw = false
+  if (details?.staff_id) {
+    console.log('[fetchResidentPlus] Querying staff table: SELECT * FROM staff WHERE staff_id =', details.staff_id, 'AND role_id = 9')
+    const { data, error } = await supabase
+      .from('staff')
+      .select('*')
+      .eq('staff_id', details.staff_id)
+      .eq('role_id', 9)
+      .maybeSingle()
+    
+    console.log('[fetchResidentPlus] Staff query result:', {
+      found: !!data,
+      data: data,
+      error: error,
+    })
+    
+    is_bhw = !!data
+    console.log('[fetchResidentPlus] Is Barangay Health Worker (role_id=9)?', is_bhw)
+  } else {
+    console.log('[fetchResidentPlus] No staff_id found - cannot check for BHW role')
+  }
+  
+  // Check if person has maternal health record
+  let has_maternal_record = false
+  if (personId) {
+    console.log('[fetchResidentPlus] Checking maternal_health_record for person_id:', personId)
+    const { data: maternalData, error: maternalError } = await supabase
+      .from('maternal_health_record')
+      .select('maternal_record_id')
+      .eq('person_id', personId)
+      .maybeSingle()
+    
+    if (maternalError) {
+      console.log('[fetchResidentPlus] Maternal record query error:', maternalError)
+    }
+    
+    has_maternal_record = !!maternalData
+    console.log('[fetchResidentPlus] Has maternal record?', has_maternal_record, 'data:', maternalData)
+  }
 
-  return {
+  const result = {
     details,
     is_staff: Boolean(details?.is_staff),
     staff_id: details?.staff_id ?? null,
+    is_bhw,
+    has_maternal_record,
   }
+  
+  console.log('[fetchResidentPlus] Final result:', {
+    has_details: !!result.details,
+    is_staff: result.is_staff,
+    staff_id: result.staff_id,
+    is_bhw: result.is_bhw,
+    has_maternal_record: result.has_maternal_record,
+  })
+  
+  return result
 }
 
 /** Fetch a resident's full profile by explicit person_id. */

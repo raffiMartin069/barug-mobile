@@ -217,6 +217,8 @@ const Mpin = () => {
         await registerMyDevice({ user_type_id: 1, person_id: personId, staff_id: null });
       } catch { /* ignore for now */ }
 
+      // ✅ Navigate to choose-account which will force fresh fetch of all data
+      // (is_bhw, has_maternal_record, etc.)
       openModal('Unlocked', 'Welcome back!', 'success', {
         onPrimary: () => {
           router.replace('/(auth)/choose-account')

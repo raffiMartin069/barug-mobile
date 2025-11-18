@@ -153,20 +153,34 @@ export const useAccountRole = create<State>()(
         try {
           if (role === 'resident') {
             console.log('[RoleStore] fetching resident via fetchResidentPlus() …')
-            const payload = await fetchResidentPlus() // expected { details, is_staff, staff_id }
+            const payload = await fetchResidentPlus() // expected { details, is_staff, staff_id, is_bhw, has_maternal_record }
             console.log('[RoleStore] fetchResidentPlus() raw:', summarize(payload))
 
-            const { details, is_staff, staff_id } = payload || {}
+            const { details, is_staff, staff_id, is_bhw, has_maternal_record } = payload || {}
             console.log('[RoleStore] fetchResidentPlus() unpacked:', {
               hasDetails: !!details,
               is_staff,
               staff_id,
+              is_bhw,
+              has_maternal_record,
             })
-            if (is_staff && staff_id && get().staffId !== staff_id) {
-              console.log('[RoleStore] updating staffId from resident payload:', staff_id)
-              set({ staffId: staff_id })
+            
+            // Update staffId only if user is BHW
+            if (is_bhw && staff_id) {
+              if (get().staffId !== staff_id) {
+                console.log('[RoleStore] updating staffId from resident payload:', staff_id)
+                set({ staffId: staff_id })
+              }
+            } else if (staff_id && !is_bhw) {
+              // Clear staffId if user has staff_id but is NOT BHW
+              console.log('[RoleStore] User has staff_id but is NOT BHW (role_id != 9), clearing staffId')
+              set({ staffId: null })
             }
+            
+            // Add is_bhw and has_maternal_record to details for downstream checks
             if (details) {
+              details.is_bhw = is_bhw
+              details.has_maternal_record = has_maternal_record
               debugResidentProfile('after-fetch', details)
               get().setProfile('resident', details)
             } else {

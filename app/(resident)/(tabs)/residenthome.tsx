@@ -162,13 +162,17 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
       }
     }, [details?.person_id, loadRecentActivities, loadIdValidationRequest, loadProfileImage])
 
-    // 🔄 Ensure data is loaded (fetches only if missing/stale; TTL handled in store)
+    // 🔄 Ensure data is loaded (use cache since choose-account already forced fresh)
     useEffect(() => {
       let live = true
       ;(async () => {
         const fresh = await roleStore.ensureLoaded('resident')
         if (!live) return
         if (fresh) {
+          console.log('[ResidentHome] Profile loaded:', {
+            person_id: fresh.person_id,
+            has_maternal_record: fresh.has_maternal_record,
+          })
           setDetails(fresh)
           if (fresh.person_id) {
             loadRecentActivities(fresh.person_id)
