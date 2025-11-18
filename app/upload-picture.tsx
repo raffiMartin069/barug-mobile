@@ -70,12 +70,13 @@ export default function UploadPicture() {
       } as any)
 
       // Upload to Supabase storage
-      const fileName = `profile_${profile.person_id}_${Date.now()}.jpg`
-      console.log('Uploading file:', fileName)
+      const fileName = `${profile.supabase_uid}/${Date.now()}.jpg`
+      const fullPath = `person/${fileName}`
+      console.log('Uploading file:', fullPath)
       
       const { data, error } = await supabase.storage
         .from('profile-pictures')
-        .upload(fileName, formData)
+        .upload(fullPath, formData)
 
       if (error) {
         console.error('Storage upload error:', error)
@@ -85,19 +86,14 @@ export default function UploadPicture() {
 
       console.log('Upload successful, data:', data)
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('profile-pictures')
-        .getPublicUrl(fileName)
+      console.log('Upload successful, storing path:', fullPath)
 
-      console.log('Public URL:', publicUrl)
-
-      // Update person_img in database
-      console.log('Updating database with person_id:', profile.person_id, 'and URL:', publicUrl)
+      // Update person_img in database with just the path
+      console.log('Updating database with person_id:', profile.person_id, 'and path:', fullPath)
       
       const { data: updateData, error: updateError } = await supabase
-        .from('persons')
-        .update({ person_img: publicUrl })
+        .from('person')
+        .update({ person_img: fullPath })
         .eq('person_id', profile.person_id)
         .select()
 

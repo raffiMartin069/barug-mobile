@@ -39,16 +39,20 @@ const BhwHome = () => {
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
           <View style={[styles.container, {paddingHorizontal: 30, paddingVertical: 10,}]}>
-              <ThemedText title>Welcome, KIMBERLY!</ThemedText>
-              <ThemedImage
-                src={
-                 {
-                      uri: 'https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/id-uploads/person/df2bd136-11c9-4136-9f59-6bb86e60143d/2x2.png',
-                    }
-
-                }
-                size={50}
-              />
+              <ThemedText title>Welcome, {profile?.first_name || 'Staff'}!</ThemedText>
+              <View style={styles.profileImageContainer}>
+                <ThemedImage
+                  src={
+                    profileImage
+                      ? { uri: profileImage.startsWith('http') 
+                          ? profileImage 
+                          : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
+                      : require('@/assets/images/default-image.jpg')
+                  }
+                  size={62}
+                  style={styles.profileImage}
+                />
+              </View>
           </View>
 
           <Spacer height={5}/>
@@ -168,5 +172,26 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#333',
+  },
+  profileImageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    borderWidth: 2,
+    borderColor: '#561C24',
+    backgroundColor: '#fff',
+    shadowColor: '#561C24',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  profileImage: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
   },
 })
