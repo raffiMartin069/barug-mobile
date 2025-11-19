@@ -121,32 +121,32 @@ export const useAccountRole = create<State>()(
           ...get().profiles,
           [role]: { data, cachedAt: Date.now() },
         }
-        console.log('[RoleStore] setProfile()', { role, cachedAt: profiles[role]?.cachedAt })
-        if (role === 'resident') {
-          debugResidentProfile('setProfile', data)
-        }
+        // console.log('[RoleStore] setProfile()', { role, cachedAt: profiles[role]?.cachedAt })
+        // if (role === 'resident') {
+        //   debugResidentProfile('setProfile', data)
+        // }
         set({ profiles })
       },
 
       ensureLoaded: async (role, opts) => {
-        console.log('[RoleStore] ensureLoaded() start', { role, opts })
+        // console.log('[RoleStore] ensureLoaded() start', { role, opts })
         await get().waitForHydration()
 
         const entry = get().profiles[role]
         const force = !!opts?.force
         const stale = !entry || Date.now() - entry.cachedAt > MAX_AGE
 
-        console.log('[RoleStore] cache state:', {
-          hasEntry: !!entry,
-          cachedAt: entry?.cachedAt ?? null,
-          ageMs: entry ? Date.now() - entry.cachedAt : null,
-          stale,
-          force,
-        })
+        // console.log('[RoleStore] cache state:', {
+        //   hasEntry: !!entry,
+        //   cachedAt: entry?.cachedAt ?? null,
+        //   ageMs: entry ? Date.now() - entry.cachedAt : null,
+        //   stale,
+        //   force,
+        // })
 
         if (!force && !stale) {
-          console.log('[RoleStore] returning FRESH CACHED profile for', role)
-          if (role === 'resident') debugResidentProfile('return-cached', entry?.data)
+          // console.log('[RoleStore] returning FRESH CACHED profile for', role)
+          // if (role === 'resident') debugResidentProfile('return-cached', entry?.data)
           return entry?.data ?? null
         }
 
@@ -219,12 +219,12 @@ export const useAccountRole = create<State>()(
       name: 'role-store-v1',
       storage: createJSONStorage(() => AsyncStorage),
       onRehydrateStorage: () => {
-        console.log('[RoleStore] onRehydrateStorage() BEFORE')
+        // console.log('[RoleStore] onRehydrateStorage() BEFORE')
         return (state, error) => {
           if (error) {
             console.error('[RoleStore] rehydrate error:', error)
           } else {
-            console.log('[RoleStore] onRehydrateStorage() AFTER ok')
+            // console.log('[RoleStore] onRehydrateStorage() AFTER ok')
           }
           state?.hasHydrated === false && (state as any).set?.({ hasHydrated: true })
           // resolve the hydration gate

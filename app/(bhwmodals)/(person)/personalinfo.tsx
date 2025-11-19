@@ -61,7 +61,10 @@ const PersonalInfo = () => {
   const setDobAdapt = (next: Date | string | undefined) => {
     if (next instanceof Date && !isNaN(next.getTime())) {
       const pad = (n: number) => String(n).padStart(2, '0')
-      const formatted = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`
+      const year = next.getFullYear()
+      const month = pad(next.getMonth() + 1)
+      const day = pad(next.getDate())
+      const formatted = `${year}-${month}-${day}`
       setMany({ dob: formatted })
     } else if (typeof next === 'string') {
       setMany({ dob: next })
@@ -146,10 +149,11 @@ const PersonalInfo = () => {
 
           <Spacer height={10} />
           <ThemedDatePicker
-            value={dob ? new Date(dob) : undefined}
+            value={dob ? new Date(dob + 'T00:00:00') : undefined}
             mode="date"
             onChange={setDobAdapt}
             placeholder="Date of Birth *"
+            minimumDate={new Date(1900, 0, 1)}
             maximumDate={new Date()}
           />
 

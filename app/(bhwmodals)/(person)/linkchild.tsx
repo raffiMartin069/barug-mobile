@@ -26,7 +26,10 @@ const LinkChild = () => {
   const router = useRouter()
 
   // 🔗 store fields & helpers
-  const { childIds, childNames, addChild, removeChild } = useResidentFormStore()
+  const { 
+    childIds, childNames, addChild, removeChild,
+    motherId, fatherId, guardianId 
+  } = useResidentFormStore()
 
   // Relationship picker + search input state
   const [rel, setRel] = useState<CRel | ''>('')
@@ -35,11 +38,16 @@ const LinkChild = () => {
   // ✅ live search (results + search() trigger) — mirrors CreateFamily usage
   const { results: residentItems, search } = usePersonSearchByKey()
 
+  // Filter out parents/guardians from search results
+  const filteredItems = useMemo(() => {
+    if (!residentItems) return []
+    const excludeIds = [motherId, fatherId, guardianId].filter(Boolean).map(id => String(id))
+    return residentItems.filter(p => !excludeIds.includes(String(p.person_id)))
+  }, [residentItems, motherId, fatherId, guardianId])
+
   // Relationship options (multiple children allowed)
   const relItems: RelItem[] = [
-    { label: 'Child (unspecified)', value: 'CHILD' },
-    { label: 'Son', value: 'SON' },
-    { label: 'Daughter', value: 'DAUGHTER' },
+    { label: 'Child', value: 'CHILD' },
   ]
 
   // Chips derived from store (single source of truth).
@@ -149,7 +157,7 @@ const LinkChild = () => {
 
               {/* 🔎 Live-search select (same pattern as CreateFamily) */}
               <ThemedSearchSelect<PersonSearchRequest>
-                items={residentItems}   // results from the hook
+                items={filteredItems}   // results from the hook, excluding parents/guardians
                 getLabel={(p) => (p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name)}
                 getSubLabel={(p) => p.address}
                 placeholder='Search resident by name…'
@@ -185,9 +193,6 @@ const LinkChild = () => {
 
         {/* Footer actions */}
         <View>
-          <ThemedButton submit={false}>
-            <ThemedText non_btn>Skip</ThemedText>
-          </ThemedButton>
           <ThemedButton
             onPress={() => router.push('/(bhwmodals)/(person)/socioeconomicinfo')}
           >
