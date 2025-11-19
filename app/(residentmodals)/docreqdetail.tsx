@@ -1,23 +1,21 @@
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native'
-import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedButton from '@/components/ThemedButton'
-import ThemedCard from '@/components/ThemedCard'
-import ThemedDivider from '@/components/ThemedDivider'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 
 import {
   fetchDocRequestDetailBundle,
+  getPaymentMethodMap,
   type DocRequestDetailRow,
   type DocRequestLineDetail,
   type DocRequestPaymentSummary,
   type TimelineEvent,
-  getPaymentMethodMap, // ⬅️ new tiny helper (see services section)
 } from '@/services/documentRequest'
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; fg: string }> = {
@@ -33,10 +31,12 @@ const ACTION_META: Record<
   string,
   { icon: string; tint: string; title?: (d?: any) => string }
 > = {
-  REQUEST_CREATED: { icon: 'document-text', tint: '#1e293b', title: () => 'Request Created' },
-  LINE_ADDED:      { icon: 'add-circle',     tint: '#0e7490', title: () => 'Line Added' },
-  PAYMENT_ACCEPTED:{ icon: 'cash',           tint: '#065f46', title: () => 'Payment Accepted' },
-  STATUS_CHANGED:  { icon: 'flag',           tint: '#7c3aed', title: (d) => `Status Changed` },
+  REQUEST_CREATED:   { icon: 'document-text', tint: '#310101', title: () => 'Request Created' },
+  REQUEST_ADDED_BY:  { icon: 'document-text', tint: '#310101', title: () => 'Request Added By' },
+  LINE_ADDED:        { icon: 'add-circle',     tint: '#310101', title: () => 'Line Added' },
+  PAYMENT_ACCEPTED:  { icon: 'cash',           tint: '#310101', title: () => 'Payment Accepted' },
+  STATUS_CHANGED:    { icon: 'flag',           tint: '#310101', title: (d) => `Status Changed` },
+  OR_ISSUED:         { icon: 'receipt',        tint: '#310101', title: () => 'OR Issued' },
 }
 
 export default function DocRequestDetail() {
@@ -240,8 +240,8 @@ export default function DocRequestDetail() {
                       return (
                         <View key={String(ev.common_log_id)} style={styles.timelineItem}>
                           <View style={styles.timelineIconContainer}>
-                            <View style={[styles.timelineIcon, { backgroundColor: `${meta.tint}15` }]}>
-                              <ThemedIcon name={meta.icon as any} size={16} iconColor={meta.tint} />
+                            <View style={[styles.timelineIcon, { backgroundColor: '#31010115' }]}>
+                              <ThemedIcon name={meta.icon as any} size={18} iconColor={meta.tint} />
                             </View>
                             {index < filteredArray.length - 1 && <View style={styles.timelineLine} />}
                           </View>
@@ -348,17 +348,26 @@ function renderEventDetails(
       const subject = d?.on_behalf_of
         ? `On behalf of #${d.on_behalf_of}`
         : 'Self'
+      const channelRaw = d?.channel ? String(d.channel).toUpperCase() : null
+      const channel = channelRaw === 'WALKIN' ? 'Walk-in' : channelRaw
+      
       return (
         <>
           <LabelRow>
             <Chip label={subject} />
             {d?.business_id ? <Chip label={`Business #${d.business_id}`} /> : null}
+            {channel ? <Chip label={channel} color="#059669" /> : null}
           </LabelRow>
           {d?.purpose_notes ? (
             <ThemedText small muted style={{ marginTop: 4 }}>Notes: {d.purpose_notes}</ThemedText>
           ) : null}
         </>
       )
+    }
+    case 'REQUEST_ADDED_BY': {
+      const channelRaw = d?.channel ? String(d.channel).toUpperCase() : null
+      const channel = channelRaw === 'WALKIN' ? 'Walk-in' : channelRaw
+      return channel ? <Chip label={channel} color="#059669" /> : null
     }
     case 'LINE_ADDED': {
       return (
@@ -388,10 +397,11 @@ function renderEventDetails(
       if (s) return <StatusChip label={s.label} bg={s.bg} fg={s.fg} />
       return <Chip label={`To: ${to || '—'}`} />
     }
+    case 'OR_ISSUED': {
+      return d?.or_number ? <Chip label={d.or_number} color="#059669" /> : null
+    }
     default: {
-      // Fallback compact preview (no long raw JSON)
-      const text = safeJsonSnippet(d)
-      return text ? <ThemedText small muted>{text}</ThemedText> : null
+      return null
     }
   }
 }
@@ -483,6 +493,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   statusChip: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -654,6 +665,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chip: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,

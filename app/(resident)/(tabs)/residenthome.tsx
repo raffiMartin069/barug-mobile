@@ -2,7 +2,6 @@
   import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedCard from '@/components/ThemedCard'
-import ThemedDivider from '@/components/ThemedDivider'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
@@ -231,22 +230,25 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
               />
             }
           >
-            <View style={[styles.container, { paddingHorizontal: 30, paddingVertical: 10 }]}>
-              <ThemedText title={true}>
-                Welcome, {details?.first_name ?? fullName}!
-              </ThemedText>
-              <View style={styles.profileImageContainer}>
-                <ThemedImage
-                  src={
-                    profileImage
-                      ? { uri: profileImage.startsWith('http') 
-                          ? profileImage 
-                          : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
-                      : require('@/assets/images/default-image.jpg')
-                  }
-                  size={62}
-                  style={styles.profileImage}
-                />
+            <View style={styles.heroSection}>
+              <View style={styles.heroContent}>
+                <View style={styles.profileImageContainer}>
+                  <ThemedImage
+                    src={
+                      profileImage
+                        ? { uri: profileImage.startsWith('http') 
+                            ? profileImage 
+                            : `https://wkactspmojbvuzghmjcj.supabase.co/storage/v1/object/public/profile-pictures/${profileImage}` }
+                        : require('@/assets/images/default-image.jpg')
+                    }
+                    size={70}
+                    style={styles.profileImage}
+                  />
+                </View>
+                <View style={styles.heroText}>
+                  <ThemedText style={styles.welcomeText}>Welcome back,</ThemedText>
+                  <ThemedText style={styles.nameText}>{details?.first_name ?? fullName}!</ThemedText>
+                </View>
               </View>
             </View>
 
@@ -304,8 +306,10 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
               </>
             )}
 
-            <ThemedCard>
-              <ThemedText style={styles.text} subtitle={true}>Recent Activities</ThemedText>
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Recent Activities</ThemedText>
+            </View>
+            <ThemedCard style={styles.activityCard}>
               
               {activitiesLoading ? (
                 <View style={{ alignItems: 'center', paddingVertical: 20 }}>
@@ -313,89 +317,95 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
                   <ThemedText style={{ marginTop: 8, fontSize: 12, color: '#666' }}>Loading activities...</ThemedText>
                 </View>
               ) : recentActivities.length === 0 ? (
-                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                  <ThemedIcon name="time-outline" size={24} containerSize={40} bgColor="#f3f4f6" />
-                  <ThemedText style={{ marginTop: 8, fontSize: 14, color: '#666' }}>No recent activities</ThemedText>
-                  <ThemedText style={{ fontSize: 12, color: '#999', textAlign: 'center', marginTop: 4 }}>Your recent reports and cases will appear here</ThemedText>
+                <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                  <ThemedIcon name="time-outline" size={32} containerSize={64} bgColor="#f3f4f6" iconColor="#9ca3af" />
+                  <ThemedText style={{ marginTop: 12, fontSize: 15, fontWeight: '600', color: '#4b5563' }}>No recent activities</ThemedText>
+                  <ThemedText style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', marginTop: 4, paddingHorizontal: 32 }}>Your recent reports and cases will appear here</ThemedText>
                 </View>
               ) : (
                 recentActivities.map((activity, index) => {
                   const getStatusColor = (status: string, type: string) => {
                     const s = status.toUpperCase()
                     if (type === 'document') {
-                      if (s.includes('FOR_TREASURER_REVIEW')) return '#fde68a'
-                      if (s.includes('PAID')) return '#dbeafe'
-                      if (s.includes('FOR_PRINTING')) return '#e0e7ff'
-                      if (s.includes('RELEASED')) return '#d1fae5'
-                      if (s.includes('DECLINED')) return '#fecaca'
+                      if (s.includes('FOR_TREASURER_REVIEW')) return { bg: '#fef3c7', fg: '#92400e' }
+                      if (s.includes('PAID')) return { bg: '#dbeafe', fg: '#1e40af' }
+                      if (s.includes('FOR_PRINTING')) return { bg: '#e0e7ff', fg: '#3730a3' }
+                      if (s.includes('RELEASED')) return { bg: '#d1fae5', fg: '#065f46' }
+                      if (s.includes('DECLINED')) return { bg: '#fecaca', fg: '#7f1d1d' }
                     } else {
-                      if (s.includes('PENDING')) return '#ffe082'
-                      if (s.includes('SETTLED') || s.includes('RESOLVED')) return '#c8e6c9'
-                      if (s.includes('ESCALATED')) return '#b3e5fc'
-                      if (s.includes('DISMISSED')) return '#ffcdd2'
+                      if (s.includes('PENDING')) return { bg: '#fef3c7', fg: '#92400e' }
+                      if (s.includes('SETTLED') || s.includes('RESOLVED')) return { bg: '#d1fae5', fg: '#065f46' }
+                      if (s.includes('ESCALATED')) return { bg: '#dbeafe', fg: '#1e40af' }
+                      if (s.includes('DISMISSED')) return { bg: '#fecaca', fg: '#7f1d1d' }
                     }
-                    return '#e0e0e0'
+                    return { bg: '#f3f4f6', fg: '#6b7280' }
                   }
 
+                  const statusColors = getStatusColor(activity.status, activity.type)
+
                   return (
-                    <React.Fragment key={index}>
+                    <View key={index} style={styles.activityItemWrapper}>
                       <View style={styles.activityItem}>
-                        <ThemedIcon
-                          name={activity.icon}
-                          iconColor={activity.iconColor}
-                          bgColor={activity.iconBg}
-                          shape='square'
-                          containerSize={50}
-                          size={20}
-                        />
-                        <View style={styles.activityDetails}>
-                          <ThemedText style={styles.activityTitle}>{activity.title}</ThemedText>
-                          <ThemedText style={styles.activitySubtext}>{activity.subtitle}</ThemedText>
-                          <ThemedText style={styles.activitySubtext}>Filed on: {activity.dateOnly}</ThemedText>
-                          <ThemedText style={styles.activitySubtext}>Time Filed: {activity.timeOnly}</ThemedText>
-                          <ThemedText style={styles.activitySubtext}>{activity.reference}</ThemedText>
+                        <View style={styles.activityIconWrapper}>
+                          <ThemedIcon
+                            name={activity.icon}
+                            iconColor={'#310101'}
+                            bgColor={'#31010115'}
+                            shape='square'
+                            containerSize={48}
+                            size={22}
+                          />
                         </View>
-                        <View style={[styles.badge, { backgroundColor: getStatusColor(activity.status, activity.type) }]}>
-                          <ThemedText style={styles.badgeText}>{activity.status}</ThemedText>
+                        <View style={styles.activityDetails}>
+                          <View style={styles.activityHeader}>
+                            <ThemedText style={styles.activityTitle}>{activity.title}</ThemedText>
+                            <View style={[styles.badge, { backgroundColor: statusColors.bg }]}>
+                              <ThemedText style={[styles.badgeText, { color: statusColors.fg }]}>{activity.status}</ThemedText>
+                            </View>
+                          </View>
+                          <ThemedText style={styles.activitySubtitle}>{activity.subtitle}</ThemedText>
+                          <View style={styles.activityMeta}>
+                            <ThemedText style={styles.activityReference}>{activity.reference}</ThemedText>
+                          </View>
+                          <ThemedText style={styles.activityDate}>{activity.dateOnly} • {activity.timeOnly}</ThemedText>
                         </View>
                       </View>
-                      {index < recentActivities.length - 1 && (
-                        <>
-                          <Spacer height={15} />
-                          <ThemedDivider />
-                          <Spacer height={15} />
-                        </>
-                      )}
-                    </React.Fragment>
+                      {index < recentActivities.length - 1 && <View style={styles.activityDivider} />}
+                    </View>
                   )
                 })
               )}
             </ThemedCard>
-            <Spacer height={20} />
 
-            <ThemedCard>
-              <ThemedText style={styles.text} subtitle={true}>Services</ThemedText>
-              <View style={styles.container}>
-                <View style={styles.subcontainer}>
-                  <TouchableOpacity onPress={() => router.push('/requestdoc')}>
-                    <ThemedIcon name={'newspaper'} iconColor={'#6b4c3b'} bgColor={'#f2e5d7'} />
-                  </TouchableOpacity>
-                  <ThemedText style={styles.icontext}>Request a Document</ThemedText>
+
+            <View style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionTitle}>Quick Services</ThemedText>
+            </View>
+            <View style={styles.servicesGrid}>
+              <TouchableOpacity style={[styles.serviceCard, { backgroundColor: '#fef3c7' }]} onPress={() => router.push('/requestdoc')} activeOpacity={0.7}>
+                <View style={styles.serviceIconContainer}>
+                  <ThemedIcon name={'newspaper'} iconColor={'#92400e'} bgColor={'#fde68a'} size={28} containerSize={60} />
                 </View>
-                <View style={styles.subcontainer}>
-                  <TouchableOpacity onPress={() => router.push('/fileblotterreport')}>
-                    <ThemedIcon name={'receipt'} iconColor={'#4a5c6a'} bgColor={'#dfe3e6'} />
-                  </TouchableOpacity>
-                  <ThemedText style={styles.icontext}>File a Blotter Report</ThemedText>
+                <ThemedText style={styles.serviceTitle}>Request Document</ThemedText>
+                {/* <ThemedText style={styles.serviceSubtitle}>Get barangay certificates</ThemedText> */}
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.serviceCard, { backgroundColor: '#dbeafe' }]} onPress={() => router.push('/fileblotterreport')} activeOpacity={0.7}>
+                <View style={styles.serviceIconContainer}>
+                  <ThemedIcon name={'receipt'} iconColor={'#1e40af'} bgColor={'#bfdbfe'} size={28} containerSize={60} />
                 </View>
-                <View style={styles.subcontainer}>
-                  <TouchableOpacity onPress={() => router.push('/barangaycases')}>
-                    <ThemedIcon name={'folder-open'} iconColor={'#4e6151'} bgColor={'#dce5dc'} />
-                  </TouchableOpacity>
-                  <ThemedText style={styles.icontext}>Barangay Cases</ThemedText>
+                <ThemedText style={styles.serviceTitle}>File Report</ThemedText>
+                <ThemedText style={styles.serviceSubtitle}>Submit blotter report</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={[styles.serviceCard, { backgroundColor: '#d1fae5' }]} onPress={() => router.push('/barangaycases')} activeOpacity={0.7}>
+                <View style={styles.serviceIconContainer}>
+                  <ThemedIcon name={'folder-open'} iconColor={'#065f46'} bgColor={'#a7f3d0'} size={28} containerSize={60} />
                 </View>
-              </View>
-            </ThemedCard>
+                <ThemedText style={styles.serviceTitle}>View Cases</ThemedText>
+                <ThemedText style={styles.serviceSubtitle}>Track your cases</ThemedText>
+              </TouchableOpacity>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
 
@@ -410,39 +420,71 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
 
   const styles = StyleSheet.create({
     container: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    subcontainer: { alignItems: 'center', justifyContent: 'center', marginVertical: 10, width: 90 },
     fab: { position: 'absolute', bottom: 20, right: 20, zIndex: 999 },
-    text: { textAlign: 'center', fontWeight: 'bold' },
-    icontext: { textAlign: 'center', paddingTop: 10 },
-    activityItem: { flexDirection: 'row', alignItems: 'center', marginVertical: 10, gap: 10 },
-    activityDetails: { flex: 1, paddingHorizontal: 10 },
-    activityTitle: { fontWeight: 'bold' },
-    activitySubtext: { fontSize: 12, color: '#555' },
-    badge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
-    badgeText: { fontSize: 10, fontWeight: 'bold', color: '#333' },
-    verifyCard: { borderWidth: 2, borderColor: '#4b0404b2' },
-    verifyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    verifyTitle: { fontWeight: 'bold', fontSize: 16 },
-    verifySubtext: { fontSize: 12, color: '#6b7280', marginTop: 2 },
+    
+    heroSection: { paddingHorizontal: 20, paddingVertical: 20, backgroundColor: '#31010108' },
+    heroContent: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    heroText: { flex: 1 },
+    welcomeText: { fontSize: 14, color: '#6b7280', marginBottom: 4 },
+    nameText: { fontSize: 24, fontWeight: '700', color: '#310101' },
+    
     profileImageContainer: {
       width: 70,
       height: 70,
       borderRadius: 35,
-      borderWidth: 2,
-      borderColor: '#561C24',
+      borderWidth: 3,
+      borderColor: '#310101',
       backgroundColor: '#fff',
-      shadowColor: '#561C24',
+      shadowColor: '#310101',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
+      shadowOpacity: 0.2,
       shadowRadius: 8,
       elevation: 8,
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
     },
-    profileImage: {
-      width: 62,
-      height: 62,
-      borderRadius: 31,
+    profileImage: { width: 70, height: 70, borderRadius: 35 },
+    
+    sectionHeader: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
+    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1f2937' },
+    
+    activityCard: { marginHorizontal: 16, marginBottom: 16, paddingVertical: 8 },
+    activityItemWrapper: { paddingVertical: 4 },
+    activityItem: { flexDirection: 'row', gap: 12, paddingVertical: 8 },
+    activityIconWrapper: { paddingTop: 2 },
+    activityDetails: { flex: 1 },
+    activityHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6, gap: 8 },
+    activityTitle: { fontWeight: '700', fontSize: 14, color: '#1f2937', flex: 1 },
+    activitySubtitle: { fontSize: 13, color: '#4b5563', marginBottom: 6, lineHeight: 18 },
+    activityMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 4 },
+    activityReference: { fontSize: 11, fontWeight: '600', color: '#310101', backgroundColor: '#31010110', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
+    activityDate: { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+    activityDivider: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 8 },
+    badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+    badgeText: { fontSize: 10, fontWeight: '700' },
+    
+    servicesGrid: { flexDirection: 'row', paddingHorizontal: 16, gap: 10, marginBottom: 20 },
+    serviceCard: {
+      flex: 1,
+      backgroundColor: '#fff',
+      borderRadius: 12,
+      padding: 12,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
     },
+    serviceIconContainer: { marginBottom: 8 },
+    serviceTitle: { fontSize: 12, fontWeight: '700', color: '#1f2937', textAlign: 'center', marginBottom: 2 },
+    serviceSubtitle: { fontSize: 10, color: '#6b7280', textAlign: 'center', lineHeight: 13 },
+    
+    verifyCard: { borderWidth: 2, borderColor: '#4b0404b2', marginHorizontal: 16 },
+    verifyRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    verifyTitle: { fontWeight: 'bold', fontSize: 16 },
+    verifySubtext: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   })

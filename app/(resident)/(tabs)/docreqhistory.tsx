@@ -1,7 +1,8 @@
 // /(resident)/(tabs)/docreqhistory.tsx
 import React, { useEffect, useMemo, useState } from 'react'
-import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native'
+import { RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Modal } from 'react-native'
 import { useRouter } from 'expo-router'
+import DateTimePicker from '@react-native-community/datetimepicker'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -62,6 +63,13 @@ export default function DocReqHistory() {
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [items, setItems] = useState<DocRequestListItem[]>([])
+  
+  // Date filter state
+  const [showDateModal, setShowDateModal] = useState(false)
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
+  const [showStartPicker, setShowStartPicker] = useState(false)
+  const [showEndPicker, setShowEndPicker] = useState(false)
 
   const load = async () => {
     if (!meId) return
@@ -105,14 +113,34 @@ export default function DocReqHistory() {
 
   // local search filter (in addition to server search)
   const filtered = useMemo(() => {
+    let result = items
+    
+    // Date range filter
+    if (startDate || endDate) {
+      result = result.filter(i => {
+        const reqDate = new Date(i.created_at)
+        if (startDate && reqDate < startDate) return false
+        if (endDate) {
+          const endOfDay = new Date(endDate)
+          endOfDay.setHours(23, 59, 59, 999)
+          if (reqDate > endOfDay) return false
+        }
+        return true
+      })
+    }
+    
+    // Search filter
     const q = search.trim().toLowerCase()
-    if (!q) return items
-    return items.filter(i =>
-      i.request_code.toLowerCase().includes(q) ||
-      (i.on_behalf_of || '').toLowerCase().includes(q) ||
-      (i.doc_types?.join(', ') || '').toLowerCase().includes(q)
-    )
-  }, [items, search])
+    if (q) {
+      result = result.filter(i =>
+        i.request_code.toLowerCase().includes(q) ||
+        (i.on_behalf_of || '').toLowerCase().includes(q) ||
+        (i.doc_types?.join(', ') || '').toLowerCase().includes(q)
+      )
+    }
+    
+    return result
+  }, [items, search, startDate, endDate])
 
   const active = filtered.filter(i => i.status !== 'RELEASED')
   const history = filtered.filter(i => i.status === 'RELEASED')
@@ -146,25 +174,34 @@ export default function DocReqHistory() {
             />
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
-            <View style={styles.chipRow}>
-              {FILTERS.map(f => {
-                const selected = selectedFilter === f.key
-                return (
-                  <TouchableOpacity
-                    key={f.key}
-                    activeOpacity={0.7}
-                    style={[styles.chip, selected && styles.chipSelected]}
-                    onPress={() => setSelectedFilter(f.key)}
-                  >
-                    <ThemedText style={[styles.chipText, selected && styles.chipTextSelected]}>
-                      {f.label}
-                    </ThemedText>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-          </ScrollView>
+          <View style={styles.filtersRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
+              <View style={styles.chipRow}>
+                {FILTERS.map(f => {
+                  const selected = selectedFilter === f.key
+                  return (
+                    <TouchableOpacity
+                      key={f.key}
+                      activeOpacity={0.7}
+                      style={[styles.chip, selected && styles.chipSelected]}
+                      onPress={() => setSelectedFilter(f.key)}
+                    >
+                      <ThemedText style={[styles.chipText, selected && styles.chipTextSelected]}>
+                        {f.label}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </ScrollView>
+            
+            <TouchableOpacity
+              style={[styles.dateFilterButton, (startDate || endDate) && styles.dateFilterButtonActive]}
+              onPress={() => setShowDateModal(true)}
+            >
+              <ThemedIcon name="calendar" size={14} iconColor={(startDate || endDate) ? '#fff' : '#6b7280'} bgColor="transparent" containerSize={16} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (
@@ -257,6 +294,126 @@ export default function DocReqHistory() {
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/(residentmodals)/requestdoc')}>
         <ThemedIcon name="add" size={20} iconColor="#fff" bgColor="transparent" containerSize={24} />
       </TouchableOpacity>
+      
+      {/* Date Filter Modal */}
+      <Modal
+        visible={showDateModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDateModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDateModal(false)}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <View style={styles.modalIconBg}>
+                  <ThemedIcon name="calendar" size={18} iconColor="#310101" bgColor="transparent" containerSize={24} />
+                </View>
+                <ThemedText style={styles.modalTitle}>Filter by Date Range</ThemedText>
+              </View>
+              
+              <View style={styles.dateContainer}>
+                <View style={styles.dateCard}>
+                  <View style={styles.dateCardHeader}>
+                    <ThemedIcon name="calendar-outline" size={14} iconColor="#6b7280" bgColor="transparent" containerSize={18} />
+                    <ThemedText style={styles.dateCardLabel}>Start Date</ThemedText>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.dateButton}
+                    onPress={() => setShowStartPicker(true)}
+                  >
+                    <ThemedText style={[styles.dateButtonText, !startDate && styles.dateButtonPlaceholder]}>
+                      {startDate ? startDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select start date'}
+                    </ThemedText>
+                    <ThemedIcon name="chevron-down" size={14} iconColor="#9ca3af" bgColor="transparent" containerSize={18} />
+                  </TouchableOpacity>
+                  {startDate && (
+                    <TouchableOpacity 
+                      style={styles.clearButton}
+                      onPress={() => setStartDate(null)}
+                    >
+                      <ThemedIcon name="close-circle" size={16} iconColor="#dc2626" bgColor="transparent" containerSize={20} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+                
+                <View style={styles.dateCard}>
+                  <View style={styles.dateCardHeader}>
+                    <ThemedIcon name="calendar-outline" size={14} iconColor="#6b7280" bgColor="transparent" containerSize={18} />
+                    <ThemedText style={styles.dateCardLabel}>End Date</ThemedText>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.dateButton}
+                    onPress={() => setShowEndPicker(true)}
+                  >
+                    <ThemedText style={[styles.dateButtonText, !endDate && styles.dateButtonPlaceholder]}>
+                      {endDate ? endDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select end date'}
+                    </ThemedText>
+                    <ThemedIcon name="chevron-down" size={14} iconColor="#9ca3af" bgColor="transparent" containerSize={18} />
+                  </TouchableOpacity>
+                  {endDate && (
+                    <TouchableOpacity 
+                      style={styles.clearButton}
+                      onPress={() => setEndDate(null)}
+                    >
+                      <ThemedIcon name="close-circle" size={16} iconColor="#dc2626" bgColor="transparent" containerSize={20} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+              
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={styles.modalButtonSecondary}
+                  onPress={() => {
+                    setStartDate(null)
+                    setEndDate(null)
+                    setShowDateModal(false)
+                  }}
+                >
+                  <ThemedIcon name="close" size={14} iconColor="#6b7280" bgColor="transparent" containerSize={18} />
+                  <ThemedText style={styles.modalButtonSecondaryText}>Clear All</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.modalButtonPrimary}
+                  onPress={() => setShowDateModal(false)}
+                >
+                  <ThemedIcon name="checkmark" size={14} iconColor="#fff" bgColor="transparent" containerSize={18} />
+                  <ThemedText style={styles.modalButtonPrimaryText}>Apply Filter</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+      
+      {/* Date Pickers */}
+      {showStartPicker && (
+        <DateTimePicker
+          value={startDate || new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowStartPicker(false)
+            if (date) setStartDate(date)
+          }}
+        />
+      )}
+      {showEndPicker && (
+        <DateTimePicker
+          value={endDate || new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, date) => {
+            setShowEndPicker(false)
+            if (date) setEndDate(date)
+          }}
+        />
+      )}
     </ThemedView>
   )
 }
@@ -367,9 +524,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
   },
+  filtersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   filtersScroll: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+    flex: 1,
+  },
+  dateFilterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateFilterButtonActive: {
+    backgroundColor: '#310101',
+    borderColor: '#310101',
   },
   chipRow: {
     flexDirection: 'row',
@@ -599,5 +774,132 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+  },
+  
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  modalIconBg: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#fef7f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    flex: 1,
+  },
+  dateContainer: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  dateCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  dateCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  dateCardLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dateButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1f2937',
+  },
+  dateButtonPlaceholder: {
+    color: '#9ca3af',
+  },
+  clearButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButtonSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  modalButtonSecondaryText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  modalButtonPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#310101',
+    borderRadius: 12,
+    paddingVertical: 14,
+    shadowColor: '#310101',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modalButtonPrimaryText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 })

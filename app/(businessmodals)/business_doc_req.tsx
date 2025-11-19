@@ -1,7 +1,7 @@
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -13,22 +13,22 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 
+import { supabase } from '@/constants/supabase'; // ⬅️ fallback fetch here
 import { useAccountRole } from '@/store/useAccountRole'
-import { supabase } from '@/constants/supabase' // ⬅️ fallback fetch here
 
 import {
+  checkBusinessClearanceEffectiveOn,
+  checkBusinessClearanceForYear,
+  computeExemptionAmount,
+  createDocumentRequest,
+  getBusinessesOwnedByPerson,
   getDocumentTypes,
   getPurposesByDocumentType,
-  getBusinessesOwnedByPerson,
-  createDocumentRequest,
-  computeExemptionAmount,
   peso,
+  resolveClearanceMode,
+  type BusinessLite,
   type DocType,
   type PurposeWithFeeFlags as Purpose,
-  type BusinessLite,
-  checkBusinessClearanceForYear,
-  resolveClearanceMode,
-  checkBusinessClearanceEffectiveOn,
 } from '@/services/documentRequest'
 
 type PersonMinimal = {
@@ -260,6 +260,10 @@ export default function BusinessDocRequest() {
         if (!live) return
         console.debug('[BUS_DOC] purposes loaded for docType', effectiveDocTypeId, p)
         setPurposes(p)
+        const ctcPurpose = p.find(purpose => purpose.purpose_label?.toUpperCase().includes('CERTIFIED TRUE COPY'))
+        if (ctcPurpose) {
+          setPurposeId(ctcPurpose.document_purpose_id)
+        }
       } catch (e) {
         console.warn('[BUS_DOC] getPurposesByDocumentType failed for', effectiveDocTypeId, e)
       }
@@ -324,14 +328,15 @@ export default function BusinessDocRequest() {
   }, [ctcMode, businessId, purposes, purposeId, businesses, bizCatMap])
 
   const businessItems = useMemo(() => {
-    return businesses.map((b) => {
-      const s = statusByBiz[b.business_id]
-      const suffix =
-        s?.status === 'ISSUED'    ? ` • CTC only (${CURRENT_YEAR})`
-      : s?.status === 'REQUESTED' ? ` • In progress (${CURRENT_YEAR})`
-                                 : ' • New Clearance'
-      return { label: `${b.business_name}${suffix}`, value: b.business_id }
-    })
+    return businesses
+      .filter((b) => {
+        const s = statusByBiz[b.business_id]
+        return s?.status === 'ISSUED'
+      })
+      .map((b) => ({
+        label: `${b.business_name} • CTC only (${CURRENT_YEAR})`,
+        value: b.business_id
+      }))
   }, [businesses, statusByBiz])
 
   const purposeItems = useMemo(
@@ -406,7 +411,7 @@ export default function BusinessDocRequest() {
     return ''
   }, [blocked, effectiveDocTypeId, purposeId, businessId, quantity, ctcMode, clearanceRef?.reference_request_id, clearanceRef?.year])
 
-  const pageTitle = ctcMode ? 'CTC — Business Clearance' : 'Business Clearance'
+  const pageTitle = 'CTC — Business Clearance'
   const summaryText = useMemo(() => {
     const doc = ctcMode ? 'CTC — Business Clearance' : BUSINESS_DOC_NAME
     const purp = selectedPurpose?.purpose_label
@@ -423,6 +428,22 @@ export default function BusinessDocRequest() {
       setModal({ visible: true, icon: 'error', title: 'Missing info', message: err, primaryText: 'OK' })
       return
     }
+    
+    const selectedBusiness = businesses.find(b => b.business_id === businessId)
+    setModal({
+      visible: true,
+      icon: 'info',
+      title: 'Confirm CTC Request',
+      message: `Submit CTC request for ${selectedBusiness?.business_name || 'this business'}? Estimated fee: ${estimatedDisplay}`,
+      primaryText: 'Confirm',
+      onPrimary: () => {
+        hideModal()
+        submitRequest()
+      },
+    })
+  }
+
+  const submitRequest = async () => {
     try {
       setSubmitting(true)
       const requesterId = Number(me?.person_id)
@@ -481,41 +502,19 @@ export default function BusinessDocRequest() {
     <ThemedView safe>
       <ThemedAppBar title={pageTitle} showNotif={false} showProfile={false} />
 
-      <View style={styles.stepper}>
-        {['Requester', 'Business', ctcMode ? 'CTC & Copies' : 'Purpose & Copies'].map((s, i) => (
-          <View key={s} style={styles.stepItem}>
-            <View style={styles.stepDot} />
-            <ThemedText small muted numberOfLines={1} style={{ maxWidth: 98 }}>{s}</ThemedText>
-            {i < 2 && <View style={styles.stepLine} />}
-          </View>
-        ))}
-      </View>
-
       <ThemedKeyboardAwareScrollView
         contentContainerStyle={{ paddingBottom: SUBMIT_BAR_HEIGHT + 28 }}
         enableOnAndroid extraScrollHeight={24} keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.summaryChip}>
-          <Ionicons name="document-text-outline" size={16} color={BRAND} />
-          <ThemedText style={{ marginLeft: 6 }} weight="700">{summaryText}</ThemedText>
+        <View style={styles.headerBanner}>
+          <View style={styles.headerIconWrap}>
+            <Ionicons name="document-text" size={24} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <ThemedText style={styles.headerTitle}>Certified True Copy</ThemedText>
+            <ThemedText style={styles.headerSubtitle}>Request a certified copy of your Business Clearance</ThemedText>
+          </View>
         </View>
-
-        {blocked ? (
-          <View style={styles.banner}>
-            <Ionicons name="pause-circle-outline" size={18} color="#92400E" />
-            <ThemedText style={styles.bannerText} small>
-              You already have a Business Clearance request in progress for {CURRENT_YEAR}. Please wait for it to be issued.
-            </ThemedText>
-          </View>
-        ) : ctcMode && (
-          <View style={styles.banner}>
-            <Ionicons name="warning-outline" size={18} color="#92400E" />
-            <ThemedText style={styles.bannerText} small>
-              This business already has an issued Business Clearance (still valid).
-              You can only request a <ThemedText weight="800">Certified True Copy</ThemedText>.
-            </ThemedText>
-          </View>
-        )}
 
         <ThemedCard style={{ marginTop: 10 }}>
           <View style={styles.cardHeaderRow}>
@@ -557,51 +556,17 @@ export default function BusinessDocRequest() {
             items={businessItems}
             value={businessId}
             setValue={(v: number) => setBusinessId(v)}
-            placeholder={businessItems.length ? 'Select business' : 'No businesses found'}
+            placeholder={businessItems.length ? 'Select business' : 'No business clearance yet'}
             order={0}
           />
-          {(!businessId && businesses.length === 0) && (
+          {businessItems.length === 0 && (
             <ThemedText small style={styles.hintText}>
-              No linked businesses. You can apply for a Business Profile from your Profile → Other Services.
+              No business clearance available yet. Please request a Business Clearance first.
             </ThemedText>
           )}
-        </ThemedCard>
 
-        <Spacer height={50} />
-        <ThemedCard>
-          <RowTitle icon="document-text-outline" title={ctcMode ? 'CTC Information' : 'Business Information'} />
-          <Spacer height={8} />
-
-          <ThemedDropdown
-            items={purposeItems}
-            value={purposeId}
-            setValue={(v: number) => setPurposeId(v)}
-            placeholder={!effectiveDocTypeId ? 'Loading document…' : (ctcMode ? 'Select CTC purpose' : 'Select Business Nature')}
-            order={1}
-          />
-          {!!effectiveDocTypeId && !purposeItems.length && <ThemedText small muted>Loading purposes…</ThemedText>}
-          {(!purposeId) && <ThemedText small style={styles.errorText}>Please select a purpose.</ThemedText>}
-
-          {/* Visible detected nature from Business Profile (RPC or fallback) */}
-          {!!detectedNatureLabel && !ctcMode && (
-            <>
-              <Spacer height={10} />
-              <View style={styles.detectedChip}>
-                <Ionicons name="pricetag-outline" size={14} color={BRAND} />
-                <ThemedText small style={{ marginLeft: 6 }}>
-                  Business Nature (from Business Profile): <ThemedText small weight="800">{detectedNatureLabel}</ThemedText>
-                </ThemedText>
-              </View>
-            </>
-          )}
-
-          <Spacer height={12} />
+          <Spacer height={16} />
           <FeeRow title="Estimated Fee" value={estimatedDisplay} sub={exemptDisplay} />
-
-          <Spacer height={12} />
-          <ThemedText weight="600">Copies</ThemedText>
-          <Spacer height={6} />
-          <QuantityPicker value={quantity} onChange={setQuantity} />
 
           <Spacer height={12} />
           <ThemedText weight="600">Notes to Treasurer/Clerk (optional)</ThemedText>
@@ -609,7 +574,7 @@ export default function BusinessDocRequest() {
           <ThemedTextInput
             value={purposeNotes}
             onChangeText={setPurposeNotes}
-            placeholder={ctcMode ? 'E.g., need certified copy for agency filing' : 'E.g., renewal before end of month'}
+            placeholder="E.g., need certified copy for agency filing"
             multiline
           />
 
@@ -625,7 +590,7 @@ export default function BusinessDocRequest() {
           <ThemedText weight="800" style={{ fontSize: 18 }}>{estimatedDisplay}</ThemedText>
         </View>
         <ThemedButton onPress={handleSubmit} disabled={!!inlineError || submitting} loading={submitting}>
-          <ThemedText btn>{ctcMode ? 'Submit CTC Request' : 'Submit Request'}</ThemedText>
+          <ThemedText btn>Submit CTC Request</ThemedText>
         </ThemedButton>
       </View>
 
@@ -637,9 +602,16 @@ export default function BusinessDocRequest() {
             </View>
             {!!modal.title && <ThemedText style={styles.modalTitle} title>{modal.title}</ThemedText>}
             {!!modal.message && <ThemedText style={styles.modalMsg}>{modal.message}</ThemedText>}
-            <Pressable style={styles.modalBtn} onPress={() => { modal.onPrimary ? modal.onPrimary() : hideModal() }}>
-              <ThemedText btn>{modal.primaryText || 'OK'}</ThemedText>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 8, width: '100%' }}>
+              {modal.icon === 'info' && (
+                <Pressable style={[styles.modalBtn, { flex: 1, backgroundColor: '#e5e7eb' }]} onPress={hideModal}>
+                  <ThemedText style={{ color: '#374151', fontWeight: '700' }}>Cancel</ThemedText>
+                </Pressable>
+              )}
+              <Pressable style={[styles.modalBtn, modal.icon === 'info' && { flex: 1 }]} onPress={() => { modal.onPrimary ? modal.onPrimary() : hideModal() }}>
+                <ThemedText btn>{modal.primaryText || 'OK'}</ThemedText>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -656,30 +628,40 @@ const styles = StyleSheet.create({
   rowLabel: { width: 120, color: '#6b7280' },
   rowValue: { flex: 1 },
 
-  stepper: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 6, paddingBottom: 4 },
-  stepItem: { flexDirection: 'row', alignItems: 'center' },
-  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: BRAND, marginRight: 6 },
-  stepLine: { width: 28, height: 2, backgroundColor: 'rgba(49,1,1,0.25)', marginHorizontal: 8, borderRadius: 1 },
-
-  summaryChip: {
-    marginHorizontal: 16, marginTop: 6, marginBottom: 2,
-    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: '#eee', backgroundColor: '#fafafa',
-    flexDirection: 'row', alignItems: 'center'
-  },
-
-  banner: {
-    marginHorizontal: 16, marginTop: 10,
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FED7AA',
-    backgroundColor: '#FFFBEB',
+  headerBanner: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: BRAND,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: BRAND,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  bannerText: { color: '#92400E', flex: 1 },
+  headerIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.85)',
+  },
 
   hintText: { marginTop: 6, color: '#6b7280' },
   errorText: { color: '#C0392B', marginTop: 6 },
@@ -691,18 +673,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8, paddingHorizontal: 12,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: '#fafafa',
-  },
-
-  detectedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fafafa'
   },
 
   fadeTop: { position: 'absolute', left: 0, right: 0, bottom: SUBMIT_BAR_HEIGHT, height: 14, backgroundColor: 'transparent' },

@@ -14,6 +14,8 @@ type Props = {
   showNotif?: boolean
   showProfile?: boolean
   showSettings?: boolean
+  rightAction?: React.ReactNode
+  onPressBack?: () => void
 }
 
 const ThemedAppBar = ({
@@ -24,6 +26,8 @@ const ThemedAppBar = ({
   showNotif = true,
   showProfile = true,
   showSettings = false,
+  rightAction,
+  onPressBack,
 }: Props) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme ?? 'light'] ?? Colors.light
@@ -44,7 +48,7 @@ const ThemedAppBar = ({
       {/* Left */}
       <View style={styles.leftSection}>
         {showBack ? (
-          <TouchableOpacity onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
+          <TouchableOpacity onPress={onPressBack || (() => navigation.goBack())} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={20} color={theme.background} />
           </TouchableOpacity>
         ) : (
@@ -62,6 +66,7 @@ const ThemedAppBar = ({
 
       {/* Right */}
       <View style={styles.rightSection}>
+        {rightAction}
         {/* change badge to show {unread} instead of prop unreadCount */}
         {showNotif && (
           <TouchableOpacity
