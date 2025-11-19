@@ -1,5 +1,5 @@
 import { supabase } from "@/constants/supabase";
-import { Business, BusinessDetails } from "@/types/businessType";
+import { Business, BusinessDetails, QuoteRow } from "@/types/businessType";
 
 export class BusinessRepository {
   /**
@@ -31,5 +31,23 @@ export class BusinessRepository {
     // Depending on how your RPC returns data: sometimes array, sometimes object
     const details = Array.isArray(data) ? data[0] ?? null : data ?? null;
     return (details as BusinessDetails) ?? null;
+  }
+
+  async fetchAutoQuote(businessId: number, year: number) {
+    const res = await supabase.rpc("get_bc_renewal_quote_auto", { p_business_id: businessId, p_year: year });
+    if (res.error) throw res.error;
+    // res.data will be array of rows
+    return (res.data ?? []) as QuoteRow[];
+  }
+
+  async fetchAutoGrandTotal(businessId: number, year: number) {
+    const res = await supabase.rpc("get_bc_renewal_grand_total_auto", { p_business_id: businessId, p_year: year });
+    if (res.error) throw res.error;
+    // Postgres returns a numeric; supabase may return array or scalar — normalize:
+    if (Array.isArray(res.data)) {
+      const v = (res.data[0] as any)?.coalesce ?? (res.data[0] as any)?.sum ?? res.data[0];
+      return Number(v ?? 0);
+    }
+    return Number(res.data ?? 0);
   }
 }

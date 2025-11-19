@@ -33,3 +33,20 @@ export type BusinessDetails = {
   owner_person_id?: number | null;
   owner_full_name?: string | null;
 };
+
+export type QuoteRow = {
+  item_year: number;
+  kind: "ARREARS" | "CURRENT" | string;
+  base_fee: number | null;
+  offense_no?: string | null;
+  surcharge: number | null;
+  total: number | null;
+  deadline?: string | null;
+  days_late?: number | null;
+};
+
+export type QuoteBreakdown = {
+  rows: QuoteRow[];
+  grand_total: number;
+};
+

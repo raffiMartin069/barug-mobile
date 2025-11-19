@@ -25,10 +25,10 @@ export const useFetchBusiness = () => {
 
   return {
     businesses,
-    setBusinesses,           // optional
+    setBusinesses,           
     getBusinesses,
     selectedBusiness,
-    setSelectedBusiness,     // important for your list
-    getBusinessDetails,      // useful for details screen
+    setSelectedBusiness,     
+    getBusinessDetails,      
   };
 };

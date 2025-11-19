@@ -1,16 +1,15 @@
-// app/(businessmodals)/businessdetails.tsx
 import Spacer from "@/components/Spacer";
 import ThemedAppBar from "@/components/ThemedAppBar";
 import ThemedButton from "@/components/ThemedButton";
 import ThemedCard from "@/components/ThemedCard";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
+import { useBusinessQuote } from "@/hooks/useBusinessQuote";
 import { useFetchBusiness } from "@/hooks/useFetchBusiness";
-import { useLocalSearchParams } from "expo-router";
-import React from "react";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, TouchableOpacity, View, Modal, Image } from "react-native";
 import { supabaseStorage } from "@/services/supabaseStorage";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type ProofFile = {
   name?: string;
@@ -23,7 +22,7 @@ export default function BusinessDetails() {
   const businessId = useMemo(() => {
     if (!idParam) return null;
     const n = Number(idParam);
-    return Number.isFinite(n) ? n : null;
+    return Number.isFinite(n) && n > 0 ? n : null;
   }, [idParam]);
 
   const {
@@ -37,6 +36,8 @@ export default function BusinessDetails() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { quote, loading: quoteLoading, error: quoteError, loadAutoQuote } = useBusinessQuote();
+  const [quoteYear, setQuoteYear] = useState<number>(new Date().getFullYear());
 
   useEffect(() => {
     let mounted = true;
@@ -45,25 +46,65 @@ export default function BusinessDetails() {
       
       setLoading(true);
       
-      // Get business details
-      let businessData = selectedBusiness;
-      if (!businessData || businessData.business_id !== businessId) {
-        businessData = await getBusinessDetails(undefined, businessId);
+      try {
+        // Get business details
+        let businessData = selectedBusiness;
+        if (!businessData || businessData.business_id !== businessId) {
+          businessData = await getBusinessDetails(undefined, businessId);
+        }
+        
+        if (!mounted) return;
+        setDetails(businessData ?? null);
+        
+        // Get proof images from Supabase storage
+        if (businessData) {
+          try {
+            const proofFiles = await supabaseStorage.getBusinessProofImages(businessId);
+            setFiles(proofFiles.length > 0 ? proofFiles : null);
+          } catch (storageError) {
+            console.warn('Failed to load business proof images:', storageError);
+            setFiles(null);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load business details:', error);
+        if (mounted) {
+          setDetails(null);
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
-      
-      if (!mounted) return;
-      setDetails(businessData ?? null);
-      
-      // Get proof images from Supabase storage
-      if (businessData) {
-        const proofFiles = await supabaseStorage.getBusinessProofImages(businessId);
-        setFiles(proofFiles.length > 0 ? proofFiles : null);
-      }
-      
-      setLoading(false);
     })();
     return () => { mounted = false; };
   }, [businessId, selectedBusiness]);
+
+  useEffect(() => {
+    // auto-load quote once we have a business id
+    let mounted = true;
+    (async () => {
+      if (!businessId) return;
+      try {
+        await loadAutoQuote(businessId, quoteYear);
+      } catch (e) {
+        /* swallow, error state is available via quoteError */
+      }
+    })();
+    return () => { mounted = false; };
+  }, [businessId, quoteYear]);
+
+  // Early return if no valid business ID
+  if (!businessId) {
+    return (
+      <ThemedView safe>
+        <ThemedAppBar title="Business Details" showProfile={false} />
+        <View style={styles.center}>
+          <ThemedText>Invalid business ID provided.</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   if (loading) {
     return (
@@ -286,6 +327,94 @@ export default function BusinessDetails() {
           )}
         </ThemedCard>
 
+        <Spacer height={12} />
+
+        {/* AUTO-COMPUTED QUOTE BREAKDOWN */}
+        <ThemedCard style={styles.section}>
+          <View style={styles.sectionHead}>
+            <ThemedText subtitle style={styles.sectionIcon}>📋</ThemedText>
+            <ThemedText style={styles.sectionTitle}>BREAKDOWN (AUTO-COMPUTED QUOTE)</ThemedText>
+          </View>
+
+          <Spacer height={8} />
+
+          {quoteLoading ? (
+            <View style={styles.center}><ActivityIndicator /></View>
+          ) : quoteError ? (
+            <ThemedText style={styles.mutedSmall}>Failed to load quote.</ThemedText>
+          ) : !quote?.rows || quote.rows.length === 0 ? (
+            <ThemedText style={styles.mutedSmall}>No items.</ThemedText>
+          ) : (
+            <>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tableContainer}>
+                <View style={styles.tableWrapper}>
+                  <View style={styles.tableHeader}>
+                    <ThemedText style={[styles.th, styles.colYear]}>Year</ThemedText>
+                    <ThemedText style={[styles.th, styles.colKind]}>Kind</ThemedText>
+                    <ThemedText style={[styles.th, styles.thRight, styles.colFee]}>Base Fee</ThemedText>
+                    <ThemedText style={[styles.th, styles.thRight, styles.colOffense]}>Offense #</ThemedText>
+                    <ThemedText style={[styles.th, styles.thRight, styles.colFee]}>Surcharge</ThemedText>
+                    <ThemedText style={[styles.th, styles.thRight, styles.colTotal]}>Line Total</ThemedText>
+                    <ThemedText style={[styles.th, styles.colDeadline]}>Deadline</ThemedText>
+                    <ThemedText style={[styles.th, styles.thRight, styles.colDays]}>Days Late</ThemedText>
+                  </View>
+
+                  {quote.rows.map((r, idx) => (
+                    <View key={idx} style={styles.tableRow}>
+                      <ThemedText style={[styles.td, styles.colYear]}>{String(r.item_year)}</ThemedText>
+
+                      <ThemedText style={[styles.td, styles.colKind]}>
+                        <Text style={r.kind === "ARREARS" ? styles.pillArrearsText : styles.pillCurrentText}>
+                          {r.kind === "ARREARS" ? "ARREARS" : "CURRENT"}
+                        </Text>
+                      </ThemedText>
+
+                      <ThemedText style={[styles.tdRight, styles.td, styles.bold, styles.colFee]}>
+                        {r.base_fee != null ? `₱ ${Number(r.base_fee).toFixed(2)}` : "—"}
+                      </ThemedText>
+
+                      <ThemedText style={[styles.tdRight, styles.td, styles.colOffense]}>
+                        {r.offense_no ?? "—"}
+                      </ThemedText>
+
+                      <ThemedText style={[styles.tdRight, styles.td, styles.colFee]}>
+                        {r.surcharge != null ? `₱ ${Number(r.surcharge).toFixed(2)}` : "—"}
+                      </ThemedText>
+
+                      <ThemedText style={[styles.tdRight, styles.td, styles.bold, styles.colTotal]}>
+                        {r.total != null ? `₱ ${Number(r.total).toFixed(2)}` : "—"}
+                      </ThemedText>
+
+                      <ThemedText style={[styles.td, styles.colDeadline]}>
+                        {r.deadline ? (/* try to format */ (():string => {
+                          try { return new Date(r.deadline).toISOString().slice(0,10) } catch { return String(r.deadline) }
+                        })()) : "—"}
+                      </ThemedText>
+
+                      <ThemedText style={[styles.tdRight, styles.td, styles.colDays]}>
+                        {r.days_late ?? "—"}
+                      </ThemedText>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+
+              {/* grand total */}
+              <View style={[styles.tableFooter]}>
+                <ThemedText style={[styles.tfootLabel]}>Grand Total</ThemedText>
+                <ThemedText style={[styles.tfootValue]}>
+                  <ThemedText style={styles.bold}>₱ {Number(quote.grand_total ?? 0).toFixed(2)}</ThemedText>
+                </ThemedText>
+              </View>
+
+              <Spacer height={8} />
+              <ThemedText style={styles.mutedSmall}>
+                * Generated by get_bc_renewal_quote_auto(business_id, year). Use get_bc_renewal_grand_total_auto(business_id, year) for the total above.
+              </ThemedText>
+            </>
+          )}
+        </ThemedCard>
+
         <Spacer height={32} />
       </ScrollView>
 
@@ -361,4 +490,29 @@ const styles = StyleSheet.create({
   navText: { color: "white", fontSize: 30, fontWeight: "bold" },
   imageCounter: { position: "absolute", bottom: 50, alignSelf: "center", backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15 },
   counterText: { color: "white", fontSize: 14, fontWeight: "600" },
+  // Table styles
+  tableContainer: { marginHorizontal: -12 },
+  tableWrapper: { paddingHorizontal: 12, minWidth: 700 },
+  tableHeader: { flexDirection: "row", paddingVertical: 8, alignItems: "center", borderBottomWidth: 1, borderColor: "#eee" },
+  th: { fontSize: 11, fontWeight: "700", color: "#374151", paddingHorizontal: 4 },
+  thRight: { textAlign: "right" as const },
+  tableRow: { flexDirection: "row", paddingVertical: 8, alignItems: "center", borderBottomWidth: 1, borderColor: "#f3f4f6" },
+  td: { fontSize: 12, color: "#111827", paddingHorizontal: 4 },
+  tdRight: { textAlign: "right" as const },
+  bold: { fontWeight: "700" as const },
+  // Column widths
+  colYear: { width: 60 },
+  colKind: { width: 80 },
+  colFee: { width: 90 },
+  colOffense: { width: 70 },
+  colTotal: { width: 100 },
+  colDeadline: { width: 90 },
+  colDays: { width: 70 },
+  // Footer styles
+  tfootLabel: { flex: 1, textAlign: "right" as const, paddingRight: 12, fontWeight: "600" as const },
+  tfootValue: { width: 120, textAlign: "right" as const, fontWeight: "700" as const },
+  pillArrearsText: { color: "#7a1919", fontWeight: "700" },
+  pillCurrentText: { color: "#0b5ed7", fontWeight: "700" },
+  tableFooter: { flexDirection: "row", paddingTop: 10, alignItems: "center", justifyContent: "flex-end" },
+
 });
