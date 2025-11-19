@@ -196,11 +196,26 @@ export const useAccountRole = create<State>()(
             return get().profiles.staff?.data ?? null
           }
 
+          // if (role === 'business') {
+          //   // const details = await fetchBusinessProfile()
+          //   // if (details) get().setProfile('business', details)
+          //   console.log('[RoleStore] business role requested; returning cached business profile only')
+          //   return get().profiles.business?.data ?? null
+          // }
+
           if (role === 'business') {
-            // const details = await fetchBusinessProfile()
-            // if (details) get().setProfile('business', details)
-            console.log('[RoleStore] business role requested; returning cached business profile only')
-            return get().profiles.business?.data ?? null
+            console.log('[RoleStore] fetching logged-in user as business owner via fetchResidentPlus() …')
+            const payload = await fetchResidentPlus()
+            const { details } = payload || {}
+
+            if (details) {
+              // store it under 'business' role so getProfile('business') works
+              get().setProfile('business', details)
+            } else {
+              console.warn('[RoleStore] fetchResidentPlus() returned no details for business')
+            }
+
+            return details ?? entry?.data ?? null
           }
 
           return entry?.data ?? null
