@@ -10,7 +10,7 @@ import ThemedView from '@/components/ThemedView'
 import { supabase } from '@/constants/supabase'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
-import React, { useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 
 const BusinessHome = () => {
