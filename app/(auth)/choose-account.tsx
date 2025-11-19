@@ -1,4 +1,5 @@
 // app/(auth)/choose-account.tsx
+import NiceModal from '@/components/NiceModal'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useAccountRole } from '@/store/useAccountRole'
@@ -38,6 +39,9 @@ export default function ChooseAccount() {
   const [details, setDetails] = useState<any | null>(cached ?? null)
   const [loading, setLoading] = useState(!cached)
   const hasFetched = useRef(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalTitle, setModalTitle] = useState('')
+  const [modalMessage, setModalMessage] = useState('')
 
   // Ensure we have a fresh resident profile (force refresh to check role_id) - fetch once
   useEffect(() => {
@@ -71,11 +75,22 @@ export default function ChooseAccount() {
     return parts || undefined
   }, [details])
 
+  const personStatus = useMemo(() => {
+    if (!details?.person_status_id) return null
+    const statusId = details.person_status_id
+    if (statusId === 1) return { name: 'ACTIVE', color: '#22C55E', icon: 'checkmark-circle' as const }
+    if (statusId === 2) return { name: 'INACTIVE', color: '#F59E0B', icon: 'alert-circle' as const }
+    if (statusId === 3) return { name: 'DECEASED', color: '#EF4444', icon: 'close-circle' as const }
+    return null
+  }, [details?.person_status_id])
+
   const options: Option[] = useMemo(() => {
     const list: Option[] = []
 
     console.log('[ChooseAccount] Building options with details:', {
       person_id: details?.person_id,
+      person_status_id: details?.person_status_id,
+      residential_status_id: details?.residential_status_id,
       is_business_owner: details?.is_business_owner,
       is_staff: details?.is_staff,
       is_bhw: details?.is_bhw,
@@ -83,7 +98,7 @@ export default function ChooseAccount() {
       store_staffId: store.staffId,
     })
 
-    if (details?.person_id) {
+    if (details?.person_id && details?.residential_status_id === 2) {
       list.push({
         label: 'Login as Resident',
         type: 'resident',
@@ -129,6 +144,25 @@ export default function ChooseAccount() {
 
   const handleChoose = (type: Option['type']) => {
     if (type === 'resident') {
+      // Check person status before allowing access
+      if (details?.person_status_id === 2) {
+        setModalTitle('Account Inactive')
+        setModalMessage('Your account is INACTIVE. Please visit the barangay office to know why this happened.')
+        setModalOpen(true)
+        return
+      }
+      if (details?.person_status_id === 3) {
+        setModalTitle('Account Deceased')
+        setModalMessage('The owner of this account is already DECEASED.')
+        setModalOpen(true)
+        return
+      }
+      if (details?.person_status_id !== 1) {
+        setModalTitle('Access Denied')
+        setModalMessage('Your account status does not allow access. Please contact the barangay office.')
+        setModalOpen(true)
+        return
+      }
       store.setResident()
       return router.replace('/(resident)/(tabs)/residenthome')
     }
@@ -185,7 +219,7 @@ export default function ChooseAccount() {
                 style={({ pressed }) => [
                   styles.optionCard,
                   {
-                    borderColor: COLORS.border,
+                    borderColor: opt.type === 'resident' && personStatus?.name !== 'ACTIVE' ? personStatus?.color : COLORS.border,
                     backgroundColor: '#FFFFFF',
                     opacity: pressed ? 0.96 : 1,
                   },
@@ -197,9 +231,19 @@ export default function ChooseAccount() {
                   </View>
 
                   <View style={{ flex: 1 }}>
-                    <ThemedText style={[styles.optionLabel, { color: COLORS.text }]}>
-                      {opt.label}
-                    </ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <ThemedText style={[styles.optionLabel, { color: COLORS.text }]}>
+                        {opt.label}
+                      </ThemedText>
+                      {opt.type === 'resident' && personStatus && personStatus.name !== 'ACTIVE' && (
+                        <View style={[styles.statusBadge, { backgroundColor: personStatus.color + '20' }]}>
+                          <Ionicons name={personStatus.icon} size={12} color={personStatus.color} />
+                          <ThemedText style={[styles.statusText, { color: personStatus.color }]}>
+                            {personStatus.name}
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
                     {!!opt.subtitle && (
                       <ThemedText style={[styles.optionSubtitle, { color: COLORS.muted }]}>
                         {opt.subtitle}
@@ -223,6 +267,16 @@ export default function ChooseAccount() {
           </View>
         </View>
       </View>
+
+      <NiceModal
+        visible={modalOpen}
+        title={modalTitle}
+        message={modalMessage}
+        variant="warn"
+        primaryText="OK"
+        onPrimary={() => setModalOpen(false)}
+        onClose={() => setModalOpen(false)}
+      />
     </ThemedView>
   )
 }
@@ -255,6 +309,15 @@ const styles = StyleSheet.create({
   },
   optionLabel: { fontSize: 16, fontWeight: '600' },
   optionSubtitle: { marginTop: 2, fontSize: 12 },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  statusText: { fontSize: 10, fontWeight: '700' },
   empty: {
     marginTop: 16,
     padding: 14,

@@ -14,7 +14,7 @@ import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View 
 const BhwHome = () => {
   const router = useRouter()
   const { getProfile } = useAccountRole()
-  const profile = getProfile('staff')
+  const residentProfile = getProfile('resident')
   const [profileImage, setProfileImage] = useState<string | null>(null)
 
   // Load profile image
@@ -36,10 +36,10 @@ const BhwHome = () => {
 
   // Load profile image when component mounts
   useEffect(() => {
-    if (profile?.person_id) {
-      loadProfileImage(profile.person_id)
+    if (residentProfile?.person_id) {
+      loadProfileImage(residentProfile.person_id)
     }
-  }, [profile?.person_id, loadProfileImage])
+  }, [residentProfile?.person_id, loadProfileImage])
 
   // Handle hardware back button
   useEffect(() => {
@@ -68,7 +68,7 @@ const BhwHome = () => {
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
           <View style={[styles.container, {paddingHorizontal: 30, paddingVertical: 10,}]}>
-              <ThemedText title>Welcome, {profile?.first_name || 'Staff'}!</ThemedText>
+              <ThemedText title>Welcome, {residentProfile?.first_name || 'Staff'}!</ThemedText>
               <View style={styles.profileImageContainer}>
                 <ThemedImage
                   src={

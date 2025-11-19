@@ -410,6 +410,21 @@
             <InfoRow label="Civil Status:" value={profile?.civil_status ?? '—'} />
             <InfoRow label="Nationality:" value={profile?.nationality ?? '—'} />
             <InfoRow 
+              label="Account Status:" 
+              value={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons 
+                    name='checkmark-circle' 
+                    size={16} 
+                    color='#22C55E' 
+                  />
+                  <ThemedText style={{ color: '#22C55E', fontWeight: '600' }}>
+                    {profile?.person_status_name || 'ACTIVE'}
+                  </ThemedText>
+                </View>
+              } 
+            />
+            <InfoRow 
               label="ID Status:" 
               value={
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>

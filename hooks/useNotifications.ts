@@ -29,6 +29,12 @@ export function useNotifications({ userTypeId, personId = null, staffId = null }
   useEffect(() => {
     let mounted = true;
 
+    // Clear notifications immediately if no user ID
+    if ((userTypeId === 1 && !personId) || (userTypeId === 2 && !staffId)) {
+      setItems([]);
+      return;
+    }
+
     async function load() {
       const q = supabase
         .from('notification')
@@ -42,6 +48,8 @@ export function useNotifications({ userTypeId, personId = null, staffId = null }
       if (!error) {
         const mineOnly = (data || []).filter(mine) as NotifItem[];
         setItems(mineOnly);
+      } else {
+        setItems([]);
       }
     }
 

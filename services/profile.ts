@@ -13,12 +13,28 @@ export async function fetchResidentPlus() {
   if (me.error) throw me.error
 
   const personId = me.data?.person_id
-  if (!personId) return { details: null, is_staff: false, staff_id: null, is_bhw: false }
+  if (!personId) return { details: null, is_staff: false, staff_id: null, is_bhw: false, has_maternal_record: false }
+
+  // Get person status and residential status
+  const { data: personData, error: personError } = await supabase
+    .from('person')
+    .select('person_status_id, residential_status_id')
+    .eq('person_id', personId)
+    .single()
+  
+  if (personError) throw personError
 
   const res = await supabase.rpc('get_specific_resident_full_profile', { p_person_id: personId })
   if (res.error) throw res.error
 
   const details = Array.isArray(res.data) ? res.data[0] : res.data
+  
+  // Add person status info to details
+  if (details) {
+    details.person_status_id = personData.person_status_id
+    details.person_status_name = personData.person_status_id === 1 ? 'ACTIVE' : personData.person_status_id === 2 ? 'INACTIVE' : personData.person_status_id === 3 ? 'DECEASED' : 'UNKNOWN'
+    details.residential_status_id = personData.residential_status_id
+  }
   
   console.log('[fetchResidentPlus] Checking staff status:', {
     is_staff: details?.is_staff,

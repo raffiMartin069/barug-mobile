@@ -4,15 +4,35 @@ import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrol
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { useAccountRole } from '@/store/useAccountRole'
+import { logout } from '@/services/auth'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, View } from 'react-native'
 
 const Settings = () => {
   const router = useRouter()
-  const { getProfile, currentRole } = useAccountRole()
+  const { getProfile, currentRole, clearAll } = useAccountRole()
   const profile = getProfile('resident')
+  
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout()
+            clearAll()
+            router.replace('/(auth)/phone')
+          },
+        },
+      ]
+    )
+  }
   
   const settingsData = useMemo(() => {
     const sections = [
@@ -65,7 +85,7 @@ const Settings = () => {
           </View>
         ))}
 
-        <ThemedButton submit={false}>
+        <ThemedButton submit={false} onPress={handleLogout}>
           <ThemedText non_btn={true}>Logout</ThemedText>
         </ThemedButton>
       </ThemedKeyboardAwareScrollView>
