@@ -50,3 +50,9 @@ export type QuoteBreakdown = {
   grand_total: number;
 };
 
+export type PaidRecord = {
+  period_year: number;
+  or_number: string | null;
+  paid_on: string | null;
+};
+

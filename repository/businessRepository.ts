@@ -50,4 +50,17 @@ export class BusinessRepository {
     }
     return Number(res.data ?? 0);
   }
+
+  async fetchPaidHistory(businessId: number) {
+    const { data, error } = await supabase
+      .from('business_clearance_status_record')
+      .select('period_year, or_number, paid_on')
+      .eq('business_id', businessId)
+      .eq('period_type', 'ANNUAL')
+      .not('paid_on', 'is', null)
+      .order('period_year', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
 }
