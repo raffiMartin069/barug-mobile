@@ -66,11 +66,18 @@ export const useAssistant = () => {
 
         const sendMessage = async () => {
             try {
-                const response = await fetch(CHATBOT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: t }),
-                    signal: controller.signal,
+                // const response = await fetch(CHATBOT_URL, {
+                //     method: 'POST',
+                //     headers: { 'Content-Type': 'application/json' },
+                //     body: JSON.stringify({ query: t }),
+                //     signal: controller.signal,
+                // });
+
+                // dummy response
+                const response = await new Promise<Response>((resolve) => {
+                    setTimeout(() => {
+                        resolve(new Response(JSON.stringify({ reply: `You said: ${t}` }), { status: 200 }));
+                    }, 3000);
                 });
 
                 let res: any = null;
@@ -129,8 +136,11 @@ export const useAssistant = () => {
         Object.values(loadingTimersRef.current).forEach(timer => clearInterval(timer));
         loadingTimersRef.current = {};
 
-        // Remove loading placeholders from messages
-        setMsgs(prev => prev.filter(m => !m.id?.toString().startsWith('loading_')));
+        // Remove only messages that are still marked as loading.
+        // Previously we removed messages by `id` prefix which also matched
+        // finalized bot responses (they reuse the loading id). That caused
+        // previously received bot replies to vanish when cancelling.
+        setMsgs(prev => prev.filter(m => !(m as any).loading));
     }, []);
 
     return { message, setMessage, msgs, setMsgs, listRef, loadingTimersRef, handleSend, stopAll };
