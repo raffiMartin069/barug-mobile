@@ -5,12 +5,41 @@ import ThemedIcon from '@/components/ThemedIcon'
 import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { supabase } from '@/constants/supabase'
+import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
-import React, { useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native'
 
 const BhwHome = () => {
   const router = useRouter()
+  const { getProfile } = useAccountRole()
+  const residentProfile = getProfile('resident')
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+
+  // Load profile image
+  const loadProfileImage = useCallback(async (personId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('person')
+        .select('person_img')
+        .eq('person_id', personId)
+        .single()
+      
+      if (error) throw error
+      setProfileImage(data?.person_img || null)
+    } catch (error) {
+      console.error('[BhwHome] Failed to load profile image:', error)
+      setProfileImage(null)
+    }
+  }, [])
+
+  // Load profile image when component mounts
+  useEffect(() => {
+    if (residentProfile?.person_id) {
+      loadProfileImage(residentProfile.person_id)
+    }
+  }, [residentProfile?.person_id, loadProfileImage])
 
   // Handle hardware back button
   useEffect(() => {
@@ -39,7 +68,7 @@ const BhwHome = () => {
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
 
           <View style={[styles.container, {paddingHorizontal: 30, paddingVertical: 10,}]}>
-              <ThemedText title>Welcome, {profile?.first_name || 'Staff'}!</ThemedText>
+              <ThemedText title>Welcome, {residentProfile?.first_name || 'Staff'}!</ThemedText>
               <View style={styles.profileImageContainer}>
                 <ThemedImage
                   src={

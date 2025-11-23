@@ -2,10 +2,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Stack } from 'expo-router'
 import React, { useEffect } from 'react'
-import { ActivityIndicator, StyleSheet, View, LogBox } from 'react-native'
+import { ActivityIndicator, LogBox, StyleSheet, View } from 'react-native'
 import { NiceModalProvider } from '../hooks/NiceModalProvider'
-import { useRouteGuard } from '../hooks/useRouteGuard'
 import useDeepLinks from '../hooks/useDeepLinks'
+import { useRouteGuard } from '../hooks/useRouteGuard'
 
 // 🔔 Notifications: global handler so foreground notifications show an alert
 import * as Notifications from 'expo-notifications'
