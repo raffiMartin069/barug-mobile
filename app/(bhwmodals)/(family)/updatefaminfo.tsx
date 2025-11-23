@@ -13,6 +13,7 @@ import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
 import { RELATIONSHIP } from '@/constants/relationship'
 import { FamilyRepository } from '@/repository/familyRepository'
 import { HouseholdRepository } from '@/repository/householdRepository'
+import { useAccountRole } from '@/store/useAccountRole'
 import { UpdateFamilyInformation } from '@/types/updateFamilyInformationType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
@@ -106,10 +107,11 @@ const UpdateFamInfo = () => {
           return
         }
 
-        console.log('Fetched familyId:', familyId, 'familyHeadId:', familyHeadId)
+        const profile = useAccountRole((s) => s.getProfile('resident'))
+        const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
 
         const data: UpdateFamilyInformation = {
-          p_performed_by: 0,
+          p_performed_by: parseInt(addedById ?? '0'),
           p_family_id: familyId,
           p_reason: 'Update Family Information',
           p_source_of_income: incomesource,

@@ -35,6 +35,7 @@ import { useHouseMateStore } from '@/store/houseMateStore'
 import { MgaKaHouseMates } from '@/types/houseMates'
 
 import { SchedulingUtility } from '@/utilities/SchedulingUtlitiy'
+import { useAccountRole } from '@/store/useAccountRole'
 
 const SCREEN_WIDTH = Dimensions.get('window').width
 const ACTION_BTN_HEIGHT = 44
@@ -133,6 +134,9 @@ const QuarterlySched = () => {
 
   const { households, setHouseholds, fetchSchedules } = useFetchSchedule();
 
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+
   // ---------- Household details bottom sheet ----------
   const [open, setOpen] = useState(false)
   const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null)
@@ -229,7 +233,7 @@ const QuarterlySched = () => {
       const res = await service.Execute({
         p_schedule_id: Number(reschedTarget?.id.split("-")[1]),
         p_new_week_id: reschedWeek.week_id,
-        p_resched_by_id: 1,
+        p_resched_by_id: parseInt(addedById ?? '1'),
         p_reason: reschedReason ?? "N/A"
       });
       if (!res) {
@@ -270,7 +274,7 @@ const QuarterlySched = () => {
     try {
       const msg = await SchedulingUtility.MarkAsDone({
         p_hth_id: Number(selectedHousehold?.id.split("-")[1]),
-        p_staff_id: 1,
+        p_staff_id: parseInt(addedById ?? '1'),
         p_remarks: "N/A"
       })
       if (!msg) {

@@ -11,6 +11,7 @@ import ThemedView from '@/components/ThemedView'
 import { HouseholdException } from '@/exception/HouseholdException'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { HouseholdRepository } from '@/repository/householdRepository'
+import { useAccountRole } from '@/store/useAccountRole'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, StyleSheet } from 'react-native'
@@ -71,6 +72,9 @@ const UpdateFamHead = () => {
   // Reason
   const [reason, setReason] = useState<ChangeReason | null>(null)
   const [otherReason, setOtherReason] = useState('')
+
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
   
   const residentItems = useMemo(() => residentList, [residentList])
   const reasonItems = useMemo(
@@ -108,7 +112,7 @@ const UpdateFamHead = () => {
           Alert.alert('Warning', 'Family not found. Please check the family number and try again.');
           return;
         }
-        const result = await repository.UpdateFamilyHead(familyId, Number(newHeadId), 0, finalReason);
+        const result = await repository.UpdateFamilyHead(familyId, Number(newHeadId), parseInt(addedById ?? '1'), finalReason);
         if (!result) {
           Alert.alert('Error', 'Failed to update family head. Please try again.');
           return;
