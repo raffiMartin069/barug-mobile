@@ -1,5 +1,4 @@
 import { CHATBOT_LOADING_SCREENS } from "@/constants/temp/bot/chatbot";
-import { CHATBOT_URL } from "@/lib/chatbotSettings";
 import { ChatBotMessageType } from "@/types/chatbotMessageType";
 import { useCallback, useRef, useState } from "react";
 import { Alert, FlatList } from "react-native";
