@@ -1,4 +1,5 @@
 import { CHATBOT_LOADING_SCREENS } from "@/constants/temp/bot/chatbot";
+import { CHATBOT_URL } from "@/lib/chatbotSettings";
 import { ChatBotMessageType } from "@/types/chatbotMessageType";
 import { useCallback, useRef, useState } from "react";
 import { Alert, FlatList } from "react-native";
@@ -65,19 +66,19 @@ export const useAssistant = () => {
 
         const sendMessage = async () => {
             try {
-                // const response = await fetch(CHATBOT_URL, {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({ query: t }),
-                //     signal: controller.signal,
-                // });
+                const response = await fetch(CHATBOT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: t }),
+                    signal: controller.signal,
+                });
 
                 // dummy response
-                const response = await new Promise<Response>((resolve) => {
-                    setTimeout(() => {
-                        resolve(new Response(JSON.stringify({ reply: `You said: ${t}` }), { status: 200 }));
-                    }, 3000);
-                });
+                // const response = await new Promise<Response>((resolve) => {
+                //     setTimeout(() => {
+                //         resolve(new Response(JSON.stringify({ reply: `You said: ${t}` }), { status: 200 }));
+                //     }, 3000);
+                // });
 
                 let res: any = null;
                 try {
