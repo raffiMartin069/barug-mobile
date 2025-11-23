@@ -4,12 +4,16 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Colors } from '@/constants/Colors';
 
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
@@ -26,8 +30,8 @@ import {
 } from '@/services/barangayCases';
 import { useAccountRole } from '@/store/useAccountRole';
 
-const BRAND = '#6d2932';
-const BRAND_LIGHT = '#8b4a56';
+const BRAND = Colors.primary;
+
 const NEUTRAL_50 = '#fafafa';
 const NEUTRAL_100 = '#f5f5f5';
 const NEUTRAL_200 = '#e5e5e5';
@@ -46,17 +50,32 @@ const STATUS_CONFIG: Record<StatusBucket, { bg: string; fg: string; icon: string
   dismissed: { bg: '#f3f4f6', fg: '#374151', icon: 'close-circle-outline' },
 };
 
+const FILTER_STATUS_CONFIG = {
+  ongoing: { icon: 'hourglass-outline', label: 'Ongoing' },
+  settled: { icon: 'checkmark-circle-outline', label: 'Settled' },
+  arbitrated: { icon: 'scale-outline', label: 'Arbitrated' },
+  dismissed: { icon: 'close-circle-outline', label: 'Dismissed' },
+  repudiated: { icon: 'ban-outline', label: 'Repudiated' },
+};
+
 const BarangayCases = () => {
   const router = useRouter();
   const { currentRole, getProfile, ensureLoaded } = useAccountRole();
 
   const [personId, setPersonId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | StatusBucket>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'ongoing' | 'settled' | 'arbitrated' | 'dismissed' | 'repudiated'>('all');
   const [roleFilter, setRoleFilter] = useState<'ALL' | 'COMPLAINANT' | 'RESPONDENT'>('ALL');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rows, setRows] = useState<CaseHistoryUI[]>([]);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -120,12 +139,27 @@ const BarangayCases = () => {
         (r.complainants || '').toLowerCase().includes(q) ||
         (r.respondents || '').toLowerCase().includes(q);
       
-      const matchesStatus = statusFilter === 'all' || r.status_bucket === statusFilter;
+      let matchesStatus = true;
+      if (statusFilter !== 'all') {
+        const status = (r.settlement_status || '').toUpperCase();
+        if (statusFilter === 'ongoing') {
+          matchesStatus = r.status_bucket === 'pending' || r.status_bucket === 'under_review';
+        } else if (statusFilter === 'repudiated') {
+          matchesStatus = status.includes('REPUDIATED');
+        } else {
+          matchesStatus = r.status_bucket === statusFilter;
+        }
+      }
+      
       const matchesRole = roleFilter === 'ALL' || r.role === roleFilter;
       
-      return matchesSearch && matchesStatus && matchesRole;
+      const filedDate = dayjs(r.filed_date);
+      const matchesDate = (!startDate || filedDate.isAfter(dayjs(startDate).subtract(1, 'day'))) &&
+                          (!endDate || filedDate.isBefore(dayjs(endDate).add(1, 'day')));
+      
+      return matchesSearch && matchesStatus && matchesRole && matchesDate;
     });
-  }, [rows, search, statusFilter, roleFilter]);
+  }, [rows, search, statusFilter, roleFilter, startDate, endDate]);
 
   const stats = useMemo(() => {
     const statusCounts: Record<string, number> = {};
@@ -191,7 +225,22 @@ const BarangayCases = () => {
   if (loading) {
     return (
       <ThemedView safe style={styles.container}>
-        <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
+        <ThemedAppBar 
+          title="Barangay Cases" 
+          showNotif={false} 
+          showProfile={false}
+          rightAction={
+            <TouchableOpacity
+              onPress={() => router.push({
+                pathname: '/resident-records',
+                params: { personId: personId }
+              })}
+              style={{ padding: 8 }}
+            >
+              <Ionicons name="person-circle-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          }
+        />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={BRAND} />
           <ThemedText style={styles.loadingText}>Loading cases...</ThemedText>
@@ -202,7 +251,22 @@ const BarangayCases = () => {
 
   return (
     <ThemedView safe style={styles.container}>
-      <ThemedAppBar title="Barangay Cases" showNotif={false} showProfile={false} />
+      <ThemedAppBar 
+        title="Barangay Cases" 
+        showNotif={false} 
+        showProfile={false}
+        rightAction={
+          <TouchableOpacity
+            onPress={() => router.push({
+              pathname: '/resident-records',
+              params: { personId: personId }
+            })}
+            style={{ padding: 8 }}
+          >
+            <Ionicons name="person-circle-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -262,60 +326,27 @@ const BarangayCases = () => {
             style={styles.searchInput}
           />
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll}>
-            <View style={styles.filtersRow}>
-              <TouchableOpacity
-                style={[styles.filterChip, statusFilter === 'all' && styles.filterChipSelected]}
-                onPress={() => setStatusFilter('all')}
-              >
-                <ThemedIcon name="apps-outline" size={14} containerSize={18} bgColor="transparent" />
-                <ThemedText style={[styles.filterText, statusFilter === 'all' && styles.filterTextSelected]}>
-                  All
-                </ThemedText>
-              </TouchableOpacity>
+          <View style={styles.filterRow}>
+            <TouchableOpacity style={styles.filterButton} onPress={() => setShowStatusModal(true)}>
+              <Ionicons name="funnel-outline" size={18} color={NEUTRAL_800} />
+              <ThemedText style={styles.filterButtonText}>Status</ThemedText>
+              {statusFilter !== 'all' && <View style={styles.filterDot} />}
+            </TouchableOpacity>
 
-              {Object.entries(STATUS_CONFIG).map(([key, config]) => {
-                const selected = statusFilter === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[styles.filterChip, selected && styles.filterChipSelected]}
-                    onPress={() => setStatusFilter(key as StatusBucket)}
-                  >
-                    <ThemedIcon name={config.icon} size={14} containerSize={18} bgColor="transparent" />
-                    <ThemedText style={[styles.filterText, selected && styles.filterTextSelected]}>
-                      {key.replace('_', ' ')}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+            <TouchableOpacity style={styles.filterButton} onPress={() => setShowRoleModal(true)}>
+              <Ionicons name="people-outline" size={18} color={NEUTRAL_800} />
+              <ThemedText style={styles.filterButtonText}>Role</ThemedText>
+              {roleFilter !== 'ALL' && <View style={styles.filterDot} />}
+            </TouchableOpacity>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roleFiltersScroll}>
-            <View style={styles.filtersRow}>
-              {(['ALL', 'COMPLAINANT', 'RESPONDENT'] as const).map((role) => {
-                const selected = role === roleFilter;
-                return (
-                  <TouchableOpacity
-                    key={role}
-                    style={[styles.roleChip, selected && styles.roleChipSelected]}
-                    onPress={() => setRoleFilter(role)}
-                  >
-                    <ThemedIcon
-                      name={role === 'ALL' ? 'people-outline' : role === 'COMPLAINANT' ? 'person-outline' : 'shield-outline'}
-                      size={14}
-                      containerSize={18}
-                      bgColor="transparent"
-                    />
-                    <ThemedText style={[styles.roleFilterText, selected && styles.roleFilterTextSelected]}>
-                      {role === 'ALL' ? 'All Roles' : role}
-                    </ThemedText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+            <TouchableOpacity style={styles.filterButton} onPress={() => setShowDateModal(true)}>
+              <Ionicons name="calendar-outline" size={18} color={NEUTRAL_800} />
+              <ThemedText style={styles.filterButtonText}>Date</ThemedText>
+              {(startDate || endDate) && <View style={styles.filterDot} />}
+            </TouchableOpacity>
+          </View>
+
+
         </View>
 
         {/* Cases List */}
@@ -327,13 +358,6 @@ const BarangayCases = () => {
               <ThemedText style={styles.emptyText}>
                 {statusFilter === 'all' ? "You don't have any cases yet." : `No cases found for the selected filter.`}
               </ThemedText>
-              <TouchableOpacity
-                style={styles.newReportButton}
-                onPress={() => router.push('/(residentmodals)/fileblotterreport')}
-              >
-                <ThemedIcon name="add-outline" size={16} containerSize={20} bgColor="transparent" />
-                <ThemedText style={styles.newReportText}>File New Report</ThemedText>
-              </TouchableOpacity>
             </ThemedCard>
           ) : (
             filtered.map(renderCaseCard)
@@ -343,14 +367,99 @@ const BarangayCases = () => {
         <Spacer height={100} />
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(residentmodals)/fileblotterreport')}
-        activeOpacity={0.8}
-      >
-        <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={BRAND} />
-      </TouchableOpacity>
+
+
+      {/* Status Filter Modal */}
+      <Modal visible={showStatusModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowStatusModal(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Filter by Status</ThemedText>
+              <TouchableOpacity onPress={() => setShowStatusModal(false)}>
+                <Ionicons name="close" size={24} color={NEUTRAL_800} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={[styles.modalOption, statusFilter === 'all' && styles.modalOptionSelected]} onPress={() => { setStatusFilter('all'); setShowStatusModal(false); }}>
+              <Ionicons name="apps-outline" size={20} color={NEUTRAL_800} />
+              <ThemedText style={[styles.modalOptionText, statusFilter === 'all' && styles.modalOptionTextSelected]}>All</ThemedText>
+              {statusFilter === 'all' && <Ionicons name="checkmark" size={20} color={BRAND} />}
+            </TouchableOpacity>
+            {Object.entries(FILTER_STATUS_CONFIG).map(([key, config]) => (
+              <TouchableOpacity key={key} style={[styles.modalOption, statusFilter === key && styles.modalOptionSelected]} onPress={() => { setStatusFilter(key as any); setShowStatusModal(false); }}>
+                <Ionicons name={config.icon as any} size={20} color={NEUTRAL_800} />
+                <ThemedText style={[styles.modalOptionText, statusFilter === key && styles.modalOptionTextSelected]}>{config.label}</ThemedText>
+                {statusFilter === key && <Ionicons name="checkmark" size={20} color={BRAND} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Role Filter Modal */}
+      <Modal visible={showRoleModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowRoleModal(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Filter by Role</ThemedText>
+              <TouchableOpacity onPress={() => setShowRoleModal(false)}>
+                <Ionicons name="close" size={24} color={NEUTRAL_800} />
+              </TouchableOpacity>
+            </View>
+            {(['ALL', 'COMPLAINANT', 'RESPONDENT'] as const).map((role) => (
+              <TouchableOpacity key={role} style={[styles.modalOption, roleFilter === role && styles.modalOptionSelected]} onPress={() => { setRoleFilter(role); setShowRoleModal(false); }}>
+                <Ionicons name={role === 'ALL' ? 'people-outline' : role === 'COMPLAINANT' ? 'person-outline' : 'shield-outline'} size={20} color={NEUTRAL_800} />
+                <ThemedText style={[styles.modalOptionText, roleFilter === role && styles.modalOptionTextSelected]}>{role === 'ALL' ? 'All Roles' : role}</ThemedText>
+                {roleFilter === role && <Ionicons name="checkmark" size={20} color={BRAND} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Filter Modal */}
+      <Modal visible={showDateModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setShowDateModal(false)} />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <ThemedText style={styles.modalTitle}>Filter by Date</ThemedText>
+              <TouchableOpacity onPress={() => setShowDateModal(false)}>
+                <Ionicons name="close" size={24} color={NEUTRAL_800} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.dateCard} onPress={() => setShowStartPicker(true)}>
+              <Ionicons name="calendar-outline" size={20} color={BRAND} />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.dateLabel}>Start Date</ThemedText>
+                <ThemedText style={styles.dateValue}>{startDate ? dayjs(startDate).format('MMM DD, YYYY') : 'Not set'}</ThemedText>
+              </View>
+            </TouchableOpacity>
+            {showStartPicker && (
+              <DateTimePicker value={startDate || new Date()} mode="date" display="default" onChange={(e, date) => { setShowStartPicker(false); if (date) setStartDate(date); }} />
+            )}
+            <TouchableOpacity style={styles.dateCard} onPress={() => setShowEndPicker(true)}>
+              <Ionicons name="calendar-outline" size={20} color={BRAND} />
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.dateLabel}>End Date</ThemedText>
+                <ThemedText style={styles.dateValue}>{endDate ? dayjs(endDate).format('MMM DD, YYYY') : 'Not set'}</ThemedText>
+              </View>
+            </TouchableOpacity>
+            {showEndPicker && (
+              <DateTimePicker value={endDate || new Date()} mode="date" display="default" onChange={(e, date) => { setShowEndPicker(false); if (date) setEndDate(date); }} />
+            )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.clearButton} onPress={() => { setStartDate(null); setEndDate(null); setShowDateModal(false); }}>
+                <ThemedText style={styles.clearButtonText}>Clear</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.applyButton} onPress={() => setShowDateModal(false)}>
+                <ThemedText style={styles.applyButtonText}>Apply</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 };
@@ -385,37 +494,37 @@ const styles = StyleSheet.create({
 
   filtersSection: { paddingHorizontal: 16, marginBottom: 16 },
   searchInput: { marginBottom: 12 },
-  filtersScroll: { marginBottom: 8 },
-  roleFiltersScroll: {},
-  filtersRow: { flexDirection: 'row', gap: 8, paddingRight: 16 },
-  filterChip: {
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: NEUTRAL_100,
     borderWidth: 1,
     borderColor: NEUTRAL_200,
   },
-  filterChipSelected: { backgroundColor: BRAND, borderColor: BRAND },
-  filterText: { fontSize: 12, fontWeight: '600', color: NEUTRAL_600, textTransform: 'capitalize' },
-  filterTextSelected: { color: '#fff' },
-  roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: `${BRAND}10`,
-    borderWidth: 1,
-    borderColor: `${BRAND}30`,
-  },
-  roleChipSelected: { backgroundColor: BRAND_LIGHT, borderColor: BRAND_LIGHT },
-  roleFilterText: { fontSize: 12, fontWeight: '600', color: BRAND },
-  roleFilterTextSelected: { color: '#fff' },
+  filterButtonText: { fontSize: 13, fontWeight: '600', color: NEUTRAL_800 },
+  filterDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: BRAND },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: NEUTRAL_900 },
+  modalOption: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 8, marginBottom: 8 },
+  modalOptionSelected: { backgroundColor: `${BRAND}10` },
+  modalOptionText: { flex: 1, fontSize: 15, fontWeight: '500', color: NEUTRAL_800, textTransform: 'capitalize' },
+  modalOptionTextSelected: { color: BRAND, fontWeight: '600' },
+  dateCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: NEUTRAL_50, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: NEUTRAL_200 },
+  dateLabel: { fontSize: 12, color: NEUTRAL_600, marginBottom: 4 },
+  dateValue: { fontSize: 15, fontWeight: '600', color: NEUTRAL_900 },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  clearButton: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: NEUTRAL_100, alignItems: 'center' },
+  clearButtonText: { fontSize: 15, fontWeight: '600', color: NEUTRAL_800 },
+  applyButton: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: BRAND, alignItems: 'center' },
+  applyButtonText: { fontSize: 15, fontWeight: '600', color: '#fff' },
 
   casesSection: { paddingHorizontal: 16 },
   caseCard: {

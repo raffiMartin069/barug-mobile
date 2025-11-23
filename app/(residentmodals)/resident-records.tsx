@@ -185,7 +185,7 @@ const ResidentRecords = () => {
   return (
     <ThemedView style={{ flex: 1 }} safe>
       <ThemedAppBar
-        title={`Records - ${person.full_name}`}
+        title={`Blotter Records`}
         showNotif={false}
         showProfile={false}
       />
@@ -263,38 +263,48 @@ const ResidentRecords = () => {
               reportHistory.map((report, index) => {
                 console.log('[ResidentRecords] Rendering report:', report);
                 return (
-                  <ThemedCard key={report.blotter_report_id || index} style={styles.recordCard}>
-                    <View style={styles.recordHeader}>
-                      <ThemedText style={styles.recordTitle}>{report.incident_subject}</ThemedText>
-                      <View style={[styles.roleBadge, { backgroundColor: report.role_in_report === 'COMPLAINANT' ? '#dcfce7' : '#fef3c7' }]}>
-                        <ThemedText style={[styles.roleText, { color: report.role_in_report === 'COMPLAINANT' ? '#059669' : '#d97706' }]}>
-                          {report.role_in_report}
+                  <TouchableOpacity
+                    key={report.blotter_report_id || index}
+                    onPress={() => {
+                      const { useRouter } = require('expo-router');
+                      const router = useRouter();
+                      router.push(`/(residentmodals)/blotter-report-detail?reportId=${report.blotter_report_id}`);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <ThemedCard style={styles.recordCard}>
+                      <View style={styles.recordHeader}>
+                        <ThemedText style={styles.recordTitle}>{report.incident_subject}</ThemedText>
+                        <View style={[styles.roleBadge, { backgroundColor: report.role_in_report === 'COMPLAINANT' ? '#dcfce7' : '#fef3c7' }]}>
+                          <ThemedText style={[styles.roleText, { color: report.role_in_report === 'COMPLAINANT' ? '#059669' : '#d97706' }]}>
+                            {report.role_in_report}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      
+                      <ThemedText style={styles.recordDescription} numberOfLines={2}>
+                        {report.incident_desc}
+                      </ThemedText>
+                      
+                      <View style={styles.recordMeta}>
+                        <ThemedText style={styles.recordId}>Report #{report.blotter_report_id}</ThemedText>
+                        <ThemedText style={styles.recordDate}>
+                          Incident: {dayjs(report.incident_date).format('MMM DD, YYYY')} at {report.incident_time}
+                        </ThemedText>
+                        <ThemedText style={styles.recordDate}>
+                          Reported: {dayjs(report.date_time_reported).format('MMM DD, YYYY h:mm A')}
                         </ThemedText>
                       </View>
-                    </View>
-                    
-                    <ThemedText style={styles.recordDescription} numberOfLines={2}>
-                      {report.incident_desc}
-                    </ThemedText>
-                    
-                    <View style={styles.recordMeta}>
-                      <ThemedText style={styles.recordId}>Report #{report.blotter_report_id}</ThemedText>
-                      <ThemedText style={styles.recordDate}>
-                        Incident: {dayjs(report.incident_date).format('MMM DD, YYYY')} at {report.incident_time}
-                      </ThemedText>
-                      <ThemedText style={styles.recordDate}>
-                        Reported: {dayjs(report.date_time_reported).format('MMM DD, YYYY h:mm A')}
-                      </ThemedText>
-                    </View>
-                    
-                    <View style={styles.statusContainer}>
-                      <ThemedText style={styles.statusLabel}>Status:</ThemedText>
-                      <ThemedText style={styles.statusValue}>{report.status_name}</ThemedText>
-                      {report.linked_case_num && (
-                        <ThemedText style={styles.linkedCase}>→ Case {report.linked_case_num}</ThemedText>
-                      )}
-                    </View>
-                  </ThemedCard>
+                      
+                      <View style={styles.statusContainer}>
+                        <ThemedText style={styles.statusLabel}>Status:</ThemedText>
+                        <ThemedText style={styles.statusValue}>{report.status_name}</ThemedText>
+                        {report.linked_case_num && (
+                          <ThemedText style={styles.linkedCase}>→ Case {report.linked_case_num}</ThemedText>
+                        )}
+                      </View>
+                    </ThemedCard>
+                  </TouchableOpacity>
                 );
               })
             )}
@@ -311,55 +321,65 @@ const ResidentRecords = () => {
               caseHistory.map((caseItem, index) => {
                 console.log('[ResidentRecords] Rendering case:', caseItem);
                 return (
-                  <ThemedCard key={caseItem.blotter_case_id || index} style={styles.recordCard}>
-                    <View style={styles.recordHeader}>
-                      <ThemedText style={styles.recordTitle}>{caseItem.blotter_case_name}</ThemedText>
-                      <View style={[styles.roleBadge, { backgroundColor: caseItem.role_in_case === 'COMPLAINANT' ? '#dcfce7' : '#fef3c7' }]}>
-                        <ThemedText style={[styles.roleText, { color: caseItem.role_in_case === 'COMPLAINANT' ? '#059669' : '#d97706' }]}>
-                          {caseItem.role_in_case}
+                  <TouchableOpacity
+                    key={caseItem.blotter_case_id || index}
+                    onPress={() => {
+                      const { useRouter } = require('expo-router');
+                      const router = useRouter();
+                      router.push(`/(residentmodals)/(brgycases)/brgycasesdetails/${caseItem.blotter_case_id}`);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <ThemedCard style={styles.recordCard}>
+                      <View style={styles.recordHeader}>
+                        <ThemedText style={styles.recordTitle}>{caseItem.blotter_case_name}</ThemedText>
+                        <View style={[styles.roleBadge, { backgroundColor: caseItem.role_in_case === 'COMPLAINANT' ? '#dcfce7' : '#fef3c7' }]}>
+                          <ThemedText style={[styles.roleText, { color: caseItem.role_in_case === 'COMPLAINANT' ? '#059669' : '#d97706' }]}>
+                            {caseItem.role_in_case}
+                          </ThemedText>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.caseTypeContainer}>
+                        <ThemedText style={styles.caseType}>{caseItem.complaint_title}</ThemedText>
+                        <ThemedText style={styles.caseNature}>{caseItem.case_nature}</ThemedText>
+                      </View>
+                      
+                      <ThemedText style={styles.partiesText}>
+                        {caseItem.complainant_names} vs. {caseItem.respondent_names}
+                      </ThemedText>
+                      
+                      <View style={styles.recordMeta}>
+                        <ThemedText style={styles.recordId}>Case #{caseItem.blotter_case_num}</ThemedText>
+                        <ThemedText style={styles.recordDate}>
+                          Filed: {dayjs(caseItem.date_filed).format('MMM DD, YYYY')} at {caseItem.time_filed}
                         </ThemedText>
                       </View>
-                    </View>
-                    
-                    <View style={styles.caseTypeContainer}>
-                      <ThemedText style={styles.caseType}>{caseItem.complaint_title}</ThemedText>
-                      <ThemedText style={styles.caseNature}>{caseItem.case_nature}</ThemedText>
-                    </View>
-                    
-                    <ThemedText style={styles.partiesText}>
-                      {caseItem.complainant_names} vs. {caseItem.respondent_names}
-                    </ThemedText>
-                    
-                    <View style={styles.recordMeta}>
-                      <ThemedText style={styles.recordId}>Case #{caseItem.blotter_case_num}</ThemedText>
-                      <ThemedText style={styles.recordDate}>
-                        Filed: {dayjs(caseItem.date_filed).format('MMM DD, YYYY')} at {caseItem.time_filed}
-                      </ThemedText>
-                    </View>
-                    
-                    <View style={styles.statusContainer}>
-                      <ThemedText style={styles.statusLabel}>Status:</ThemedText>
-                      <ThemedText style={styles.statusValue}>{caseItem.settlement_status}</ThemedText>
-                    </View>
-                    
-                    {caseItem.last_progress && (
-                      <View style={styles.progressContainer}>
-                        <ThemedText style={styles.progressLabel}>Latest Progress:</ThemedText>
-                        <ThemedText style={styles.progressText}>{caseItem.last_progress}</ThemedText>
-                        <ThemedText style={styles.progressDate}>
-                          {dayjs(caseItem.last_progress_date).format('MMM DD, YYYY h:mm A')}
+                      
+                      <View style={styles.statusContainer}>
+                        <ThemedText style={styles.statusLabel}>Status:</ThemedText>
+                        <ThemedText style={styles.statusValue}>{caseItem.settlement_status}</ThemedText>
+                      </View>
+                      
+                      {caseItem.last_progress && (
+                        <View style={styles.progressContainer}>
+                          <ThemedText style={styles.progressLabel}>Latest Progress:</ThemedText>
+                          <ThemedText style={styles.progressText}>{caseItem.last_progress}</ThemedText>
+                          <ThemedText style={styles.progressDate}>
+                            {dayjs(caseItem.last_progress_date).format('MMM DD, YYYY h:mm A')}
+                          </ThemedText>
+                        </View>
+                      )}
+                      
+                      <View style={styles.paymentContainer}>
+                        <ThemedText style={styles.paymentLabel}>Payment:</ThemedText>
+                        <ThemedText style={styles.paymentAmount}>₱{caseItem.total_payment_amount}</ThemedText>
+                        <ThemedText style={[styles.paymentStatus, { color: caseItem.last_payment_status === 'PAID' ? '#059669' : '#d97706' }]}>
+                          {caseItem.last_payment_status}
                         </ThemedText>
                       </View>
-                    )}
-                    
-                    <View style={styles.paymentContainer}>
-                      <ThemedText style={styles.paymentLabel}>Payment:</ThemedText>
-                      <ThemedText style={styles.paymentAmount}>₱{caseItem.total_payment_amount}</ThemedText>
-                      <ThemedText style={[styles.paymentStatus, { color: caseItem.last_payment_status === 'PAID' ? '#059669' : '#d97706' }]}>
-                        {caseItem.last_payment_status}
-                      </ThemedText>
-                    </View>
-                  </ThemedCard>
+                    </ThemedCard>
+                  </TouchableOpacity>
                 );
               })
             )}

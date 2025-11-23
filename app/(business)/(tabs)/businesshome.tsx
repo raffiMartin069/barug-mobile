@@ -16,7 +16,9 @@ import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, Touch
 const BusinessHome = () => {
   const router = useRouter()
   const { getProfile } = useAccountRole()
-  const profile = getProfile('business')
+  const businessProfile = getProfile('business')
+  const residentProfile = getProfile('resident')
+  const profile = businessProfile || residentProfile
   const [profileImage, setProfileImage] = useState<string | null>(null)
 
   // Load profile image
@@ -38,29 +40,11 @@ const BusinessHome = () => {
 
   // Load profile image when component mounts
   useEffect(() => {
-    if (profile?.person_id) {
-      loadProfileImage(profile.person_id)
+    const personId = businessProfile?.person_id || residentProfile?.person_id
+    if (personId) {
+      loadProfileImage(personId)
     }
-  }, [profile?.person_id, loadProfileImage])
-
-  // Handle hardware back button
-  useEffect(() => {
-    const backAction = () => {
-      if (router.canGoBack()) {
-        router.back()
-        return true
-      }
-      
-      Alert.alert('Exit App', 'Do you want to exit the app?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Exit', style: 'destructive', onPress: () => BackHandler.exitApp() }
-      ])
-      return true
-    }
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction)
-    return () => backHandler.remove()
-  }, [router])
+  }, [businessProfile?.person_id, residentProfile?.person_id, loadProfileImage])
 
   // Handle hardware back button
   useEffect(() => {

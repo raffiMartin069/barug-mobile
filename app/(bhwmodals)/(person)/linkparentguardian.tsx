@@ -9,7 +9,7 @@ import ThemedProgressBar from '@/components/ThemedProgressBar'
 import ThemedSearchSelect from '@/components/ThemedSearchSelect'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
-import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
+import { usePersonSearchWithGender } from '@/hooks/usePersonSearch'
 import { useResidentFormStore } from '@/store/forms'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { useRouter } from 'expo-router'
@@ -28,14 +28,32 @@ const LinkParentGuardian = () => {
     motherId, motherName,
     fatherId, fatherName,
     guardianId, guardianName,
+    childIds,
     setMother, setFather,
     setGuardian, clearGuardian,
   } = useResidentFormStore()
 
-  const { results: residentItems, search } = usePersonSearchByKey()
+  const { results: residentItems, search } = usePersonSearchWithGender()
 
   const [rel, setRel] = useState<Rel | ''>('')
   const [searchText, setSearchText] = useState('')
+
+  // Filter results by sex based on relationship and exclude children
+  const filteredBySex = useMemo(() => {
+    if (!residentItems) return []
+    console.log('[LinkParent] childIds:', childIds)
+    console.log('[LinkParent] residentItems sample:', residentItems[0])
+    let filtered = residentItems.filter(p => {
+      const personIdStr = String(p.person_id)
+      const isChild = childIds.includes(personIdStr)
+      if (isChild) console.log('[LinkParent] Filtering out child:', personIdStr, p.full_name)
+      return !isChild
+    })
+    console.log('[LinkParent] After child filter:', filtered.length, 'of', residentItems.length)
+    if (rel === 'MOTHER') return filtered.filter(p => p.sex_id === 2)
+    if (rel === 'FATHER') return filtered.filter(p => p.sex_id === 1)
+    return filtered
+  }, [residentItems, rel, childIds])
 
   // Build chips: mother, father, guardian (single)
   const linked: Linked[] = useMemo(() => {
@@ -144,7 +162,7 @@ const LinkParentGuardian = () => {
 
               {/* Live search select */}
               <ThemedSearchSelect<PersonSearchRequest>
-                items={residentItems ?? []}
+                items={filteredBySex}
                 getLabel={(p) =>
                   p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
                 }
@@ -177,9 +195,6 @@ const LinkParentGuardian = () => {
 
         {/* Footer actions */}
         <View>
-          <ThemedButton submit={false} onPress={() => router.push('/(bhwmodals)/(person)/linkchild')}>
-            <ThemedText non_btn>Skip</ThemedText>
-          </ThemedButton>
           <ThemedButton onPress={() => router.push('/(bhwmodals)/(person)/linkchild')}>
             <ThemedText btn>Continue</ThemedText>
           </ThemedButton>

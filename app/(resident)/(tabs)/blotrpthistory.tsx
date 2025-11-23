@@ -8,6 +8,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 
 import Spacer from '@/components/Spacer';
@@ -48,7 +49,7 @@ const statusColors: Record<UiStatus, string> = {
   dismissed: '#6b7280',
 };
 const statusLabels: Record<UiStatus, string> = {
-  pending: 'Pending',
+  pending: 'For Case Filing',
   under_investigation: 'Under Review',
   resolved: 'Resolved',
   dismissed: 'Dismissed',
@@ -92,7 +93,7 @@ export default function BlotterReportHistory() {
   const [rawRows, setRawRows] = useState<PersonBlotterHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending'>('all');
 
   // Resolve personId once on mount (or when role changes)
   useEffect(() => {
@@ -203,7 +204,6 @@ export default function BlotterReportHistory() {
   const filteredReports = reports.filter((report) => {
     if (filter === 'all') return true;
     if (filter === 'pending') return mapDbStatusToUi(report.status) === 'pending';
-    if (filter === 'resolved') return mapDbStatusToUi(report.status) === 'resolved';
     return true;
   });
 
@@ -272,7 +272,22 @@ export default function BlotterReportHistory() {
 
   return (
     <ThemedView safe style={{ flex: 1 }}>
-      <ThemedAppBar title="Blotter Report History" showNotif={false} showProfile={false} />
+      <ThemedAppBar 
+        title="Blotter Report History" 
+        showNotif={false} 
+        showProfile={false}
+        rightAction={
+          <TouchableOpacity
+            onPress={() => router.push({
+              pathname: '/resident-records',
+              params: { personId: personId }
+            })}
+            style={{ padding: 8 }}
+          >
+            <Ionicons name="person-circle-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.container}>
         {/* Header Stats */}
@@ -296,13 +311,7 @@ export default function BlotterReportHistory() {
               <ThemedText style={styles.statNumber}>
                 {reports.filter((r) => mapDbStatusToUi(r.status) === 'pending').length}
               </ThemedText>
-              <ThemedText muted style={styles.statLabel}>Pending</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statNumber}>
-                {reports.filter((r) => mapDbStatusToUi(r.status) === 'resolved').length}
-              </ThemedText>
-              <ThemedText muted style={styles.statLabel}>Resolved</ThemedText>
+              <ThemedText muted style={styles.statLabel}>For Case Filing</ThemedText>
             </View>
           </View>
         </ThemedCard>
@@ -311,7 +320,7 @@ export default function BlotterReportHistory() {
 
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
-          {(['all', 'pending', 'resolved'] as const).map((filterOption) => (
+          {(['all', 'pending'] as const).map((filterOption) => (
             <TouchableOpacity
               key={filterOption}
               style={[
@@ -326,30 +335,10 @@ export default function BlotterReportHistory() {
                   filter === filterOption && styles.filterTabTextActive,
                 ]}
               >
-                {filterOption === 'all'
-                  ? 'All'
-                  : filterOption === 'pending'
-                  ? 'Pending'
-                  : 'Resolved'}
+                {filterOption === 'all' ? 'All' : 'For Case Filing'}
               </ThemedText>
             </TouchableOpacity>
           ))}
-        </View>
-
-        <Spacer height={16} />
-
-        {/* My Records Button */}
-        <View style={styles.recordsButtonContainer}>
-          <TouchableOpacity
-            style={styles.recordsButton}
-            onPress={() => router.push({
-              pathname: '/resident-records',
-              params: { personId: personId }
-            })}
-          >
-            <ThemedIcon name="person-circle-outline" size={16} containerSize={20} bgColor="transparent" iconColor="#fff" />
-            <ThemedText style={styles.recordsButtonText}>View My Records</ThemedText>
-          </TouchableOpacity>
         </View>
 
         <Spacer height={16} />
@@ -399,6 +388,8 @@ export default function BlotterReportHistory() {
       >
         <ThemedIcon name="add-outline" size={24} containerSize={56} bgColor={accent} />
       </TouchableOpacity>
+      
+
     </ThemedView>
   );
 }
@@ -535,18 +526,6 @@ const styles = StyleSheet.create({
   },
   fileReportButtonText: { color: '#fff', fontWeight: '600', marginLeft: 6 },
   
-  recordsButtonContainer: { paddingHorizontal: 16, paddingBottom: 8, paddingTop: 3 },
-  recordsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#310101',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 8,
-  },
-  recordsButtonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  
   fab: {
     position: 'absolute',
     bottom: 20,
@@ -558,4 +537,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  
+
 });
