@@ -1,5 +1,6 @@
 // services/profile.ts
 import { supabase } from '@/constants/supabase'
+import { fetchStaffPurokAssignments } from './staffPurok'
 
 export async function getMyProfile() {
   const { data, error } = await supabase.rpc('me_profile')
@@ -43,6 +44,7 @@ export async function fetchResidentPlus() {
   
   // Check if staff has role_id = 9 (Barangay Health Worker)
   let is_bhw = false
+  let staff_purok_assignments = []
   if (details?.staff_id) {
     console.log('[fetchResidentPlus] Querying staff table: SELECT * FROM staff WHERE staff_id =', details.staff_id, 'AND role_id = 9')
     const { data, error } = await supabase
@@ -60,6 +62,14 @@ export async function fetchResidentPlus() {
     
     is_bhw = !!data
     console.log('[fetchResidentPlus] Is Barangay Health Worker (role_id=9)?', is_bhw)
+    
+    // Fetch purok assignments for staff
+    try {
+      staff_purok_assignments = await fetchStaffPurokAssignments(details.staff_id)
+      console.log('[fetchResidentPlus] Staff purok assignments:', staff_purok_assignments)
+    } catch (e) {
+      console.log('[fetchResidentPlus] Error fetching purok assignments:', e)
+    }
   } else {
     console.log('[fetchResidentPlus] No staff_id found - cannot check for BHW role')
   }
@@ -82,12 +92,18 @@ export async function fetchResidentPlus() {
     console.log('[fetchResidentPlus] Has maternal record?', has_maternal_record, 'data:', maternalData)
   }
 
+  // Add purok assignments to details
+  if (details && staff_purok_assignments.length > 0) {
+    details.staff_purok_assignments = staff_purok_assignments
+  }
+
   const result = {
     details,
     is_staff: Boolean(details?.is_staff),
     staff_id: details?.staff_id ?? null,
     is_bhw,
     has_maternal_record,
+    staff_purok_assignments,
   }
   
   console.log('[fetchResidentPlus] Final result:', {
