@@ -11,6 +11,7 @@ import { useAddMember } from "@/hooks/useAddMember";
 import { usePersonSearchByKey } from "@/hooks/usePersonSearch";
 import { FamilyRepository } from "@/repository/familyRepository";
 import { useHouseMateStore } from "@/store/houseMateStore";
+import { useAccountRole } from "@/store/useAccountRole";
 import { FamilyMembershipType } from "@/types/familyMembership";
 import { MgaKaHouseMates } from "@/types/houseMates";
 import React, { useEffect, useMemo, useState } from "react";
@@ -62,6 +63,9 @@ const AddMember = () => {
     const familyNumber = useHouseMateStore((state: MgaKaHouseMates) => state.familyId);
     const { results: residentItems, search } = usePersonSearchByKey();
     const { addMember, loading, error } = useAddMember();
+    const profile = useAccountRole((s) => s.getProfile('resident'))
+    const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+    
 
     useEffect(() => {
         const getFamilyId = async () => {
@@ -75,7 +79,7 @@ const AddMember = () => {
         // TODO: Replace p_added_by_id with actual user ID from auth
         const data: FamilyMembershipType = {
             p_family_id: familyId,
-            p_added_by_id: 1,
+            p_added_by_id: parseInt(addedById ?? '1'),
             p_existing_person_id: Number(residentId),
             p_relationship_to_hholdhead_id: Number(hhheadrel),
             p_relationship_to_family_head_id: Number(famheadrel),

@@ -1,6 +1,7 @@
 import { MemberRemovalException } from "@/exception/memberRemovalException";
 import { PolicyException } from "@/exception/policyException";
 import { MemberRemovalService } from "@/services/memberRemovalService";
+import { useAccountRole } from "@/store/useAccountRole";
 import { MemberRemovalType } from "@/types/memberRemoval";
 import { useState } from "react";
 
@@ -8,7 +9,8 @@ export const useMemberRemoval = () => {
 
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
-
+    const profile = useAccountRole((s) => s.getProfile('resident'))
+    const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
     const removeMember = async (id: number, selectedReason: string, service: MemberRemovalService): Promise<boolean> => {
         setLoading(true);
         setError(null);
@@ -16,7 +18,7 @@ export const useMemberRemoval = () => {
             const reason = selectedReason === null ? "OTHER" : selectedReason.trim()
             const data: MemberRemovalType = {
                 p_house_member_id: Number(id),
-                p_performed_by: 1,
+                p_performed_by: parseInt(addedById ?? '1'),
                 p_reason: reason
             };
             const result = await service.execute(data);

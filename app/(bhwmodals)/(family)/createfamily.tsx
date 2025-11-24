@@ -23,6 +23,7 @@ import { useFamilyCreation } from '@/hooks/useFamilyCreation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
 import { useEmojiRemover } from '@/hooks/useEmojiRemover'
+import { useAccountRole } from '@/store/useAccountRole'
 
 const CreateFamily = () => {
 
@@ -60,6 +61,8 @@ const CreateFamily = () => {
 
     const { results: residentItems, search } = usePersonSearchByKey()
     const { createFamily, loading, error, success } = useFamilyCreation()
+    const profile = useAccountRole((s) => s.getProfile('resident'))
+    const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
 
     const integrityCheck = () => {
         /**
@@ -83,7 +86,7 @@ const CreateFamily = () => {
     const handleSubmit = async () => {
         const data: FamilyCreationRequest = {
             p_household_id: parseInt(householdHeadId),
-            p_added_by_id: 1,
+            p_added_by_id: parseInt(addedById ?? '1'),
             p_family_num: famnum.trim(),
             p_ufc_num: ufcNum.trim(),
             p_source_of_income: incomesource.trim(),
