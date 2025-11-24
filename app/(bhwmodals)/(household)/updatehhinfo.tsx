@@ -12,6 +12,7 @@ import { HouseholdException } from '@/exception/HouseholdException'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { HouseholdService } from '@/services/HouseholdService'
 import { useGeolocationStore } from '@/store/geolocationStore'
+import { useAccountRole } from '@/store/useAccountRole'
 import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
 import { useDynamicRouteStore } from '@/store/useDynamicRouteStore'
 import { HouseholdUpdateType } from '@/types/request/householdUpdateType'
@@ -49,6 +50,8 @@ const UpdateHhInfo = () => {
 
   const getFullAddress = useGeolocationStore((state) => state.getFullAddress);
 
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
 
   const street = useGeolocationStore((state) => state.street);
   const barangay = useGeolocationStore((state) => state.barangay);
@@ -102,7 +105,7 @@ const UpdateHhInfo = () => {
     const updateInfo = async () => {
       try {
         const updateRequest: HouseholdUpdateType = {
-          p_performed_by: 0,
+          p_performed_by: parseInt(addedById ?? '1'),
           p_household_id: houseHoldNumber ? parseInt(houseHoldNumber) : 0,
           p_reason: "N/A",
           p_house_type_id: parseInt(housetype),
