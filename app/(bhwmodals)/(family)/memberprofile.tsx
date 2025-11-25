@@ -312,7 +312,16 @@ const MemberProfile = () => {
               {/* Confirm (right) - disabled until a relationship is selected */}
               <ThemedButton
                 style={{ flex: 1, borderRadius: 8, paddingVertical: 10 }}
-                onPress={submitConfirmResidency}
+                onPress={() => showModal({
+                  title: 'Confirm Residency',
+                  message: 'Are you sure you want to confirm this residency? This action cannot be undone.',
+                  variant: 'warn',
+                  primaryText: 'Confirm',
+                  secondaryText: 'Cancel',
+                  onPrimary: async () => { await submitConfirmResidency(); },
+                  onSecondary: () => {},
+                  dismissible: true,
+                })}
                 disabled={submitting || !(relToHousehold || relToFamily)}
               >
                 <ThemedText btn>Confirm</ThemedText>
