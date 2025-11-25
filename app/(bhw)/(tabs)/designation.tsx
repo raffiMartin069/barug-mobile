@@ -34,6 +34,7 @@ import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
 
+import CenteredModal from '@/components/maternal/CenteredModal';
 import { Colors } from '@/constants/Colors';
 import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { Ionicons } from "@expo/vector-icons";
@@ -314,6 +315,21 @@ const HouseholdList = () => {
     This identifies which operation will be used by the search service object.*/
   const [searchExecutionType, setSearchExecutionType] = useState(0)
 
+  // centered modal filter state (used instead of inline dropdown)
+  const [filterModalVisible, setFilterModalVisible] = useState(false)
+  const [filterModalTitle, setFilterModalTitle] = useState('')
+  const [filterModalItems, setFilterModalItems] = useState<{ label: string; value: any }[]>([])
+  const [filterModalOnSelect, setFilterModalOnSelect] = useState<((v: any) => void) | null>(null)
+
+  const openFilterModal = (title: string, items: { label: string; value: any }[], onSelect: (v: any) => void) => {
+    setFilterModalTitle(title)
+    setFilterModalItems(items)
+    setFilterModalOnSelect(() => onSelect)
+    setFilterModalVisible(true)
+  }
+
+  const getLabelFor = (items: { label: string; value: any }[], val: any) => items.find((i) => i.value === val)?.label ?? String(val ?? '')
+
   const findHousehold = async (key: string | number, executionType: number) => {
 
     /* This function allows users to execute search functionality and retrieve household information.
@@ -362,41 +378,40 @@ const HouseholdList = () => {
               findHousehold(text, 1)
             }} />
             <Spacer height={10} />
-            <View style={styles.filtersWrap}>
+                <View style={styles.filtersWrap}>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Status</ThemedText>
-                <ThemedDropdown
-                  placeholder="All"
-                  items={FILTER_BY_STATUS}
-                  value={status}
-                  setValue={(value) => {
-                    setStatus(value)
-                    setSearch('')
-                    setWeekRange(undefined)
-                    findHousehold(value, 2)
-                  }}
-                  order={0}
-                />
+                    <Pressable
+                      onPress={() => openFilterModal('Status', FILTER_BY_STATUS, async (value) => {
+                        setStatus(value)
+                        setSearch('')
+                        setWeekRange(undefined)
+                        await findHousehold(value, 2)
+                        setFilterModalVisible(false)
+                      })}
+                      style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
+                    >
+                      <ThemedText>{status ? getLabelFor(FILTER_BY_STATUS, status) : 'All'}</ThemedText>
+                    </Pressable>
               </View>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
-                <ThemedDropdown
-                  placeholder="This Week"
-                  items={FILTER_BY_WEEK}
-                  value={weekRange}
-                  setValue={async (val) => {
-                    setWeekRange(val)
-                    setSearch('')
-                    setStatus(undefined)
-                    // If user selects 'All', reload full household list
-                    if (val === 'all') {
-                      await fetchHouseholds()
-                      return
-                    }
-                    await findHousehold(val as string, 3)
-                  }}
-                  order={0}
-                />
+                    <Pressable
+                      onPress={() => openFilterModal('Week Range', FILTER_BY_WEEK, async (val) => {
+                        setWeekRange(val)
+                        setSearch('')
+                        setStatus(undefined)
+                        if (val === 'all') {
+                          await fetchHouseholds()
+                        } else {
+                          await findHousehold(val as string, 3)
+                        }
+                        setFilterModalVisible(false)
+                      })}
+                      style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
+                    >
+                      <ThemedText>{weekRange ? getLabelFor(FILTER_BY_WEEK, weekRange) : 'This Week'}</ThemedText>
+                    </Pressable>
               </View>
             </View>
             <Spacer height={10} />
@@ -789,6 +804,24 @@ const HouseholdList = () => {
           </View>
         </View>
       </ThemedBottomSheet>
+      {/* Centered modal used for filters (status / week range) */}
+      <CenteredModal visible={filterModalVisible} title={filterModalTitle} onClose={() => setFilterModalVisible(false)}>
+        {filterModalItems.map((it) => (
+          <Pressable
+            key={String(it.value)}
+            onPress={() => {
+              try {
+                filterModalOnSelect && filterModalOnSelect(it.value)
+              } finally {
+                setFilterModalVisible(false)
+              }
+            }}
+            style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}
+          >
+            <ThemedText>{it.label}</ThemedText>
+          </Pressable>
+        ))}
+      </CenteredModal>
     </ThemedView>
   );
 };
