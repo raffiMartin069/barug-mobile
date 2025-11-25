@@ -35,6 +35,7 @@ import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
 
 import { Colors } from '@/constants/Colors';
+import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -79,11 +80,12 @@ type MenuPortalState = {
 
 const HouseholdList = () => {
   const router = useRouter();
-
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const staffId = profile?.person_id ?? useAccountRole.getState().staffId ?? null
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(staffId);
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
@@ -190,16 +192,6 @@ const HouseholdList = () => {
     });
   }
 
-  // NEW: update family head handler (used by the new button)
-  const onPressUpdateFamilyHead = (fam: Family) => {
-    // keep your existing ID parsing convention
-    setFamilyId(Number(fam.familyNum.split('-')[1]));
-    setHouseholdId(Number(fam.familyNum.split('-')[0]));
-    router.push({
-      pathname: "/(bhwmodals)/(family)/updatehead",
-      params: { familyNum: fam.familyNum },
-    });
-  };
 
   const { removeMember, loading, error } = useMemberRemoval()
 
@@ -214,6 +206,41 @@ const HouseholdList = () => {
     Alert.alert('Success', 'Member has been removed successfully.')
     setRemoveOpen(false)
     await fetchHouseholds()
+  }
+
+  const { showModal } = useNiceModal()
+
+  const confirmCompleteHousehold = (householdId?: string | number) => {
+    showModal({
+      title: 'Confirm Household Visit',
+      message: 'Mark this household as visited for the quarter?',
+      variant: 'warn',
+      primaryText: 'Proceed',
+      secondaryText: 'Cancel',
+      onPrimary: async () => { await completeHouseholdVisit(householdId) }
+    })
+  }
+
+  const confirmCompleteFamily = (familyNum?: string) => {
+    showModal({
+      title: 'Confirm Family Visit',
+      message: 'Mark this family as visited for the quarter?',
+      variant: 'warn',
+      primaryText: 'Proceed',
+      secondaryText: 'Cancel',
+      onPrimary: async () => { await completeFamilyVisit(familyNum) }
+    })
+  }
+
+  const confirmMemberRemoval = (memberId?: string | number) => {
+    showModal({
+      title: 'Confirm Remove',
+      message: 'Are you sure you want to remove this member?',
+      variant: 'warn',
+      primaryText: 'Remove',
+      secondaryText: 'Cancel',
+      onPrimary: async () => { await memberRemovalHandler(String(memberId ?? '')) }
+    })
   }
 
   const completeHouseholdVisit = async (householdId?: string | number) => {
@@ -353,12 +380,23 @@ const HouseholdList = () => {
               </View>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
-                <ThemedDropdown placeholder="This Week" items={FILTER_BY_WEEK} value={weekRange} setValue={(val) => {
-                  setWeekRange(val)
-                  setSearch('')
-                  setStatus(undefined)
-                  findHousehold(val, 3)
-                }} order={0} />
+                <ThemedDropdown
+                  placeholder="This Week"
+                  items={FILTER_BY_WEEK}
+                  value={weekRange}
+                  setValue={async (val) => {
+                    setWeekRange(val)
+                    setSearch('')
+                    setStatus(undefined)
+                    // If user selects 'All', reload full household list
+                    if (val === 'all') {
+                      await fetchHouseholds()
+                      return
+                    }
+                    await findHousehold(val as string, 3)
+                  }}
+                  order={0}
+                />
               </View>
             </View>
             <Spacer height={10} />
@@ -552,7 +590,7 @@ const HouseholdList = () => {
                     />
                     <ThemedChip
                       label={"Complete"}
-                      onPress={() => completeHouseholdVisit(selectedHousehold?.id)}
+                      onPress={() => confirmCompleteHousehold(selectedHousehold?.id)}
                       filled={true}
                     />
                   </View>
@@ -650,7 +688,7 @@ const HouseholdList = () => {
                             />
                             <ThemedChip
                               label={"Complete"}
-                              onPress={() => completeFamilyVisit(fam.familyNum)}
+                              onPress={() => confirmCompleteFamily(fam.familyNum)}
                               filled={true}
                             />
                           </View>
@@ -746,7 +784,7 @@ const HouseholdList = () => {
             <ThemedButton
               style={{ flex: 1 }}
             >
-              <ThemedText onPress={() => memberRemovalHandler(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
+              <ThemedText onPress={() => confirmMemberRemoval(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>
         </View>

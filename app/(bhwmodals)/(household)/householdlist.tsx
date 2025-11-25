@@ -81,7 +81,6 @@ const HouseholdList = () => {
   const router = useRouter();
   // Make this page read-only: hide/disable CRUD controls but allow navigation/viewing
   const READ_ONLY = true;
-
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
@@ -365,12 +364,22 @@ const HouseholdList = () => {
               </View>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
-                <ThemedDropdown placeholder="This Week" items={FILTER_BY_WEEK} value={weekRange} setValue={(val) => {
-                  setWeekRange(val)
-                  setSearch('')
-                  setStatus(undefined)
-                  findHousehold(val, 3)
-                }} order={0} />
+                <ThemedDropdown
+                  placeholder="This Week"
+                  items={FILTER_BY_WEEK}
+                  value={weekRange}
+                  setValue={async (val) => {
+                    setWeekRange(val)
+                    setSearch('')
+                    setStatus(undefined)
+                    if (val === 'all') {
+                      await fetchHouseholds()
+                      return
+                    }
+                    await findHousehold(val as string, 3)
+                  }}
+                  order={0}
+                />
               </View>
             </View>
             <Spacer height={10} />
