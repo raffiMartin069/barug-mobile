@@ -19,11 +19,12 @@ import { RELATIONSHIP } from '@/constants/relationship'
 
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 
+import { useNiceModal } from '@/hooks/NiceModalProvider'
+import { useEmojiRemover } from '@/hooks/useEmojiRemover'
 import { useFamilyCreation } from '@/hooks/useFamilyCreation'
+import { useAccountRole } from '@/store/useAccountRole'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
-import { useEmojiRemover } from '@/hooks/useEmojiRemover'
-import { useAccountRole } from '@/store/useAccountRole'
 
 const CreateFamily = () => {
 
@@ -63,6 +64,7 @@ const CreateFamily = () => {
     const { createFamily, loading, error, success } = useFamilyCreation()
     const profile = useAccountRole((s) => s.getProfile('resident'))
     const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+        const { showModal } = useNiceModal()
 
     const integrityCheck = () => {
         /**
@@ -278,10 +280,14 @@ const CreateFamily = () => {
                 <Spacer height={15} />
 
                 <View>
-                    <ThemedButton onPress={() => {
-                        integrityCheck();
-                        handleSubmit();
-                    }} loading={loading} disabled={loading}>
+                    <ThemedButton onPress={() => showModal({
+                        title: 'Create Family Unit',
+                        message: 'Create this family unit?',
+                        variant: 'info',
+                        primaryText: 'Create',
+                        secondaryText: 'Cancel',
+                        onPrimary: () => { integrityCheck(); handleSubmit(); },
+                    })} loading={loading} disabled={loading}>
                         <ThemedText btn>Continue</ThemedText>
                     </ThemedButton>
                 </View>

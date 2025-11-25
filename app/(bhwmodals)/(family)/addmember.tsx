@@ -7,6 +7,7 @@ import ThemedSearchSelect from "@/components/ThemedSearchSelect";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
 import { RELATIONSHIP } from "@/constants/relationship";
+import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { useAddMember } from "@/hooks/useAddMember";
 import { usePersonSearchByKey } from "@/hooks/usePersonSearch";
 import { FamilyRepository } from "@/repository/familyRepository";
@@ -14,7 +15,7 @@ import { useHouseMateStore } from "@/store/houseMateStore";
 import { useAccountRole } from "@/store/useAccountRole";
 import { FamilyMembershipType } from "@/types/familyMembership";
 import { MgaKaHouseMates } from "@/types/houseMates";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 
 type Resident = {
@@ -65,6 +66,7 @@ const AddMember = () => {
     const { addMember, loading, error } = useAddMember();
     const profile = useAccountRole((s) => s.getProfile('resident'))
     const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+    const { showModal } = useNiceModal()
     
 
     useEffect(() => {
@@ -160,7 +162,14 @@ const AddMember = () => {
                 <Spacer height={15} />
 
                 <View>
-                    <ThemedButton onPress={submitHandler} disabled={!residentId || !famheadrel || !hhheadrel }>
+                    <ThemedButton onPress={() => showModal({
+                        title: 'Add Member',
+                        message: 'Add this resident to the family?',
+                        variant: 'info',
+                        primaryText: 'Add',
+                        secondaryText: 'Cancel',
+                        onPrimary: () => submitHandler(),
+                    })} disabled={!residentId || !famheadrel || !hhheadrel }>
                         <ThemedText btn>Continue</ThemedText>
                     </ThemedButton>
                 </View>

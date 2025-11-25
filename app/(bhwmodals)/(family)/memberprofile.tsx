@@ -1,23 +1,35 @@
+import CenteredModal from '@/components/maternal/CenteredModal';
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
+import ThemedButton from '@/components/ThemedButton';
 import ThemedCard from '@/components/ThemedCard';
 import ThemedDivider from '@/components/ThemedDivider';
 import ThemedImage from '@/components/ThemedDocumentImage';
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView';
 import ThemedText from '@/components/ThemedText';
+import ThemedTextInput from '@/components/ThemedTextInput';
 import ThemedView from '@/components/ThemedView';
+import { RELATIONSHIP } from '@/constants/relationship';
+import { ResidencyException } from '@/exception/ResidencyException';
+import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { ResidentRepository } from '@/repository/residentRepository';
 import { useHouseMateStore } from '@/store/houseMateStore';
 import { MgaKaHouseMates } from '@/types/houseMates';
 import { PersonalDetails } from '@/types/personalDetails';
 import React, { useEffect } from 'react';
-import { Alert, ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 
 const MemberProfile = () => {
   const memberId = useHouseMateStore((state: MgaKaHouseMates) => state.memberId);
   const [personalDetails, setPersonalDetails] = React.useState<PersonalDetails | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [submitting, setSubmitting] = React.useState<boolean>(false);
+  const { showModal } = useNiceModal()
+  const [confirmModalVisible, setConfirmModalVisible] = React.useState(false)
+  const [reason, setReason] = React.useState<string>('')
+  const [relToHousehold, setRelToHousehold] = React.useState<number | null>(null)
+  const [relToFamily, setRelToFamily] = React.useState<number | null>(null)
+  const [relationshipPicker, setRelationshipPicker] = React.useState<'household' | 'family' | null>(null)
 
   useEffect(() => {
     let isMounted = true;
@@ -75,58 +87,52 @@ const MemberProfile = () => {
   }, [memberId]);
 
   const handleConfirmResidency = () => {
-    Alert.alert(
-      'Confirm Residency',
-      'Are you sure you want to confirm this member as a resident?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          style: 'default',
-          onPress: async () => {
-            const repo = new ResidentRepository();
-            try {
-              setSubmitting(true);
-              // 🔁 Adjust if your repository uses a different method name:
-              await repo.confirmResidency(memberId);
-              Alert.alert('Success', 'Residency has been confirmed.');
-            } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Failed to confirm residency.');
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ],
-    );
+    // open the centered modal to collect reason and relationships
+    setConfirmModalVisible(true)
   };
 
-  const handleRemoveMember = () => {
-    Alert.alert(
-      'Remove Member',
-      'Remove this member from the household/family? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const repo = new ResidentRepository();
-            try {
-              setSubmitting(true);
-              // 🔁 Adjust if your repository uses a different method name:
-              await repo.removeHouseMember(memberId);
-              Alert.alert('Removed', 'Member has been removed.');
-            } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Failed to remove member.');
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ],
-    );
-  };
+  const submitConfirmResidency = async () => {
+    const repo = new ResidentRepository();
+    try {
+      setSubmitting(true);
+      await repo.confirmResidency(Number(memberId), undefined, relToHousehold ?? null, relToFamily ?? null, reason ?? null)
+      Alert.alert('Success', 'Residency has been confirmed.')
+      setConfirmModalVisible(false)
+      setRelToHousehold(null)
+      setRelToFamily(null)
+      setReason('')
+    } catch (e: any) {
+      if (e instanceof ResidencyException) {
+        Alert.alert('Warning', e.message)
+        return
+      }
+      Alert.alert('Error', 'Failed to confirm residency.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // const handleRemoveMember = () => {
+  //   showModal({
+  //     title: 'Remove Member',
+  //     message: 'Remove this member from the household/family? This action cannot be undone.',
+  //     variant: 'warn',
+  //     primaryText: 'Remove',
+  //     secondaryText: 'Cancel',
+  //     onPrimary: async () => {
+  //       const repo = new ResidentRepository();
+  //       try {
+  //         setSubmitting(true);
+  //         await repo.removeHouseMember(memberId);
+  //         Alert.alert('Removed', 'Member has been removed.');
+  //       } catch (e: any) {
+  //         Alert.alert('Error', e?.message || 'Failed to remove member.');
+  //       } finally {
+  //         setSubmitting(false);
+  //       }
+  //     }
+  //   })
+  // };
 
   return (
     <ThemedView style={{ flex: 1 }} safe={true}>
@@ -288,6 +294,59 @@ const MemberProfile = () => {
           <Spacer height={20} />
         </ThemedKeyboardAwareScrollView>
 
+        {/* Confirm Residency Modal */}
+        <CenteredModal
+          visible={confirmModalVisible}
+          title='Confirm Residency Details'
+          footer={(
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {/* Close (left) */}
+              <ThemedButton
+                submit={false}
+                style={{ flex: 1, borderRadius: 8, marginRight: 10, paddingVertical: 10 }}
+                onPress={() => setConfirmModalVisible(false)}
+              >
+                <ThemedText non_btn>Close</ThemedText>
+              </ThemedButton>
+
+              {/* Confirm (right) - disabled until a relationship is selected */}
+              <ThemedButton
+                style={{ flex: 1, borderRadius: 8, paddingVertical: 10 }}
+                onPress={submitConfirmResidency}
+                disabled={submitting || !(relToHousehold || relToFamily)}
+              >
+                <ThemedText btn>Confirm</ThemedText>
+              </ThemedButton>
+            </View>
+          )}
+        >
+          <ThemedText style={{ marginBottom: 8 }}>Please provide the following details before confirming residency.</ThemedText>
+          <ThemedTextInput placeholder='Reason (optional)' value={reason} onChangeText={(t) => setReason(t)} />
+          <Spacer height={8} />
+          <Pressable onPress={() => setRelationshipPicker('household')} style={{ paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
+            <ThemedText>{relToHousehold ? (RELATIONSHIP.find(r => r.value === relToHousehold)?.label ?? 'Selected') : 'Select relationship to Household Head'}</ThemedText>
+          </Pressable>
+          <Spacer height={8} />
+          <Pressable onPress={() => setRelationshipPicker('family')} style={{ paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
+            <ThemedText>{relToFamily ? (RELATIONSHIP.find(r => r.value === relToFamily)?.label ?? 'Selected') : 'Select relationship to Family Head'}</ThemedText>
+          </Pressable>
+          <CenteredModal
+            visible={relationshipPicker === 'household' || relationshipPicker === 'family'}
+            title={relationshipPicker === 'household' ? 'Select relationship to Household Head' : 'Select relationship to Family Head'}
+            onClose={() => setRelationshipPicker(null)}
+          >
+            {RELATIONSHIP.map((r) => (
+              <Pressable key={r.value as any} onPress={() => {
+                if (relationshipPicker === 'household') setRelToHousehold(Number(r.value))
+                else setRelToFamily(Number(r.value))
+                setRelationshipPicker(null)
+              }} style={{ paddingVertical: 12 }}>
+                <ThemedText>{r.label}</ThemedText>
+              </Pressable>
+            ))}
+          </CenteredModal>
+        </CenteredModal>
+
         {/* Fixed Footer Actions */}
         <View style={styles.footer}>
           <Pressable
@@ -307,7 +366,7 @@ const MemberProfile = () => {
             )}
           </Pressable>
 
-          <Pressable
+          {/* <Pressable
             style={({ pressed }) => [
               styles.button,
               styles.dangerBtn,
@@ -322,7 +381,7 @@ const MemberProfile = () => {
             ) : (
               <ThemedText style={styles.buttonText}>Remove Member</ThemedText>
             )}
-          </Pressable>
+          </Pressable> */}
         </View>
       </View>
     </ThemedView>
