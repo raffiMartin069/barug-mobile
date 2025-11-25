@@ -12,6 +12,7 @@
   import ThemedView from '@/components/ThemedView'
   import { supabase } from '@/constants/supabase'
   import { useAccountRole } from '@/store/useAccountRole'
+  import { useStaffPuroks } from '@/hooks/useStaffPuroks'
   import { Ionicons } from '@expo/vector-icons'
   import AsyncStorage from '@react-native-async-storage/async-storage'
   import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -156,6 +157,9 @@
       ].filter(Boolean).join(' ')
       return fn || '—'
     }, [staffProfile])
+
+    // Get assigned puroks for staff
+    const { assignments: assignedPuroks } = useStaffPuroks()
 
     // Check if user has multiple roles available
     const hasMultipleRoles = useMemo(() => {
@@ -453,6 +457,28 @@
 
           {isStaff && (
             <>
+              {/* Assigned Puroks */}
+              {assignedPuroks.length > 0 && (
+                <>
+                  <ThemedCard style={[styles.cardPad, styles.shadow]}>
+                    <ThemedText style={styles.sectionTitle} title>Assigned Puroks</ThemedText>
+                    <Spacer height={8} />
+                    <View style={styles.purokContainer}>
+                      {assignedPuroks.map((assignment: any) => (
+                        <View key={assignment.staff_purok_id} style={styles.purokChip}>
+                          <Ionicons name="location" size={18} color={ACCENT} />
+                          <View style={styles.purokInfo}>
+                            <ThemedText style={styles.purokName}>{assignment.purok_sitio_name}</ThemedText>
+                            <ThemedText style={styles.purokCode}>{assignment.purok_sitio_code}</ThemedText>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </ThemedCard>
+                  <Spacer height={18} />
+                </>
+              )}
+
               <ThemedCard style={[styles.cardPad, styles.shadow]}>
                 <ThemedText style={styles.sectionTitle} title>Tools</ThemedText>
                 <Spacer height={8} />
@@ -663,5 +689,35 @@
       width: 82,
       height: 82,
       borderRadius: 41,
+    },
+    purokContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    purokChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f9fafb',
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      gap: 10,
+      minWidth: '47%',
+    },
+    purokInfo: {
+      flexDirection: 'column',
+    },
+    purokName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#111827',
+    },
+    purokCode: {
+      fontSize: 11,
+      color: '#6b7280',
+      marginTop: 2,
     },
   })
