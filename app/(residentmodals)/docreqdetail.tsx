@@ -411,7 +411,14 @@ function renderEventDetails(
 function parseDetails(details: any) {
   if (!details) return {}
   if (typeof details === 'object') return details
-  try { return JSON.parse(details) } catch { return {} }
+  if (typeof details !== 'string') return {}
+  try {
+    const parsed = JSON.parse(details)
+    return typeof parsed === 'object' ? parsed : {}
+  } catch (e) {
+    console.warn('[DocReqDetail] Failed to parse details:', details, e)
+    return {}
+  }
 }
 
 function humanizeAction(a?: string | null) {
