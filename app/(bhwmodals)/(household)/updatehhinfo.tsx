@@ -9,6 +9,7 @@ import ThemedView from '@/components/ThemedView'
 import { houseOwnership } from '@/constants/houseOwnership'
 import { houseType } from '@/constants/houseType'
 import { HouseholdException } from '@/exception/HouseholdException'
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { HouseholdService } from '@/services/HouseholdService'
 import { useGeolocationStore } from '@/store/geolocationStore'
@@ -62,6 +63,7 @@ const UpdateHhInfo = () => {
   const purokSitioCode = useGeolocationStore((state) => state.purokSitioCode);
 
   const householdService = new HouseholdService(new HouseholdRepository());
+  const { showModal } = useNiceModal()
 
   // Dropdown options (stub—replace with your data)
   const houseTypeItems: Option[] = useMemo(
@@ -210,7 +212,14 @@ const UpdateHhInfo = () => {
         <Spacer height={15} />
 
         <View>
-          <ThemedButton disabled={!canSubmit} onPress={onSubmit}>
+          <ThemedButton disabled={!canSubmit} onPress={() => showModal({
+            title: 'Update Household Information',
+            message: 'Are you sure you want to save these changes?',
+            variant: 'info',
+            primaryText: 'Save',
+            secondaryText: 'Cancel',
+            onPrimary: () => { onSubmit() },
+          })}>
             <ThemedText btn>Save Changes</ThemedText>
           </ThemedButton>
         </View>

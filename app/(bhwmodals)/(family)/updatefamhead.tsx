@@ -9,6 +9,7 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { HouseholdException } from '@/exception/HouseholdException'
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { useAccountRole } from '@/store/useAccountRole'
@@ -83,6 +84,7 @@ const UpdateFamHead = () => {
   )
 
   const repository = new HouseholdRepository()
+  const { showModal } = useNiceModal()
 
   const { results, search } = usePersonSearchByKey()
   
@@ -228,7 +230,14 @@ const UpdateFamHead = () => {
 
           <Spacer height={20} />
 
-          <ThemedButton disabled={!canSubmit} onPress={handleSubmit}>
+          <ThemedButton disabled={!canSubmit} onPress={() => showModal({
+            title: 'Update Family Head',
+            message: 'Are you sure you want to update the family head?',
+            variant: 'info',
+            primaryText: 'Update',
+            secondaryText: 'Cancel',
+            onPrimary: () => handleSubmit(),
+          })}>
             <ThemedText btn>Update Family Head</ThemedText>
           </ThemedButton>
         </ThemedCard>

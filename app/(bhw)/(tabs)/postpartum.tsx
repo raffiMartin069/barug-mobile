@@ -2,14 +2,15 @@ import CenteredModal from '@/components/maternal/CenteredModal'
 import CustomDropdown from '@/components/maternal/CustomDropdown'
 import MaternalCard from '@/components/maternal/MaternalCard'
 import Spacer from '@/components/Spacer'
-import { showToast } from '@/components/Toast'
 import ThemedAppBar from '@/components/ThemedAppBar'
 import ThemedIcon from '@/components/ThemedIcon'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { showToast } from '@/components/Toast'
 import { Colors } from '@/constants/Colors'
 import { PostpartumVisitException } from '@/exception/PostpartumVisitException'
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import type { PostpartumScheduleDisplay } from '@/repository/MaternalRepository'
 import { MaternalService } from '@/services/MaternalService'
 import { useAccountRole } from '@/store/useAccountRole'
@@ -46,6 +47,7 @@ const PostpartumTab = () => {
 
     const service = useMemo(() => new MaternalService(), [])
     const roleStore = useAccountRole()
+    const { showModal } = useNiceModal()
     const [saving, setSaving] = useState(false)
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [searchText, setSearchText] = useState<string>('')
@@ -333,7 +335,22 @@ const PostpartumTab = () => {
                     onClose={onClose}
                     footer={
                         showCheckForm ? (
-                            <Pressable onPress={onSaveCheck} style={[styles.modalCheckBtn, saving ? { opacity: 0.6 } : null]} accessibilityRole="button" disabled={saving}>
+                            <Pressable
+                                onPress={() => {
+                                    if (saving) return
+                                    showModal({
+                                        title: 'Save Postpartum Check',
+                                        message: 'Do you want to save this postpartum check?',
+                                        variant: 'warn',
+                                        primaryText: 'Save',
+                                        secondaryText: 'Cancel',
+                                        onPrimary: async () => { await onSaveCheck() },
+                                    })
+                                }}
+                                style={[styles.modalCheckBtn, saving ? { opacity: 0.6 } : null]}
+                                accessibilityRole="button"
+                                disabled={saving}
+                            >
                                 {saving ? (<ActivityIndicator color="#fff" />) : (<ThemedText style={styles.modalCheckText}>Save Check</ThemedText>)}
                             </Pressable>
                         ) : null
