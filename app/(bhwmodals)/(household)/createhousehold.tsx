@@ -18,6 +18,7 @@ import { houseType } from '@/constants/houseType'
 import { useGeolocationStore } from '@/store/geolocationStore'
 import { useHouseholdCreationStore } from '@/store/householdCreationStore'
 
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { useHouseholdCreation } from '@/hooks/useHouseholCreation'
 import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
@@ -57,6 +58,7 @@ const CreateHousehold = () => {
   const { saveHousehold } = useHouseholdCreation()
   const profile = useAccountRole((s) => s.getProfile('resident'))
   const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+  const { showModal } = useNiceModal()
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {}
@@ -190,8 +192,15 @@ const CreateHousehold = () => {
         <Spacer height={15} />
 
         <View>
-          <ThemedButton onPress={handleSave}>
-            <ThemedText btn>Continue</ThemedText>
+          <ThemedButton onPress={() => showModal({
+            title: 'Create Household',
+            message: 'Are you sure you want to create this household?',
+            variant: 'info',
+            primaryText: 'Create',
+            secondaryText: 'Cancel',
+            onPrimary: () => { handleSave() },
+          })}>
+            <ThemedText btn>Create Household</ThemedText>
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>

@@ -36,6 +36,7 @@ import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransforma
 
 import CenteredModal from '@/components/maternal/CenteredModal';
 import { Colors } from '@/constants/Colors';
+import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -80,12 +81,12 @@ type MenuPortalState = {
 
 const HouseholdList = () => {
   const router = useRouter();
-  // Make this page read-only: hide/disable CRUD controls but allow navigation/viewing
-  const READ_ONLY = true;
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const staffId = profile?.person_id ?? useAccountRole.getState().staffId ?? null
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(staffId);
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
@@ -144,10 +145,6 @@ const HouseholdList = () => {
   } | null>(null)
 
   const openRemoveModal = (householdId: string, familyNum: string, member: Member) => {
-    if (READ_ONLY) {
-      Alert.alert('Read-only', 'This action is disabled in read-only mode.');
-      return;
-    }
     setPendingRemoval({ householdId, familyNum, member })
     setSelectedReason(null)
     setOtherReason('')
@@ -196,16 +193,6 @@ const HouseholdList = () => {
     });
   }
 
-  // NEW: update family head handler (used by the new button)
-  const onPressUpdateFamilyHead = (fam: Family) => {
-    // keep your existing ID parsing convention
-    setFamilyId(Number(fam.familyNum.split('-')[1]));
-    setHouseholdId(Number(fam.familyNum.split('-')[0]));
-    router.push({
-      pathname: "/(bhwmodals)/(family)/updatehead",
-      params: { familyNum: fam.familyNum },
-    });
-  };
 
   const { removeMember, loading, error } = useMemberRemoval()
 
@@ -220,6 +207,41 @@ const HouseholdList = () => {
     Alert.alert('Success', 'Member has been removed successfully.')
     setRemoveOpen(false)
     await fetchHouseholds()
+  }
+
+  const { showModal } = useNiceModal()
+
+  const confirmCompleteHousehold = (householdId?: string | number) => {
+    showModal({
+      title: 'Confirm Household Visit',
+      message: 'Mark this household as visited for the quarter?',
+      variant: 'warn',
+      primaryText: 'Proceed',
+      secondaryText: 'Cancel',
+      onPrimary: async () => { await completeHouseholdVisit(householdId) }
+    })
+  }
+
+  const confirmCompleteFamily = (familyNum?: string) => {
+    showModal({
+      title: 'Confirm Family Visit',
+      message: 'Mark this family as visited for the quarter?',
+      variant: 'warn',
+      primaryText: 'Proceed',
+      secondaryText: 'Cancel',
+      onPrimary: async () => { await completeFamilyVisit(familyNum) }
+    })
+  }
+
+  const confirmMemberRemoval = (memberId?: string | number) => {
+    showModal({
+      title: 'Confirm Remove',
+      message: 'Are you sure you want to remove this member?',
+      variant: 'warn',
+      primaryText: 'Remove',
+      secondaryText: 'Cancel',
+      onPrimary: async () => { await memberRemovalHandler(String(memberId ?? '')) }
+    })
   }
 
   const completeHouseholdVisit = async (householdId?: string | number) => {
@@ -293,7 +315,7 @@ const HouseholdList = () => {
     This identifies which operation will be used by the search service object.*/
   const [searchExecutionType, setSearchExecutionType] = useState(0)
 
-  // centered modal filter state
+  // centered modal filter state (used instead of inline dropdown)
   const [filterModalVisible, setFilterModalVisible] = useState(false)
   const [filterModalTitle, setFilterModalTitle] = useState('')
   const [filterModalItems, setFilterModalItems] = useState<{ label: string; value: any }[]>([])
@@ -338,7 +360,7 @@ const HouseholdList = () => {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
-      <ThemedAppBar title="List of Household" />
+      <ThemedAppBar title="Designation" />
 
       <KeyboardAvoidingView>
         <ScrollView
@@ -349,53 +371,47 @@ const HouseholdList = () => {
 
           {/* ADD SEARCH AND FILTERS SECTION */}
           <View style={{ paddingHorizontal: 40 }}>
-            <ThemedTextInput
-              placeholder='Search household #, household head...'
-              value={search}
-              editable={!READ_ONLY}
-              onChangeText={(text: string) => {
-                if (READ_ONLY) return;
-                setStatus(undefined)
-                setWeekRange(undefined)
-                setSearch(text)
-                findHousehold(text, 1)
-              }}
-            />
+            <ThemedTextInput placeholder='Search household #, household head...' value={search} onChangeText={(text: string) => {
+              setStatus(undefined)
+              setWeekRange(undefined)
+              setSearch(text)
+              findHousehold(text, 1)
+            }} />
             <Spacer height={10} />
-            <View style={styles.filtersWrap}>
+                <View style={styles.filtersWrap}>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Status</ThemedText>
-                <Pressable
-                  onPress={() => openFilterModal('Status', FILTER_BY_STATUS, async (value) => {
-                    setStatus(value)
-                    setSearch('')
-                    setWeekRange(undefined)
-                    await findHousehold(value, 2)
-                    setFilterModalVisible(false)
-                  })}
-                  style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
-                >
-                  <ThemedText>{status ? getLabelFor(FILTER_BY_STATUS, status) : 'All'}</ThemedText>
-                </Pressable>
+                    <Pressable
+                      onPress={() => openFilterModal('Status', FILTER_BY_STATUS, async (value) => {
+                        setStatus(value)
+                        setSearch('')
+                        setWeekRange(undefined)
+                        await findHousehold(value, 2)
+                        setFilterModalVisible(false)
+                      })}
+                      style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
+                    >
+                      <ThemedText>{status ? getLabelFor(FILTER_BY_STATUS, status) : 'All'}</ThemedText>
+                    </Pressable>
               </View>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
-                <Pressable
-                  onPress={() => openFilterModal('Week Range', FILTER_BY_WEEK, async (val) => {
-                    setWeekRange(val)
-                    setSearch('')
-                    setStatus(undefined)
-                    if (val === 'all') {
-                      await fetchHouseholds()
-                    } else {
-                      await findHousehold(val as string, 3)
-                    }
-                    setFilterModalVisible(false)
-                  })}
-                  style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
-                >
-                  <ThemedText>{weekRange ? getLabelFor(FILTER_BY_WEEK, weekRange) : 'This Week'}</ThemedText>
-                </Pressable>
+                    <Pressable
+                      onPress={() => openFilterModal('Week Range', FILTER_BY_WEEK, async (val) => {
+                        setWeekRange(val)
+                        setSearch('')
+                        setStatus(undefined)
+                        if (val === 'all') {
+                          await fetchHouseholds()
+                        } else {
+                          await findHousehold(val as string, 3)
+                        }
+                        setFilterModalVisible(false)
+                      })}
+                      style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
+                    >
+                      <ThemedText>{weekRange ? getLabelFor(FILTER_BY_WEEK, weekRange) : 'This Week'}</ThemedText>
+                    </Pressable>
               </View>
             </View>
             <Spacer height={10} />
@@ -485,52 +501,50 @@ const HouseholdList = () => {
               </View>
 
               <View style={styles.headerRightWrap}>
-                {!READ_ONLY && (
-                  <Pressable
-                    ref={houseEllipsisRef}
-                    onPress={() =>
-                      openMenuAtRef(houseEllipsisRef.current, [
-                        {
-                          label: 'Update Household Head',
-                          onPress: () => {
-                            closeMenuPortal()
-                            router.push({
-                              pathname: '/updatehhhead',
-                              params: {
-                                id: selectedHousehold.id,
-                                householdNum: selectedHousehold.householdNum,
-                                currentHeadId: '',
-                                currentHeadName: selectedHousehold.householdHead,
-                              },
-                            })
-                          },
+                <Pressable
+                  ref={houseEllipsisRef}
+                  onPress={() =>
+                    openMenuAtRef(houseEllipsisRef.current, [
+                      {
+                        label: 'Update Household Head',
+                        onPress: () => {
+                          closeMenuPortal()
+                          router.push({
+                            pathname: '/updatehhhead',
+                            params: {
+                              id: selectedHousehold.id,
+                              householdNum: selectedHousehold.householdNum,
+                              currentHeadId: '',
+                              currentHeadName: selectedHousehold.householdHead,
+                            },
+                          })
                         },
-                        {
-                          label: 'Update Household Information',
-                          onPress: () => {
-                            closeMenuPortal()
-                            setHouseholdNumber(selectedHousehold.householdNum)
-                            setHouseholdHead(selectedHousehold.householdHead)
-                            clearAddress();
-                            router.push({
-                              pathname: '/updatehhinfo',
-                              params: {
-                                id: selectedHousehold.id,
-                                householdNum: selectedHousehold.householdNum,
-                                currentHeadId: '',
-                                currentHeadName: selectedHousehold.householdHead,
-                              },
-                            })
-                          },
+                      },
+                      {
+                        label: 'Update Household Information',
+                        onPress: () => {
+                          closeMenuPortal()
+                          setHouseholdNumber(selectedHousehold.householdNum)
+                          setHouseholdHead(selectedHousehold.householdHead)
+                          clearAddress();
+                          router.push({
+                            pathname: '/updatehhinfo',
+                            params: {
+                              id: selectedHousehold.id,
+                              householdNum: selectedHousehold.householdNum,
+                              currentHeadId: '',
+                              currentHeadName: selectedHousehold.householdHead,
+                            },
+                          })
                         },
-                      ])
-                    }
-                    hitSlop={8}
-                    style={{ padding: 6 }}
-                  >
-                    <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
-                  </Pressable>
-                )}
+                      },
+                    ])
+                  }
+                  hitSlop={8}
+                  style={{ padding: 6 }}
+                >
+                  <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
+                </Pressable>
               </View>
             </View>
 
@@ -583,20 +597,18 @@ const HouseholdList = () => {
                     Families in this Household
                   </ThemedText>
 
-                  {!READ_ONLY && (
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      <ThemedChip
-                        label={"Add Family Unit"}
-                        onPress={() => router.push("/createfamily")}
-                        filled={false}
-                      />
-                      <ThemedChip
-                        label={"Complete"}
-                        onPress={() => completeHouseholdVisit(selectedHousehold?.id)}
-                        filled={true}
-                      />
-                    </View>
-                  )}
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <ThemedChip
+                      label={"Add Family Unit"}
+                      onPress={() => router.push("/createfamily")}
+                      filled={false}
+                    />
+                    <ThemedChip
+                      label={"Complete"}
+                      onPress={() => confirmCompleteHousehold(selectedHousehold?.id)}
+                      filled={true}
+                    />
+                  </View>
                 </View>
 
                 <ScrollView
@@ -633,49 +645,47 @@ const HouseholdList = () => {
                           </View>
 
                           <View style={styles.headerRightWrap}>
-                            {!READ_ONLY && (
-                              <Pressable
-                                ref={(r) => { familyEllipsisRefs.current[key] = r }}
-                                onPress={() =>
-                                  openMenuAtRef(familyEllipsisRefs.current[key], [
-                                    {
-                                      label: 'Update Family Head',
-                                      onPress: () => {
-                                        closeMenuPortal()
-                                        router.push({
-                                          pathname: '/updatefamhead',
-                                          params: {
-                                            id: selectedHousehold.id,
-                                            householdNum: selectedHousehold.householdNum,
-                                            familyNum: fam.familyNum,
-                                            currentHeadName: fam.headName,
-                                          },
-                                        })
-                                      },
+                            <Pressable
+                              ref={(r) => { familyEllipsisRefs.current[key] = r }}
+                              onPress={() =>
+                                openMenuAtRef(familyEllipsisRefs.current[key], [
+                                  {
+                                    label: 'Update Family Head',
+                                    onPress: () => {
+                                      closeMenuPortal()
+                                      router.push({
+                                        pathname: '/updatefamhead',
+                                        params: {
+                                          id: selectedHousehold.id,
+                                          householdNum: selectedHousehold.householdNum,
+                                          familyNum: fam.familyNum,
+                                          currentHeadName: fam.headName,
+                                        },
+                                      })
                                     },
-                                    {
-                                      label: 'Update Family Information',
-                                      onPress: () => {
-                                        closeMenuPortal()
-                                        router.push({
-                                          pathname: '/updatefaminfo',
-                                          params: {
-                                            id: selectedHousehold.id,
-                                            householdNum: selectedHousehold.householdNum,
-                                            familyNum: fam.familyNum,
-                                            familyHeadName: fam.headName,
-                                          },
-                                        })
-                                      },
+                                  },
+                                  {
+                                    label: 'Update Family Information',
+                                    onPress: () => {
+                                      closeMenuPortal()
+                                      router.push({
+                                        pathname: '/updatefaminfo',
+                                        params: {
+                                          id: selectedHousehold.id,
+                                          householdNum: selectedHousehold.householdNum,
+                                          familyNum: fam.familyNum,
+                                          familyHeadName: fam.headName,
+                                        },
+                                      })
                                     },
-                                  ])
-                                }
-                                hitSlop={8}
-                                style={{ paddingLeft: 8, paddingVertical: 6 }}
-                              >
-                                <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
-                              </Pressable>
-                            )}
+                                  },
+                                ])
+                              }
+                              hitSlop={8}
+                              style={{ paddingLeft: 8, paddingVertical: 6 }}
+                            >
+                              <Ionicons name="ellipsis-vertical" size={18} color="#475569" />
+                            </Pressable>
                           </View>
                         </View>
 
@@ -686,20 +696,16 @@ const HouseholdList = () => {
                             Members
                           </ThemedText>
                           <View style={{ flexDirection: 'row', gap: 8 }}>
-                            {!READ_ONLY && (
-                              <ThemedChip
-                                label={"Add Member"}
-                                onPress={() => onPressAddMember(fam.familyNum)}
-                                filled={false}
-                              />
-                            )}
-                            {!READ_ONLY && (
-                              <ThemedChip
-                                label={"Complete"}
-                                onPress={() => completeFamilyVisit(fam.familyNum)}
-                                filled={true}
-                              />
-                            )}
+                            <ThemedChip
+                              label={"Add Member"}
+                              onPress={() => onPressAddMember(fam.familyNum)}
+                              filled={false}
+                            />
+                            <ThemedChip
+                              label={"Complete"}
+                              onPress={() => confirmCompleteFamily(fam.familyNum)}
+                              filled={true}
+                            />
                           </View>
                         </View>
 
@@ -710,8 +716,8 @@ const HouseholdList = () => {
                                 key={m.id}
                                 label={m.name}
                                 onPress={() => onPressMember(fam, m)}
-                                removable={!READ_ONLY}
-                                onRemove={!READ_ONLY ? () => openRemoveModal(selectedHousehold.id, fam.familyNum, m) : undefined}
+                                removable
+                                onRemove={() => openRemoveModal(selectedHousehold.id, fam.familyNum, m)}
                               />
                             ))}
                           </View>
@@ -732,7 +738,7 @@ const HouseholdList = () => {
         )}
       </ThemedBottomSheet>
       {/* --------- MENU PORTAL (always on top) ---------- */}
-      <Modal transparent visible={menuPortal.visible && !READ_ONLY} animationType="fade" onRequestClose={closeMenuPortal}>
+      <Modal transparent visible={menuPortal.visible} animationType="fade" onRequestClose={closeMenuPortal}>
         <Pressable style={StyleSheet.absoluteFill} onPress={closeMenuPortal} />
         <View style={[styles.portalMenu, { top: menuPortal.y, left: menuPortal.x }]}>
           {menuPortal.items?.map((it, idx) => (
@@ -746,7 +752,7 @@ const HouseholdList = () => {
           ))}
         </View>
       </Modal>
-      <ThemedBottomSheet visible={removeOpen && !READ_ONLY} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
+      <ThemedBottomSheet visible={removeOpen} onClose={() => setRemoveOpen(false)} heightPercent={0.85}>
         <View style={{ flex: 1 }}>
           {/* Scrollable content above the fixed footer */}
           <ScrollView
@@ -793,7 +799,7 @@ const HouseholdList = () => {
             <ThemedButton
               style={{ flex: 1 }}
             >
-              <ThemedText onPress={() => { if (READ_ONLY) { Alert.alert('Read-only', 'This action is disabled.'); return; } memberRemovalHandler(pendingRemoval?.member.id) }} btn>Confirm Remove</ThemedText>
+              <ThemedText onPress={() => confirmMemberRemoval(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>
         </View>

@@ -3,12 +3,12 @@ import { Household } from "@/types/householdType";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
 import { useState } from "react";
 
-export const useFetchHouseAndFamily = () => {
+export const useFetchHouseAndFamily = (staffId: number = null) => {
     const [households, setHouseholds] = useState<Household[]>([]);
     const [selectedHousehold, setSelectedHousehold] = useState<Household | null>(null);
     // HouseholdListService
     const getHouseholds = async (service: HouseholdListService) => {
-        const rawData = await service.execute();
+        const rawData = await service.execute(staffId);
         if (!rawData) return;
         const transformed = HouseholdDataTransformation.TransformHouseholdData(rawData);
         setHouseholds(transformed);
