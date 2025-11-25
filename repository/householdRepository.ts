@@ -143,6 +143,16 @@ export class HouseholdRepository {
         return data || null;
     }
 
+    async GetActiveDesignatedHouseholdByStaffId(p_staff_id: number) {
+        const func = "get_households_for_staff";
+        const { data, error } = await supabase.rpc(func, { p_staff_id });
+        if (error) {
+            console.error(`Error calling ${func}:`, error);
+            return null;
+        }
+        return data || null;
+    }
+
     async GetActiveHousehold() {
         const func = "get_active_households";
         const { data, error } = await supabase.rpc(func);
