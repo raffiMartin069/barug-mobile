@@ -7,6 +7,7 @@ import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { supabase } from '@/constants/supabase'
 import { useAccountRole } from '@/store/useAccountRole'
+import { useStaffPuroks } from '@/hooks/useStaffPuroks'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native'
@@ -16,6 +17,9 @@ const BhwHome = () => {
   const { getProfile } = useAccountRole()
   const residentProfile = getProfile('resident')
   const [profileImage, setProfileImage] = useState<string | null>(null)
+  
+  // Get assigned puroks using hook
+  const { assignments: assignedPuroks } = useStaffPuroks()
 
   // Load profile image
   const loadProfileImage = useCallback(async (personId: number) => {
@@ -85,6 +89,33 @@ const BhwHome = () => {
           </View>
 
           <Spacer height={5}/>
+
+          {/* Assigned Puroks */}
+          {assignedPuroks.length > 0 && (
+            <>
+              <ThemedCard>
+                <ThemedText style={styles.text} subtitle>Assigned Puroks</ThemedText>
+                <View style={styles.purokContainer}>
+                  {assignedPuroks.map((assignment: any) => (
+                    <View key={assignment.staff_purok_id} style={styles.purokChip}>
+                      <ThemedIcon
+                        name="location"
+                        iconColor="#561C24"
+                        bgColor="#f5e6e8"
+                        size={16}
+                        containerSize={32}
+                      />
+                      <View style={styles.purokInfo}>
+                        <ThemedText style={styles.purokName}>{assignment.purok_sitio_name}</ThemedText>
+                        <ThemedText style={styles.purokCode}>{assignment.purok_sitio_code}</ThemedText>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </ThemedCard>
+              <Spacer height={20}/>
+            </>
+          )}
 
           <ThemedCard>
             <ThemedText style={styles.text} subtitle>Activities</ThemedText>
@@ -222,5 +253,34 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
+  },
+  purokContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 10,
+  },
+  purokChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 8,
+  },
+  purokInfo: {
+    flexDirection: 'column',
+  },
+  purokName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  purokCode: {
+    fontSize: 11,
+    color: '#6b7280',
   },
 })
