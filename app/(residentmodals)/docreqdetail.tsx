@@ -234,11 +234,27 @@ export default function DocRequestDetail() {
                         action.includes('checkout_session_created')
                       )
                     })
+                    .filter((ev, idx, arr) => {
+                      // Remove duplicate consecutive STATUS_CHANGED to same status
+                      if (ev.action !== 'STATUS_CHANGED') return true
+                      const d = parseDetails(ev.details)
+                      const toStatus = String(d?.to_status || '').toUpperCase()
+                      // Check if previous event is also STATUS_CHANGED to same status
+                      if (idx > 0) {
+                        const prevEv = arr[idx - 1]
+                        if (prevEv.action === 'STATUS_CHANGED') {
+                          const prevD = parseDetails(prevEv.details)
+                          const prevToStatus = String(prevD?.to_status || '').toUpperCase()
+                          if (toStatus === prevToStatus) return false // Skip duplicate
+                        }
+                      }
+                      return true
+                    })
                     .map((ev, index, filteredArray) => {
                       const meta = ACTION_META[ev.action] ?? { icon: 'information-circle', tint: '#475569' }
                       const d = parseDetails(ev.details)
                       return (
-                        <View key={String(ev.common_log_id)} style={styles.timelineItem}>
+                        <View key={`${ev.common_log_id}-${index}`} style={styles.timelineItem}>
                           <View style={styles.timelineIconContainer}>
                             <View style={[styles.timelineIcon, { backgroundColor: '#31010115' }]}>
                               <ThemedIcon name={meta.icon as any} size={18} iconColor={meta.tint} />
@@ -393,9 +409,14 @@ function renderEventDetails(
     }
     case 'STATUS_CHANGED': {
       const to = String(d?.to_status || '').toUpperCase()
+      const reason = d?.reason || d?.notes
       const s = STATUS_STYLE[to]
-      if (s) return <StatusChip label={s.label} bg={s.bg} fg={s.fg} />
-      return <Chip label={`To: ${to || '—'}`} />
+      return (
+        <>
+          {s ? <StatusChip label={s.label} bg={s.bg} fg={s.fg} /> : <Chip label={`To: ${to || '—'}`} />}
+          {reason && <ThemedText small muted style={{ marginTop: 4 }}>Reason: {reason}</ThemedText>}
+        </>
+      )
     }
     case 'OR_ISSUED': {
       return d?.or_number ? <Chip label={d.or_number} color="#059669" /> : null
