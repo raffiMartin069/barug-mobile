@@ -349,20 +349,12 @@ const HouseholdList = () => {
 
           {/* ADD SEARCH AND FILTERS SECTION */}
           <View style={{ paddingHorizontal: 40 }}>
-            <ThemedTextInput
-              placeholder='Search household #, household head...'
-              value={search}
-              editable={!READ_ONLY}
-              onChangeText={(text: string) => {
-                if (READ_ONLY) return;
-                setStatus(undefined)
-                setWeekRange(undefined)
-                setSearch(text)
-                findHousehold(text, 1)
-              }}
-            />
+            <ThemedTextInput placeholder='Search household #, household head...' value={search} onChangeText={(text: string) => {
+              setSearch(text)
+              findHousehold(text, 1)
+            }} />
             <Spacer height={10} />
-            <View style={styles.filtersWrap}>
+            {/* <View style={styles.filtersWrap}>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Status</ThemedText>
                 <Pressable
@@ -397,7 +389,7 @@ const HouseholdList = () => {
                   <ThemedText>{weekRange ? getLabelFor(FILTER_BY_WEEK, weekRange) : 'This Week'}</ThemedText>
                 </Pressable>
               </View>
-            </View>
+            </View> */}
             <Spacer height={10} />
           </View>
           {/* END SEARCH AND FILTERS SECTION */}
