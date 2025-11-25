@@ -165,4 +165,38 @@ export class HouseholdRepository {
         return data?.household_id || null
     }
 
+    async InsertHouseholdVisitCompletion(p_household_id: number, p_staff_id: number) {
+        const func = "mark_household_quarterly_visited";
+        const { data, error } = await supabase.rpc(func, {
+            p_household_id,
+            p_staff_id,
+        });
+        if (error) {
+            if (error.code && HouseholdException.getErrorCodes().has(String(error.code))) {
+                console.warn(`Error calling ${func}:`, error);
+                throw new HouseholdException(error.message);
+            }
+            console.error(`Error calling ${func}:`, error);
+            throw new Error(error.message);
+        }
+        return data || null;
+    }
+
+    async InsertFamilyVisitCompletion(p_family_id: number, p_staff_id: number) {
+        const func = "mark_family_quarterly_visited";
+        const { data, error } = await supabase.rpc(func, {
+            p_family_id,
+            p_staff_id,
+        });
+        if (error) {
+            if (error.code && HouseholdException.getErrorCodes().has(String(error.code))) {
+                console.warn(`Error calling ${func}:`, error);
+                throw new HouseholdException(error.message);
+            }
+            console.error(`Error calling ${func}:`, error);
+            throw new Error(error.message);
+        }
+        return data || null;
+    }
+
 }

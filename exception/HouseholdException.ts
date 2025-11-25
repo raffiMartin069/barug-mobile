@@ -18,9 +18,18 @@ export class HouseholdException extends Error {
         'P6116',
         'P6117',
         'P6118',
-        'P6120'
+        'P6120',
+        'P6892',
+        'P6893',
+        'P6889',
+        'P6886',
+        'P6891',
+        'P6890',
+        'P6899',
+        'P6885',
+        'P6888',
+        'P6887'
     ]);
-
 
     constructor(message: string) {
         super(message);

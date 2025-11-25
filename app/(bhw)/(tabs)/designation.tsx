@@ -25,7 +25,6 @@ import { SearchSchedulingService } from "@/services/SearchSchedulingService";
 import { useGeolocationStore } from "@/store/geolocationStore";
 
 import { useHouseMateStore } from "@/store/houseMateStore";
-import { useAccountRole } from "@/store/useAccountRole";
 import { useBasicHouseholdInfoStore } from "@/store/useBasicHouseholdInfoStore";
 
 import { Family } from "@/types/familyTypes";
@@ -33,14 +32,13 @@ import { Household } from "@/types/householdType";
 import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
+import { transform } from "@babel/core";
 
-import { Colors } from '@/constants/Colors';
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   findNodeHandle,
@@ -50,7 +48,6 @@ import {
   ScrollView,
   StyleSheet,
   UIManager,
-  useColorScheme,
   View,
 } from "react-native";
 
@@ -112,12 +109,7 @@ const HouseholdList = () => {
 
   const fetchHouseholds = async () => {
     const service = new HouseholdListService(new FamilyRepository(), new HouseholdRepository());
-    setLoadingHouseholds(true);
-    try {
-      await getHouseholds(service);
-    } finally {
-      setLoadingHouseholds(false);
-    }
+    await getHouseholds(service);
   };
 
   useEffect(() => {
@@ -151,9 +143,6 @@ const HouseholdList = () => {
 
   const [familyIndex, setFamilyIndex] = useState(0);
   const familiesScrollRef = useRef<ScrollView>(null);
-  const [loadingHouseholds, setLoadingHouseholds] = useState(false);
-  const colorScheme = useColorScheme()
-  const theme = Colors[colorScheme] ?? Colors.light
 
   const openSheet = (item: Household) => {
     setSelectedHousehold(item);
@@ -190,17 +179,6 @@ const HouseholdList = () => {
     });
   }
 
-  // NEW: update family head handler (used by the new button)
-  const onPressUpdateFamilyHead = (fam: Family) => {
-    // keep your existing ID parsing convention
-    setFamilyId(Number(fam.familyNum.split('-')[1]));
-    setHouseholdId(Number(fam.familyNum.split('-')[0]));
-    router.push({
-      pathname: "/(bhwmodals)/(family)/updatehead",
-      params: { familyNum: fam.familyNum },
-    });
-  };
-
   const { removeMember, loading, error } = useMemberRemoval()
 
   const memberRemovalHandler = async (id: string) => {
@@ -214,73 +192,6 @@ const HouseholdList = () => {
     Alert.alert('Success', 'Member has been removed successfully.')
     setRemoveOpen(false)
     await fetchHouseholds()
-  }
-
-  const completeHouseholdVisit = async (householdId?: string | number) => {
-    if (!householdId) {
-      Alert.alert('Failed', 'Household ID is missing');
-      return;
-    }
-
-    try {
-      // ensure resident profile is loaded so staffId is populated in the store
-      await useAccountRole.getState().ensureLoaded('resident');
-      const staffId = useAccountRole.getState().staffId;
-      if (!staffId) {
-        Alert.alert('Failed', 'Unable to determine staff ID. Please make sure you are signed in as a BHW.');
-        return;
-      }
-
-      const repo = new HouseholdRepository();
-      await repo.InsertHouseholdVisitCompletion(Number(householdId), staffId);
-      Alert.alert('Success', 'Household visit marked complete.');
-      // refresh list and close sheet
-      await fetchHouseholds();
-      setOpen(false);
-    } catch (e: any) {
-      console.error('completeHouseholdVisit error:', e);
-      if (e?.name === 'HouseholdException') {
-        Alert.alert('Failed', e.message ?? 'Household error');
-      } else {
-        Alert.alert('Failed', e?.message ?? 'Unable to mark household as completed.');
-      }
-    }
-  }
-
-  const completeFamilyVisit = async (familyNum?: string) => {
-    if (!familyNum) {
-      Alert.alert('Failed', 'Family identifier is missing');
-      return;
-    }
-
-    try {
-      await useAccountRole.getState().ensureLoaded('resident');
-      const staffId = useAccountRole.getState().staffId;
-      if (!staffId) {
-        Alert.alert('Failed', 'Unable to determine staff ID. Please make sure you are signed in as a BHW.');
-        return;
-      }
-
-      const repo = new HouseholdRepository();
-      // resolve family id from its number
-      const familyId = await repo.GetFamilyIdByFamilyNumber(String(familyNum));
-      if (!familyId) {
-        Alert.alert('Failed', 'Unable to resolve family id.');
-        return;
-      }
-
-      await repo.InsertFamilyVisitCompletion(Number(familyId), staffId);
-      Alert.alert('Success', 'Family visit marked complete.');
-      await fetchHouseholds();
-      setOpen(false);
-    } catch (e: any) {
-      console.error('completeFamilyVisit error:', e);
-      if (e?.name === 'HouseholdException') {
-        Alert.alert('Failed', e.message ?? 'Household error');
-      } else {
-        Alert.alert('Failed', e?.message ?? 'Unable to mark family as completed.');
-      }
-    }
   }
 
   /* Search execution type is used for retrieving household information.
@@ -427,13 +338,6 @@ const HouseholdList = () => {
             </View>
           ))}
         </ScrollView>
-
-        {/* overlay spinner */}
-        {loadingHouseholds && (
-          <View style={styles.fullScreenSpinner} pointerEvents="auto">
-            <ActivityIndicator size="large" color={theme.link} />
-          </View>
-        )}
       </KeyboardAvoidingView>
 
       {/* ---------- Bottom Sheet --------- */}
@@ -544,18 +448,11 @@ const HouseholdList = () => {
                     Families in this Household
                   </ThemedText>
 
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <ThemedChip
-                      label={"Add Family Unit"}
-                      onPress={() => router.push("/createfamily")}
-                      filled={false}
-                    />
-                    <ThemedChip
-                      label={"Complete"}
-                      onPress={() => completeHouseholdVisit(selectedHousehold?.id)}
-                      filled={true}
-                    />
-                  </View>
+                  <ThemedChip
+                    label={"Add Family Unit"}
+                    onPress={() => router.push("/createfamily")}
+                    filled={false}
+                  />
                 </View>
 
                 <ScrollView
@@ -642,18 +539,11 @@ const HouseholdList = () => {
                           <ThemedText style={styles.sectionTitle}>
                             Members
                           </ThemedText>
-                          <View style={{ flexDirection: 'row', gap: 8 }}>
-                            <ThemedChip
-                              label={"Add Member"}
-                              onPress={() => onPressAddMember(fam.familyNum)}
-                              filled={false}
-                            />
-                            <ThemedChip
-                              label={"Complete"}
-                              onPress={() => completeFamilyVisit(fam.familyNum)}
-                              filled={true}
-                            />
-                          </View>
+                          <ThemedChip
+                            label={"Add Member"}
+                            onPress={() => onPressAddMember(fam.familyNum)}
+                            filled={false}
+                          />
                         </View>
 
                         {fam.members.length > 0 ? (
@@ -868,16 +758,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 50,
     zIndex: 9999,
-  },
-  fullScreenSpinner: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    zIndex: 1000,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
