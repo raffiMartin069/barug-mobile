@@ -389,21 +389,29 @@ export async function fetchDocRequestDetailBundle(docRequestId: number): Promise
     .maybeSingle()
   if (pe) throw pe
 
-  const [t1, t2] = await Promise.all([
-    supabase
-      .from('v_document_timeline')
-      .select('*')
-      .eq('table_affected', 'doc_request_hdr')
-      .eq('record_affected_id', docRequestId),
-    supabase
-      .from('v_document_timeline')
-      .select('*')
-      .eq('details->>doc_request_id', String(docRequestId)),
-  ])
+  const t1 = await supabase
+    .from('v_document_timeline')
+    .select('*')
+    .eq('table_affected', 'doc_request_hdr')
+    .eq('record_affected_id', docRequestId)
+  
   if (t1.error) throw t1.error
-  if (t2.error) throw t2.error
 
-  const tl = [...(t1.data ?? []), ...(t2.data ?? [])] as TimelineEvent[]
+  // Try to get related events via JSON operator, but don't fail if details has invalid JSON
+  let t2Data: any[] = []
+  try {
+    const t2 = await supabase
+      .from('v_document_timeline')
+      .select('*')
+      .eq('details->>doc_request_id', String(docRequestId))
+    if (!t2.error && t2.data) {
+      t2Data = t2.data
+    }
+  } catch (e) {
+    console.warn('[fetchDocRequestDetailBundle] Failed to query timeline with JSON operator:', e)
+  }
+
+  const tl = [...(t1.data ?? []), ...t2Data] as TimelineEvent[]
   tl.sort((a, b) => new Date(b.occurred_at as any).getTime() - new Date(a.occurred_at as any).getTime())
 
   return {
