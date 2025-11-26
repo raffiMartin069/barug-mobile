@@ -9,8 +9,6 @@ import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
 import ThemedTextInput from "@/components/ThemedTextInput";
 import ThemedView from "@/components/ThemedView";
-import { FILTER_BY_STATUS } from "@/constants/filterByStatus";
-import { FILTER_BY_WEEK } from "@/constants/filterByWeek";
 
 import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
 import { useMemberRemoval } from "@/hooks/useMemberRemoval";
@@ -18,6 +16,7 @@ import { useMemberRemoval } from "@/hooks/useMemberRemoval";
 import { FamilyRepository } from "@/repository/familyRepository";
 import { HealthWorkerRepository } from "@/repository/HealthWorkerRepository";
 import { HouseholdRepository } from "@/repository/householdRepository";
+import { StaffRepository } from '@/repository/StaffRepository';
 
 import { HouseholdListService } from "@/services/householdList";
 import { MemberRemovalService } from "@/services/memberRemovalService";
@@ -86,7 +85,27 @@ const HouseholdList = () => {
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(staffId);
+  const [resolvedStaffId, setResolvedStaffId] = useState<number | null>(null)
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId ?? 5);
+
+  useEffect(() => {
+    let mounted = true
+    const resolveStaff = async () => {
+      try {
+        const personId = staffId
+        if (!personId) return
+        const repo = new StaffRepository()
+        const staff = await repo.GetStaffByPersonId(Number(personId))
+        if (!mounted) return
+        if (staff && staff.staff_id) setResolvedStaffId(Number(staff.staff_id))
+      } catch (err) {
+        console.error('[Designation] failed to resolve staff id:', err)
+      }
+    }
+
+    resolveStaff()
+    return () => { mounted = false }
+  }, [staffId])
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
