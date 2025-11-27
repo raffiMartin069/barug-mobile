@@ -86,7 +86,7 @@ const HouseholdList = () => {
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(staffId);
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(5);
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
