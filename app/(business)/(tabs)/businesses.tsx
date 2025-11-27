@@ -63,7 +63,7 @@ const Businesses= () => {
 
   return (
     <ThemedView style={{ flex: 1 }} safe>
-      <ThemedAppBar title="Businesses" />
+      <ThemedAppBar title="Businesses"  showBack={false}/>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.search}>

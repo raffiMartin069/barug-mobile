@@ -61,6 +61,26 @@ export default function BusinessLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="(tabs)/businesses"
+        options={{
+          title: 'Businesses',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'business' : 'business-outline'} size={20} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="(tabs)/paymenthistory"
+        options={{
+          title: 'Payment History',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={20} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   )
 }
