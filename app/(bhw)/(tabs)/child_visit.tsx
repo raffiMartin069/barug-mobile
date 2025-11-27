@@ -59,11 +59,6 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
   const staffId = useAccountRole((s) => s.staffId)
   const { showModal } = useNiceModal()
 
-  console.log(`Rendering MinimalCard for child_record_id=${item.child_record_id}`);
-  console.log('Item data:', item);
-  console.log('Session profile:', session.profile);
-  console.log('Staff ID from account store:', staffId);
-
   const handleSaveVisit = React.useCallback(async () => {
     // validate payload using centralized validator (throws ChildVisitDomainException on validation errors)
     const rawPayload = {
