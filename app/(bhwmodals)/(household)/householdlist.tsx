@@ -9,8 +9,6 @@ import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
 import ThemedTextInput from "@/components/ThemedTextInput";
 import ThemedView from "@/components/ThemedView";
-import { FILTER_BY_STATUS } from "@/constants/filterByStatus";
-import { FILTER_BY_WEEK } from "@/constants/filterByWeek";
 
 import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
 import { useMemberRemoval } from "@/hooks/useMemberRemoval";
@@ -34,25 +32,25 @@ import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
 
-import CenteredModal from '@/components/maternal/CenteredModal';
+import CenteredModal from '@/components/custom/CenteredModal';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  findNodeHandle,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  UIManager,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    findNodeHandle,
+    KeyboardAvoidingView,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    UIManager,
+    useColorScheme,
+    View,
 } from "react-native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;

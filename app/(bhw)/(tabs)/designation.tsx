@@ -33,7 +33,7 @@ import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
 
-import CenteredModal from '@/components/maternal/CenteredModal';
+import CenteredModal from '@/components/custom/CenteredModal';
 import { Colors } from '@/constants/Colors';
 import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { Ionicons } from "@expo/vector-icons";
@@ -41,18 +41,18 @@ import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  findNodeHandle,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  UIManager,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    findNodeHandle,
+    KeyboardAvoidingView,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    UIManager,
+    useColorScheme,
+    View,
 } from "react-native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -810,14 +810,13 @@ const HouseholdList = () => {
             <ThemedButton
               submit={false}
               onPress={() => setRemoveOpen(false)}
-              style={{ flex: 1 }}
+              style={{ flex: 1 }} label={undefined}              
             >
               <ThemedText non_btn>Cancel</ThemedText>
             </ThemedButton>
             <View style={{ width: 10 }} />
             <ThemedButton
-              style={{ flex: 1 }}
-            >
+              style={{ flex: 1 }} label={undefined}            >
               <ThemedText onPress={() => confirmMemberRemoval(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>

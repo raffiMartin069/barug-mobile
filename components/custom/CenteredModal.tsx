@@ -1,3 +1,4 @@
+import ThemedButton from '@/components/ThemedButton'
 import ThemedText from '@/components/ThemedText'
 import { Colors } from '@/constants/Colors'
 import React from 'react'
@@ -9,17 +10,41 @@ type Props = {
   children?: React.ReactNode
   onClose?: () => void
   footer?: React.ReactNode
+  actions?: {
+    label: string
+    onPress: () => void
+    submit?: boolean
+    style?: any
+  }[]
+  contentStyle?: any
+  titleStyle?: any
 }
 
-const CenteredModal = ({ visible, title, children, onClose, footer }: Props) => {
+const CenteredModal = ({ visible, title, children, onClose, footer, actions, contentStyle, titleStyle }: Props) => {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          {title ? <ThemedText style={styles.title}>{title}</ThemedText> : null}
-          <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+          {title ? <ThemedText style={[styles.title, titleStyle]}>{title}</ThemedText> : null}
 
-          {footer ? <View style={styles.footer}>{footer}</View> : null}
+          <ScrollView contentContainerStyle={[styles.content, contentStyle]}>{children}</ScrollView>
+
+          {/* If a custom footer node is provided, render it. Otherwise, if actions are passed, render them as buttons. */}
+          {footer ? (
+            <View style={styles.footer}>{footer}</View>
+          ) : actions && actions.length ? (
+            <View style={styles.footerActions}>
+              {actions.map((a, i) => (
+                <ThemedButton
+                  key={i}
+                  label={a.label}
+                  onPress={a.onPress}
+                  submit={a.submit ?? true}
+                  style={a.style}
+                />
+              ))}
+            </View>
+          ) : null}
 
           {onClose ? (
             <Pressable style={styles.closeBtn} onPress={onClose} accessibilityRole="button">
@@ -75,5 +100,8 @@ const styles = StyleSheet.create({
   closeText: {
     color: '#fff',
     fontWeight: '700',
+  },
+  footerActions: {
+    marginTop: 12,
   },
 })

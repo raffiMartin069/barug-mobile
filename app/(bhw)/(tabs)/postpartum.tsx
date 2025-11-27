@@ -1,4 +1,4 @@
-import CenteredModal from '@/components/maternal/CenteredModal'
+import CenteredModal from '@/components/custom/CenteredModal'
 import CustomDropdown from '@/components/maternal/CustomDropdown'
 import MaternalCard from '@/components/maternal/MaternalCard'
 import Spacer from '@/components/Spacer'

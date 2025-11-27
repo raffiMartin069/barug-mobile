@@ -1,4 +1,4 @@
-import CenteredModal from '@/components/maternal/CenteredModal';
+import CenteredModal from '@/components/custom/CenteredModal';
 import Spacer from '@/components/Spacer';
 import ThemedAppBar from '@/components/ThemedAppBar';
 import ThemedButton from '@/components/ThemedButton';
