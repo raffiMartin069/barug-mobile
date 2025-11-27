@@ -6,8 +6,9 @@ import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { supabase } from '@/constants/supabase'
-import { useAccountRole } from '@/store/useAccountRole'
 import { useStaffPuroks } from '@/hooks/useStaffPuroks'
+import CommunityService from '@/services/CommunityService'
+import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native'
@@ -17,6 +18,10 @@ const BhwHome = () => {
   const { getProfile } = useAccountRole()
   const residentProfile = getProfile('resident')
   const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [residentsCount, setResidentsCount] = useState<number | null>(null)
+  const [householdsCount, setHouseholdsCount] = useState<number | null>(null)
+  const [familiesCount, setFamiliesCount] = useState<number | null>(null)
+  const [statsLoading, setStatsLoading] = useState<boolean>(false)
   
   // Get assigned puroks using hook
   const { assignments: assignedPuroks } = useStaffPuroks()
@@ -44,6 +49,30 @@ const BhwHome = () => {
       loadProfileImage(residentProfile.person_id)
     }
   }, [residentProfile?.person_id, loadProfileImage])
+
+  // Load community stats
+  useEffect(() => {
+    let mounted = true
+    const svc = new CommunityService()
+
+    const load = async () => {
+      try {
+        setStatsLoading(true)
+        const stats = await svc.getCommunityStats()
+        if (!mounted) return
+        setResidentsCount(stats.residentsCount)
+        setHouseholdsCount(stats.householdsCount)
+        setFamiliesCount(stats.familiesCount)
+      } catch (err) {
+        console.error('[BhwHome] failed to load community stats:', err)
+      } finally {
+        if (mounted) setStatsLoading(false)
+      }
+    }
+
+    load()
+    return () => { mounted = false }
+  }, [])
 
   // Handle hardware back button
   useEffect(() => {
@@ -150,19 +179,19 @@ const BhwHome = () => {
               <View style={styles.subcontainer}>
                 <ThemedIcon name="person" iconColor="#6b4c3b" bgColor="#f2e5d7" />
                 <ThemedText style={styles.statLabel}>Residents</ThemedText>
-                <ThemedText style={styles.statValue}>1,245</ThemedText>
+                <ThemedText style={styles.statValue}>{statsLoading ? '...' : (residentsCount !== null ? residentsCount.toLocaleString() : '—')}</ThemedText>
               </View>
 
               <View style={styles.subcontainer}>
                 <ThemedIcon name="home" iconColor="#4a5c6a" bgColor="#dfe3e6" />
                 <ThemedText style={styles.statLabel}>Households</ThemedText>
-                <ThemedText style={styles.statValue}>312</ThemedText>
+                <ThemedText style={styles.statValue}>{statsLoading ? '...' : (householdsCount !== null ? householdsCount.toLocaleString() : '—')}</ThemedText>
               </View>
 
               <View style={styles.subcontainer}>
                 <ThemedIcon name="people" iconColor="#4e6151" bgColor="#dce5dc" />
                 <ThemedText style={styles.statLabel}>Families</ThemedText>
-                <ThemedText style={styles.statValue}>478</ThemedText>
+                <ThemedText style={styles.statValue}>{statsLoading ? '...' : (familiesCount !== null ? familiesCount.toLocaleString() : '—')}</ThemedText>
               </View>
             </View>
           </ThemedCard>

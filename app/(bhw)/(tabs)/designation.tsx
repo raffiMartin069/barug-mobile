@@ -378,42 +378,42 @@ const HouseholdList = () => {
               findHousehold(text, 1)
             }} />
             <Spacer height={10} />
-                <View style={styles.filtersWrap}>
+            {/* <View style={styles.filtersWrap}>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Status</ThemedText>
-                    <Pressable
-                      onPress={() => openFilterModal('Status', FILTER_BY_STATUS, async (value) => {
-                        setStatus(value)
-                        setSearch('')
-                        setWeekRange(undefined)
-                        await findHousehold(value, 2)
-                        setFilterModalVisible(false)
-                      })}
-                      style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
-                    >
-                      <ThemedText>{status ? getLabelFor(FILTER_BY_STATUS, status) : 'All'}</ThemedText>
-                    </Pressable>
+                <Pressable
+                  onPress={() => openFilterModal('Status', FILTER_BY_STATUS, async (value) => {
+                    setStatus(value)
+                    setSearch('')
+                    setWeekRange(undefined)
+                    await findHousehold(value, 2)
+                    setFilterModalVisible(false)
+                  })}
+                  style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
+                >
+                  <ThemedText>{status ? getLabelFor(FILTER_BY_STATUS, status) : 'All'}</ThemedText>
+                </Pressable>
               </View>
               <View style={styles.filterCol}>
                 <ThemedText style={styles.filterLabel}>Week Range</ThemedText>
-                    <Pressable
-                      onPress={() => openFilterModal('Week Range', FILTER_BY_WEEK, async (val) => {
-                        setWeekRange(val)
-                        setSearch('')
-                        setStatus(undefined)
-                        if (val === 'all') {
-                          await fetchHouseholds()
-                        } else {
-                          await findHousehold(val as string, 3)
-                        }
-                        setFilterModalVisible(false)
-                      })}
-                      style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
-                    >
-                      <ThemedText>{weekRange ? getLabelFor(FILTER_BY_WEEK, weekRange) : 'This Week'}</ThemedText>
-                    </Pressable>
+                <Pressable
+                  onPress={() => openFilterModal('Week Range', FILTER_BY_WEEK, async (val) => {
+                    setWeekRange(val)
+                    setSearch('')
+                    setStatus(undefined)
+                    if (val === 'all') {
+                      await fetchHouseholds()
+                    } else {
+                      await findHousehold(val as string, 3)
+                    }
+                    setFilterModalVisible(false)
+                  })}
+                  style={{ paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8 }}
+                >
+                  <ThemedText>{weekRange ? getLabelFor(FILTER_BY_WEEK, weekRange) : 'This Week'}</ThemedText>
+                </Pressable>
               </View>
-            </View>
+            </View> */}
             <Spacer height={10} />
           </View>
           {/* END SEARCH AND FILTERS SECTION */}
