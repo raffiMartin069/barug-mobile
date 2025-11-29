@@ -1,4 +1,3 @@
-// (business)/(tabs)/docreqhistory.tsx
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
@@ -65,7 +64,7 @@ function formatCurrency(amount: number | null | undefined) {
 }
 
 /* ───────── screen ───────── */
-export default function DocReqHistory() {
+export default function Activities() {
   const router = useRouter()
   const roleStore = useAccountRole()
   const { requests, loading, loadRequests, refresh } = useBusinessRequestHistory()
