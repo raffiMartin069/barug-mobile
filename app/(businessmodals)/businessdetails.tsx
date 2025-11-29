@@ -1,6 +1,6 @@
 import Spacer from "@/components/Spacer";
 import ThemedAppBar from "@/components/ThemedAppBar";
-import ThemedCard from "@/components/ThemedCard";
+import ThemedDivider from "@/components/ThemedDivider";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
 import { useBusinessQuote } from "@/hooks/useBusinessQuote";
@@ -234,7 +234,7 @@ export default function BusinessDetails() {
         </View>
 
         {/* BUSINESS IDENTITY */}
-        <ThemedCard style={styles.section}>
+        <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>BUSINESS IDENTITY</ThemedText>
 
           <Spacer height={12} />
@@ -269,12 +269,14 @@ export default function BusinessDetails() {
               <ThemedText style={styles.kvValue}>{dateEstablished}</ThemedText>
             </View>
           </View>
-        </ThemedCard>
+        </View>
 
-        <Spacer height={12} />
+        <Spacer height={20} />
+        <ThemedDivider />
+        <Spacer height={20} />
 
         {/* LOCATION */}
-        <ThemedCard style={styles.section}>
+        <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>LOCATION</ThemedText>
 
           <Spacer height={8} />
@@ -292,12 +294,14 @@ export default function BusinessDetails() {
               <ThemedText style={styles.kvValue}>{U(details.description)}</ThemedText>
             </View>
           </View>
-        </ThemedCard>
+        </View>
 
-        <Spacer height={12} />
+        <Spacer height={20} />
+        <ThemedDivider />
+        <Spacer height={20} />
 
         {/* OPERATING SCHEDULE */}
-        <ThemedCard style={styles.section}>
+        <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>OPERATING SCHEDULE</ThemedText>
 
           <Spacer height={8} />
@@ -313,14 +317,16 @@ export default function BusinessDetails() {
               <ThemedText style={styles.kvValue}>{operatingHoursText}</ThemedText>
             </View>
           </View>
-        </ThemedCard>
+        </View>
 
-        <Spacer height={12} />
+        <Spacer height={20} />
+        <ThemedDivider />
+        <Spacer height={20} />
 
         {/* ATTACHMENTS GALLERY */}
         {businessFiles.length > 0 && (
           <>
-            <ThemedCard style={styles.section}>
+            <View style={styles.section}>
               <View style={styles.sectionHead}>
                 <ThemedText style={styles.sectionTitle}>ATTACHMENTS</ThemedText>
                 <View style={{ marginLeft: "auto" }}>
@@ -357,15 +363,17 @@ export default function BusinessDetails() {
                   ))}
                 </View>
               </ScrollView>
-            </ThemedCard>
+            </View>
             
-            <Spacer height={12} />
+            <Spacer height={20} />
+            <ThemedDivider />
+            <Spacer height={20} />
           </>
         )}
 
 
         {/* AUTO-COMPUTED QUOTE BREAKDOWN */}
-        <ThemedCard style={styles.section}>
+        <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>BREAKDOWN</ThemedText>
 
           <Spacer height={8} />
@@ -441,12 +449,14 @@ export default function BusinessDetails() {
 
             </>
           )}
-        </ThemedCard>
+        </View>
 
-        <Spacer height={12} />
+        <Spacer height={20} />
+        <ThemedDivider />
+        <Spacer height={20} />
 
         {/* PAID HISTORY */}
-        <ThemedCard style={styles.section}>
+        <View style={styles.section}>
           <ThemedText style={styles.sectionTitle}>PAID HISTORY</ThemedText>
 
           <Spacer height={8} />
@@ -480,7 +490,7 @@ export default function BusinessDetails() {
               </View>
             </ScrollView>
           )}
-        </ThemedCard>
+        </View>
 
         <Spacer height={32} />
       </ScrollView>
@@ -556,7 +566,7 @@ const styles = StyleSheet.create({
   galleryOverlay: { position: "absolute", top: 6, left: 6, backgroundColor: "rgba(0,0,0,0.6)", width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   galleryIndex: { color: "#fff", fontSize: 11, fontWeight: "700" },
   
-  section: { paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12 },
+  section: { paddingHorizontal: 16 },
   sectionHead: { flexDirection: "row", alignItems: "center" },
   sectionIcon: { marginRight: 8, fontSize: 16 },
   sectionTitle: { fontSize: 16, fontWeight: "700" },
