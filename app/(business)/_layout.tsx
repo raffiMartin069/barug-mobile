@@ -64,9 +64,9 @@ export default function BusinessLayout() {
       />
       
       <Tabs.Screen
-        name="(tabs)/docreqhistory"
+        name="(tabs)/activities"
         options={{
-          title: 'Document Request',
+          title: 'Activities',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} size={20} color={color} />
           ),
@@ -76,7 +76,7 @@ export default function BusinessLayout() {
       <Tabs.Screen
         name="(tabs)/paymenthistory"
         options={{
-          title: 'Payment History',
+          title: 'Transaction History',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={20} color={color} />
           ),

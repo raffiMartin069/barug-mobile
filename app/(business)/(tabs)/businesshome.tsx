@@ -110,7 +110,7 @@ const BusinessHome = () => {
 
             <View style={styles.container}>
               <View style={styles.subcontainer}>
-                <ThemedIcon name="hourglass" iconColor="#724d24ff" bgColor="#eeede8ff" containerSize={45} size={20} />
+                <ThemedIcon name="time-outline" iconColor="#724d24ff" bgColor="#eeede8ff" containerSize={45} size={20} />
                 <ThemedText style={styles.statLabel}>Pending</ThemedText>
                 <ThemedText style={styles.statValue}>
                   {statsLoading ? '...' : stats.pending_count}
@@ -118,7 +118,7 @@ const BusinessHome = () => {
               </View>
 
               <View style={styles.subcontainer}>
-                <ThemedIcon name="briefcase" iconColor="#6b4c3b" bgColor="#f2e5d7" containerSize={45} size={20} />
+                <ThemedIcon name="checkmark-circle" iconColor="#6b4c3b" bgColor="#f2e5d7" containerSize={45} size={20} />
                 <ThemedText style={styles.statLabel}>Active</ThemedText>
                 <ThemedText style={styles.statValue}>
                   {statsLoading ? '...' : stats.active_count}
@@ -126,7 +126,7 @@ const BusinessHome = () => {
               </View>
 
               <View style={styles.subcontainer}>
-                <ThemedIcon name="document-text" iconColor="#4a5c6a" bgColor="#dfe3e6" containerSize={45} size={20} />
+                <ThemedIcon name="alert-circle" iconColor="#4a5c6a" bgColor="#dfe3e6" containerSize={45} size={20} />
                 <ThemedText style={styles.statLabel}>Expired</ThemedText>
                 <ThemedText style={styles.statValue}>
                   {statsLoading ? '...' : stats.expired_count}
@@ -134,7 +134,7 @@ const BusinessHome = () => {
               </View>
 
               <View style={styles.subcontainer}>
-                <ThemedIcon name="time" iconColor="#4e6151" bgColor="#dce5dc" containerSize={45} size={20} />
+                <ThemedIcon name="close-circle" iconColor="#4e6151" bgColor="#dce5dc" containerSize={45} size={20} />
                 <ThemedText style={styles.statLabel}>Closed</ThemedText>
                 <ThemedText style={styles.statValue}>
                   {statsLoading ? '...' : stats.closed_count}

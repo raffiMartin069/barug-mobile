@@ -65,7 +65,7 @@ export default function PaymentHistoryScreen() {
 
   return (
     <ThemedView style={{ paddingBottom: 0 }} safe>
-      <ThemedAppBar title="Payment History" showBack={false} />
+      <ThemedAppBar title="Transaction History" showBack={false} />
       
       <FlatList
         data={paymentHistory}

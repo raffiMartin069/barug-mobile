@@ -1,6 +1,5 @@
 import Spacer from "@/components/Spacer";
 import ThemedAppBar from "@/components/ThemedAppBar";
-import ThemedButton from "@/components/ThemedButton";
 import ThemedCard from "@/components/ThemedCard";
 import ThemedText from "@/components/ThemedText";
 import ThemedView from "@/components/ThemedView";
@@ -192,34 +191,58 @@ export default function BusinessDetails() {
   return (
     <ThemedView safe>
       <ThemedAppBar
-        title="Business Details"
+        title="Business Profile"
         showProfile={false}
       />
 
       <ScrollView style={styles.container}>
+        {/* COVER PHOTO & HEADER */}
+        <View style={styles.coverContainer}>
+          {businessFiles.length > 0 && businessFiles[0].signed_url ? (
+            <TouchableOpacity onPress={() => openImageModal(businessFiles[0].signed_url!, 0)} activeOpacity={0.9}>
+              <Image
+                source={{ uri: businessFiles[0].signed_url }}
+                style={styles.coverImage}
+                resizeMode="cover"
+              />
+              {businessFiles.length > 1 && (
+                <View style={styles.coverBadge}>
+                  <ThemedText style={styles.coverBadgeText}>+{businessFiles.length - 1} more</ThemedText>
+                </View>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <ThemedText style={styles.coverPlaceholderText}>🏢</ThemedText>
+            </View>
+          )}
+          
+          {/* Business Name Overlay */}
+          <View style={styles.headerOverlay}>
+            <View style={styles.headerContent}>
+              <View style={{ flex: 1 }}>
+                <ThemedText style={styles.businessNameLarge} numberOfLines={2} ellipsizeMode="tail">
+                  {businessName}
+                </ThemedText>
+                <ThemedText style={styles.idDisplayLarge}>ID: {idDisplay}</ThemedText>
+              </View>
+              <View style={styles.statusBadge}>
+                <ThemedText style={styles.statusBadgeText}>{U(details.business_status)}</ThemedText>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* BUSINESS IDENTITY */}
         <ThemedCard style={styles.section}>
-          <View style={styles.sectionHead}>
-            <ThemedText subtitle style={styles.sectionIcon}>🏷️</ThemedText>
-            <ThemedText style={styles.sectionTitle}>BUSINESS IDENTITY</ThemedText>
-          </View>
+          <ThemedText style={styles.sectionTitle}>BUSINESS IDENTITY</ThemedText>
 
-          <View style={styles.rowSpace}>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={styles.businessName} title numberOfLines={2} ellipsizeMode="tail">
-                {businessName}
-              </ThemedText>
-              <Spacer height={6} />
-              <ThemedText style={styles.idDisplay}>{idDisplay}</ThemedText>
+          <Spacer height={12} />
 
-              <ThemedText style={[styles.kvLabel, { marginTop: 8 }]}>OWNER</ThemedText>
+          <View style={styles.kvRow}>
+            <View style={{ width: "100%" }}>
+              <ThemedText style={styles.kvLabel}>OWNER</ThemedText>
               <ThemedText style={styles.kvValue}>{owner}</ThemedText>
-            </View>
-
-            <View style={{ marginLeft: 12 }}>
-              <View style={styles.badge}>
-                <ThemedText style={styles.badgeText}>{U(details.business_status)}</ThemedText>
-              </View>
             </View>
           </View>
 
@@ -252,10 +275,7 @@ export default function BusinessDetails() {
 
         {/* LOCATION */}
         <ThemedCard style={styles.section}>
-          <View style={styles.sectionHead}>
-            <ThemedText subtitle style={styles.sectionIcon}>📍</ThemedText>
-            <ThemedText style={styles.sectionTitle}>LOCATION</ThemedText>
-          </View>
+          <ThemedText style={styles.sectionTitle}>LOCATION</ThemedText>
 
           <Spacer height={8} />
 
@@ -278,10 +298,7 @@ export default function BusinessDetails() {
 
         {/* OPERATING SCHEDULE */}
         <ThemedCard style={styles.section}>
-          <View style={styles.sectionHead}>
-            <ThemedText subtitle style={styles.sectionIcon}>⏰</ThemedText>
-            <ThemedText style={styles.sectionTitle}>OPERATING SCHEDULE</ThemedText>
-          </View>
+          <ThemedText style={styles.sectionTitle}>OPERATING SCHEDULE</ThemedText>
 
           <Spacer height={8} />
 
@@ -300,58 +317,56 @@ export default function BusinessDetails() {
 
         <Spacer height={12} />
 
-        {/* PROOF / ATTACHMENTS */}
-        <ThemedCard style={styles.section}>
-          <View style={styles.sectionHead}>
-            <ThemedText subtitle style={styles.sectionIcon}>📎</ThemedText>
-            <ThemedText style={styles.sectionTitle}>PROOF / ATTACHMENTS</ThemedText>
-          </View>
-
-          <Spacer height={8} />
-
-          {businessFiles.length > 0 ? (
-            <>
-              <View style={styles.proofHeader}>
-                <ThemedText style={styles.mutedSmall}>{String(businessFiles.length).toUpperCase()} FILE{businessFiles.length > 1 ? "S" : ""}</ThemedText>
-                <ThemedButton submit={false} onPress={viewAllFiles}><ThemedText non_btn>VIEW ALL</ThemedText></ThemedButton>
+        {/* ATTACHMENTS GALLERY */}
+        {businessFiles.length > 0 && (
+          <>
+            <ThemedCard style={styles.section}>
+              <View style={styles.sectionHead}>
+                <ThemedText style={styles.sectionTitle}>ATTACHMENTS</ThemedText>
+                <View style={{ marginLeft: "auto" }}>
+                  <ThemedText style={styles.mutedSmall}>{businessFiles.length} file{businessFiles.length > 1 ? "s" : ""}</ThemedText>
+                </View>
               </View>
 
-              <View style={{ marginTop: 8 }}>
-                {businessFiles.map((item, index) => (
-                  <View key={index}>
-                    <View style={styles.fileRow}>
-                      <ThemedText style={styles.fileIcon}>📄</ThemedText>
-                      <View style={{ flex: 1, marginLeft: 8 }}>
-                        <ThemedText numberOfLines={1} ellipsizeMode="tail" style={styles.kvValue}>{U(item.name)}</ThemedText>
-                      </View>
-                      <View style={{ marginLeft: 8 }}>
-                        {item.signed_url ? (
-                          <TouchableOpacity onPress={() => openImageModal(item.signed_url!, index)}>
-                            <ThemedText subtitle>PREVIEW</ThemedText>
-                          </TouchableOpacity>
-                        ) : (
-                          <ThemedText style={styles.mutedSmall}>NO SIGNED URL</ThemedText>
-                        )}
-                      </View>
-                    </View>
-                    {index < businessFiles.length - 1 && <Spacer height={8} />}
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : (
-            <ThemedText style={styles.mutedSmall}>NO ATTACHMENTS.</ThemedText>
-          )}
-        </ThemedCard>
+              <Spacer height={12} />
 
-        <Spacer height={12} />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+                <View style={styles.galleryContainer}>
+                  {businessFiles.map((item, index) => (
+                    <TouchableOpacity 
+                      key={index} 
+                      onPress={() => openImageModal(item.signed_url!, index)}
+                      style={styles.galleryItem}
+                      activeOpacity={0.8}
+                    >
+                      {item.signed_url ? (
+                        <Image
+                          source={{ uri: item.signed_url }}
+                          style={styles.galleryImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.galleryPlaceholder}>
+                          <ThemedText style={styles.galleryPlaceholderText}>📄</ThemedText>
+                        </View>
+                      )}
+                      <View style={styles.galleryOverlay}>
+                        <ThemedText style={styles.galleryIndex}>{index + 1}</ThemedText>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </ThemedCard>
+            
+            <Spacer height={12} />
+          </>
+        )}
+
 
         {/* AUTO-COMPUTED QUOTE BREAKDOWN */}
         <ThemedCard style={styles.section}>
-          <View style={styles.sectionHead}>
-            <ThemedText subtitle style={styles.sectionIcon}>📋</ThemedText>
-            <ThemedText style={styles.sectionTitle}>BREAKDOWN (AUTO-COMPUTED QUOTE)</ThemedText>
-          </View>
+          <ThemedText style={styles.sectionTitle}>BREAKDOWN</ThemedText>
 
           <Spacer height={8} />
 
@@ -432,10 +447,7 @@ export default function BusinessDetails() {
 
         {/* PAID HISTORY */}
         <ThemedCard style={styles.section}>
-          <View style={styles.sectionHead}>
-            <ThemedText subtitle style={styles.sectionIcon}>🧾</ThemedText>
-            <ThemedText style={styles.sectionTitle}>PAID HISTORY (REFERENCE)</ThemedText>
-          </View>
+          <ThemedText style={styles.sectionTitle}>PAID HISTORY</ThemedText>
 
           <Spacer height={8} />
 
@@ -517,8 +529,33 @@ export default function BusinessDetails() {
 }
 
 const styles = StyleSheet.create({
-  container: { paddingTop: 20 },
+  container: { paddingTop: 0 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
+  
+  // Cover photo & header
+  coverContainer: { position: "relative", marginBottom: 16 },
+  coverImage: { width: "100%", height: 220, backgroundColor: "#f3f4f6" },
+  coverPlaceholder: { width: "100%", height: 220, backgroundColor: "#310101", alignItems: "center", justifyContent: "center" },
+  coverPlaceholderText: { fontSize: 60, opacity: 0.3 },
+  coverBadge: { position: "absolute", top: 12, right: 12, backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  coverBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  headerOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(49,1,1,0.85)", paddingHorizontal: 16, paddingVertical: 14 },
+  headerContent: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  businessNameLarge: { fontSize: 20, fontWeight: "800", color: "#fff", letterSpacing: 0.5 },
+  idDisplayLarge: { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "600", marginTop: 4 },
+  statusBadge: { backgroundColor: "#fff", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  statusBadgeText: { color: "#310101", fontWeight: "700", fontSize: 11 },
+  
+  // Gallery
+  galleryScroll: { marginHorizontal: -12 },
+  galleryContainer: { flexDirection: "row", gap: 10, paddingHorizontal: 12 },
+  galleryItem: { position: "relative", width: 100, height: 100, borderRadius: 12, overflow: "hidden", backgroundColor: "#f3f4f6" },
+  galleryImage: { width: "100%", height: "100%" },
+  galleryPlaceholder: { width: "100%", height: "100%", alignItems: "center", justifyContent: "center", backgroundColor: "#e5e7eb" },
+  galleryPlaceholderText: { fontSize: 30, opacity: 0.5 },
+  galleryOverlay: { position: "absolute", top: 6, left: 6, backgroundColor: "rgba(0,0,0,0.6)", width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  galleryIndex: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  
   section: { paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12 },
   sectionHead: { flexDirection: "row", alignItems: "center" },
   sectionIcon: { marginRight: 8, fontSize: 16 },
