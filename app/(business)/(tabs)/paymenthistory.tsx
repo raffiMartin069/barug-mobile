@@ -1,5 +1,4 @@
 import ThemedAppBar from '@/components/ThemedAppBar';
-import ThemedCard from '@/components/ThemedCard';
 import ThemedIcon from '@/components/ThemedIcon';
 import ThemedText from '@/components/ThemedText';
 import ThemedView from '@/components/ThemedView';
@@ -21,7 +20,7 @@ export default function PaymentHistoryScreen() {
   }, [profile?.person_id]);
 
   const renderPaymentItem = ({ item }: { item: PaymentHistory }) => (
-    <ThemedCard style={styles.paymentCard}>
+    <View style={styles.paymentItem}>
       <View style={styles.paymentHeader}>
         <ThemedIcon
           name="receipt"
@@ -61,11 +60,11 @@ export default function PaymentHistoryScreen() {
           <ThemedText style={styles.metaValue}>{item.issued_by}</ThemedText>
         </View>
       </View>
-    </ThemedCard>
+    </View>
   );
 
   return (
-    <ThemedView style={{ flex: 1 }} safe>
+    <ThemedView style={{ paddingBottom: 0 }} safe>
       <ThemedAppBar title="Payment History" showBack={false} />
       
       <FlatList
@@ -110,11 +109,13 @@ export default function PaymentHistoryScreen() {
 
 const styles = StyleSheet.create({
   listContainer: {
-    padding: 16,
+    paddingHorizontal: 0,
   },
-  paymentCard: {
-    marginBottom: 12,
-    padding: 16,
+  paymentItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   paymentHeader: {
     flexDirection: 'row',

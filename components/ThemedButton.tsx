@@ -3,7 +3,7 @@ import React from 'react'
 import { Pressable, StyleSheet, useColorScheme } from 'react-native'
 import ThemedText from './ThemedText'
 
-const ThemedButton = ({ style = null, submit = true, label, children = null, ...props }) => {
+const ThemedButton = ({ style = null, submit = true, label = '', children = null, ...props }) => {
   const colorScheme = useColorScheme()
   const theme = Colors[colorScheme] ?? Colors.light
 
