@@ -19,6 +19,7 @@ import { useAccountRole } from "@/store/useAccountRole";
 const Businesses= () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   const { businesses, getBusinesses, setSelectedBusiness} = useFetchBusiness();
 
@@ -42,11 +43,20 @@ const Businesses= () => {
   }, [ownerId]);
 
   const filtered = businesses.filter((b) => {
-    if (!search) return true;
-    const s = search.trim().toLowerCase();
-    return (
-      b.business_name.toLowerCase().includes(s)
-    );
+    // Search filter
+    if (search) {
+      const s = search.trim().toLowerCase();
+      const matchesSearch = b.business_name.toLowerCase().includes(s);
+      if (!matchesSearch) return false;
+    }
+    
+    // Status filter
+    if (statusFilter !== 'ALL') {
+      const matchesStatus = b.business_status_name?.toUpperCase() === statusFilter;
+      if (!matchesStatus) return false;
+    }
+    
+    return true;
   });
 
   // ← updated: set selected business then navigate and pass id as string
@@ -62,7 +72,7 @@ const Businesses= () => {
   };
 
   return (
-    <ThemedView style={{ flex: 1 }} safe>
+    <ThemedView style={{ paddingBottom: 0 }} safe>
       <ThemedAppBar title="Businesses"  showBack={false}/>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -73,6 +83,60 @@ const Businesses= () => {
             onChangeText={(t: string) => setSearch(t)}
           />
         </View>
+
+        <Spacer height={12} />
+
+        {/* Status Filter */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterContainer}
+        >
+          <Pressable 
+            style={[styles.filterChip, statusFilter === 'ALL' && styles.filterChipActive]}
+            onPress={() => setStatusFilter('ALL')}
+          >
+            <ThemedText style={[styles.filterText, statusFilter === 'ALL' && styles.filterTextActive]}>
+              All
+            </ThemedText>
+          </Pressable>
+          
+          <Pressable 
+            style={[styles.filterChip, statusFilter === 'PENDING' && styles.filterChipActive]}
+            onPress={() => setStatusFilter('PENDING')}
+          >
+            <ThemedText style={[styles.filterText, statusFilter === 'PENDING' && styles.filterTextActive]}>
+              Pending
+            </ThemedText>
+          </Pressable>
+          
+          <Pressable 
+            style={[styles.filterChip, statusFilter === 'ACTIVE' && styles.filterChipActive]}
+            onPress={() => setStatusFilter('ACTIVE')}
+          >
+            <ThemedText style={[styles.filterText, statusFilter === 'ACTIVE' && styles.filterTextActive]}>
+              Active
+            </ThemedText>
+          </Pressable>
+          
+          <Pressable 
+            style={[styles.filterChip, statusFilter === 'EXPIRED' && styles.filterChipActive]}
+            onPress={() => setStatusFilter('EXPIRED')}
+          >
+            <ThemedText style={[styles.filterText, statusFilter === 'EXPIRED' && styles.filterTextActive]}>
+              Expired
+            </ThemedText>
+          </Pressable>
+          
+          <Pressable 
+            style={[styles.filterChip, statusFilter === 'CLOSED' && styles.filterChipActive]}
+            onPress={() => setStatusFilter('CLOSED')}
+          >
+            <ThemedText style={[styles.filterText, statusFilter === 'CLOSED' && styles.filterTextActive]}>
+              Closed
+            </ThemedText>
+          </Pressable>
+        </ScrollView>
 
         <Spacer height={12} />
 
@@ -149,6 +213,31 @@ const styles = StyleSheet.create({
     color: "#310101",
     fontWeight: "600",
     fontSize: 12,
+  },
+  filterContainer: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterChipActive: {
+    backgroundColor: '#561C24',
+    borderColor: '#561C24',
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 

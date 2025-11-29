@@ -52,15 +52,6 @@ export default function BusinessLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="(tabs)/docreqhistory"
-        options={{
-          title: 'Document Request',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} size={20} color={color} />
-          ),
-        }}
-      />
 
       <Tabs.Screen
         name="(tabs)/businesses"
@@ -68,6 +59,16 @@ export default function BusinessLayout() {
           title: 'Businesses',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? 'business' : 'business-outline'} size={20} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="(tabs)/docreqhistory"
+        options={{
+          title: 'Document Request',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} size={20} color={color} />
           ),
         }}
       />
