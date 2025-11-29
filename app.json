@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "extra": {
-      "API_BASE_URL": "https://ca09c6d501c9.ngrok-free.app",
+      "API_BASE_URL": "https://abacddfe5eed.ngrok-free.app",
       "router": {},
       "eas": {
         "projectId": "ea2ce743-fd38-441e-953d-d0e64e8e4356"

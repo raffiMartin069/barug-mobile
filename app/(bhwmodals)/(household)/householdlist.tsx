@@ -9,8 +9,6 @@ import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
 import ThemedTextInput from "@/components/ThemedTextInput";
 import ThemedView from "@/components/ThemedView";
-import { FILTER_BY_STATUS } from "@/constants/filterByStatus";
-import { FILTER_BY_WEEK } from "@/constants/filterByWeek";
 
 import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
 import { useMemberRemoval } from "@/hooks/useMemberRemoval";
@@ -34,7 +32,7 @@ import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
 import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
 
-import CenteredModal from '@/components/maternal/CenteredModal';
+import CenteredModal from '@/components/custom/CenteredModal';
 import { Colors } from '@/constants/Colors';
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
@@ -87,6 +85,9 @@ const HouseholdList = () => {
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
   const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily();
   const [search, setSearch] = useState('')
+  // pagination (max 5 items per page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
   const [menuPortal, setMenuPortal] = useState<MenuPortalState>({ visible: false, x: 0, y: 0, w: 0, h: 0, items: [] })
@@ -126,6 +127,11 @@ const HouseholdList = () => {
     if (!isFocused) return;
     fetchHouseholds();
   }, [isFocused]);
+
+  // reset page when search or households list changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, households]);
 
 
 
@@ -394,67 +400,79 @@ const HouseholdList = () => {
           </View>
           {/* END SEARCH AND FILTERS SECTION */}
 
-          {households.map((hh) => (
-            <View key={hh.id}>
-              <Pressable onPress={() => openSheet(hh)}>
-                <ThemedCard>
-                  <View style={styles.rowContainer}>
-                    <View style={styles.rowSubContainer}>
-                      <ThemedIcon
-                        name={"home"}
-                        bgColor={"#310101"}
-                        containerSize={40}
-                        size={18}
-                      />
-                      <View style={{ marginLeft: 10 }}>
-                        <ThemedText
-                          style={{ fontWeight: "700" }}
-                          subtitle={true}
-                        >
-                          {hh.householdNum}
-                        </ThemedText>
-                        <ThemedText style={{ color: "#475569" }}>
-                          Household Head: {hh.householdHead}
-                        </ThemedText>
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(households.length / itemsPerPage));
+            const start = (currentPage - 1) * itemsPerPage;
+            const displayed = households.slice(start, start + itemsPerPage);
+            return displayed.map((hh) => (
+              <View key={hh.id}>
+                <Pressable onPress={() => openSheet(hh)}>
+                  <ThemedCard>
+                    <View style={styles.rowContainer}>
+                      <View style={styles.rowSubContainer}>
+                        <ThemedIcon
+                          name={"home"}
+                          bgColor={"#310101"}
+                          containerSize={40}
+                          size={18}
+                        />
+                        <View style={{ marginLeft: 10 }}>
+                          <ThemedText
+                            style={{ fontWeight: "700" }}
+                            subtitle={true}
+                          >
+                            {hh.householdNum}
+                          </ThemedText>
+                          <ThemedText style={{ color: "#475569" }}>
+                            Household Head: {hh.householdHead}
+                          </ThemedText>
+                        </View>
                       </View>
+                      <Ionicons name="chevron-forward" size={18} />
                     </View>
-                    <Ionicons name="chevron-forward" size={18} />
-                  </View>
 
-                  <View
-                    style={[
-                      styles.rowSubContainer,
-                      { paddingBottom: 5, paddingTop: 5 },
-                    ]}
-                  >
-                    <Ionicons
-                      name="location-outline"
-                      size={16}
-                      color="#475569"
-                    />
-                    <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
-                      {hh.address}
-                    </ThemedText>
-                  </View>
+                    <View
+                      style={[
+                        styles.rowSubContainer,
+                        { paddingBottom: 5, paddingTop: 5 },
+                      ]}
+                    >
+                      <Ionicons
+                        name="location-outline"
+                        size={16}
+                        color="#475569"
+                      />
+                      <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
+                        {hh.address}
+                      </ThemedText>
+                    </View>
 
-                  <View style={styles.rowSubContainer}>
-                    <Ionicons name="people-outline" size={16} color="#475569" />
-                    <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
-                      {hh.families ? `${hh.families.length} Families` : 'No Families'}
-                    </ThemedText>
-                  </View>
+                    <View style={styles.rowSubContainer}>
+                      <Ionicons name="people-outline" size={16} color="#475569" />
+                      <ThemedText style={{ marginLeft: 10, color: "#475569" }}>
+                        {hh.families ? `${hh.families.length} Families` : 'No Families'}
+                      </ThemedText>
+                    </View>
 
-                  <Spacer height={15} />
+                    <Spacer height={15} />
 
-                  <ThemedButton submit={false} onPress={() => openSheet(hh)}>
-                    <ThemedText non_btn={true}>View Details</ThemedText>
-                  </ThemedButton>
-                </ThemedCard>
-              </Pressable>
+                    <ThemedButton submit={false} onPress={() => openSheet(hh)}>
+                      <ThemedText non_btn={true}>View Details</ThemedText>
+                    </ThemedButton>
+                  </ThemedCard>
+                </Pressable>
 
-              <Spacer />
-            </View>
-          ))}
+                <Spacer />
+              </View>
+            ))
+          })()}
+
+          {/* Pagination controls */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8, gap: 8 }}>
+            <ThemedButton label="Prev" onPress={() => setCurrentPage((p) => Math.max(1, p - 1))} />
+            <ThemedText>Page {currentPage} of {Math.max(1, Math.ceil(households.length / itemsPerPage))}</ThemedText>
+            <ThemedButton label="Next" onPress={() => setCurrentPage((p) => Math.min(Math.max(1, Math.ceil(households.length / itemsPerPage)), p + 1))} />
+          </View>
         </ScrollView>
 
         {/* overlay spinner */}

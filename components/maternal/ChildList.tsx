@@ -1,4 +1,4 @@
-import StatusBadge from '@/components/maternal/StatusBadge'
+import StatusBadge from '@/components/custom/StatusBadge'
 import Spacer from '@/components/Spacer'
 import ThemedText from '@/components/ThemedText'
 import { Colors } from '@/constants/Colors'
