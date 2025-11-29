@@ -18,9 +18,11 @@ import { houseType } from '@/constants/houseType'
 import { useGeolocationStore } from '@/store/geolocationStore'
 import { useHouseholdCreationStore } from '@/store/householdCreationStore'
 
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { useHouseholdCreation } from '@/hooks/useHouseholCreation'
 import { useNumericInput } from '@/hooks/useNumericInput'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
+import { useAccountRole } from '@/store/useAccountRole'
 import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
 import { PersonSearchRequest } from '@/types/householdHead'
@@ -54,6 +56,9 @@ const CreateHousehold = () => {
 
   const { results: residentItems, search } = usePersonSearchByKey()
   const { saveHousehold } = useHouseholdCreation()
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+  const { showModal } = useNiceModal()
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {}
@@ -84,7 +89,7 @@ const CreateHousehold = () => {
       p_barangay: barangay,
       p_sitio_purok: purok,
       p_street: street,
-      p_added_by_id: '1',
+      p_added_by_id: String(addedById ?? '1'),
       p_household_num: householdNumber,
       p_house_num: houseNumber,
       p_household_head_id: householdHead,
@@ -187,8 +192,15 @@ const CreateHousehold = () => {
         <Spacer height={15} />
 
         <View>
-          <ThemedButton onPress={handleSave}>
-            <ThemedText btn>Continue</ThemedText>
+          <ThemedButton onPress={() => showModal({
+            title: 'Create Household',
+            message: 'Are you sure you want to create this household?',
+            variant: 'info',
+            primaryText: 'Create',
+            secondaryText: 'Cancel',
+            onPrimary: () => { handleSave() },
+          })}>
+            <ThemedText btn>Create Household</ThemedText>
           </ThemedButton>
         </View>
       </ThemedKeyboardAwareScrollView>

@@ -50,4 +50,5 @@ export async function verifyOtp(phoneE164: string, code: string) {
 
 export async function logout() {
   await supabase.auth.signOut();
+  // Note: Profile store should be cleared by the calling component
 }

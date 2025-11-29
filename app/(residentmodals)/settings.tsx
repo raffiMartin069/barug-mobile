@@ -3,37 +3,68 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { useAccountRole } from '@/store/useAccountRole'
+import { logout } from '@/services/auth'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import React from 'react'
-import { Pressable, StyleSheet, View } from 'react-native'
-
-const settingsData = [
-  {
-    title: 'My Account',
-    options: [
-      { label: 'My Profile', route: '/residentprofile' },
-      { label: 'Resident Verification', route: '/residentprofile' },
-      { label: 'Change MPIN', route: '/change-mpin' },
-    ],
-  },
-  {
-    title: 'Business',
-    options: [
-      { label: 'Profile', route: '/residentprofile' },
-    ],
-  },
-  {
-    title: 'Support',
-    options: [
-      { label: 'Help Center', route: '/help-center' },
-      { label: 'About', route: '/about' },
-    ],
-  },
-] as const
+import React, { useMemo } from 'react'
+import { Alert, Pressable, StyleSheet, View } from 'react-native'
 
 const Settings = () => {
   const router = useRouter()
+  const { getProfile, currentRole, clearAll } = useAccountRole()
+  const profile = getProfile('resident')
+  
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout()
+            clearAll()
+            router.replace('/(auth)/phone')
+          },
+        },
+      ]
+    )
+  }
+  
+  const settingsData = useMemo(() => {
+    const sections = [
+      {
+        title: 'My Account',
+        options: [
+          { label: 'My Profile', route: '/residentprofile' },
+          { label: 'Change MPIN', route: '/change-mpin' },
+        ],
+      },
+    ]
+    
+    // Only show Business section if user is a business owner AND using business role
+    if (profile?.is_business_owner && currentRole === 'business') {
+      sections.push({
+        title: 'Business',
+        options: [
+          { label: 'Profile', route: '/residentprofile' },
+        ],
+      })
+    }
+    
+    sections.push({
+      title: 'Support',
+      options: [
+        { label: 'Help Center', route: '/help-center' },
+        { label: 'About', route: '/about' },
+      ],
+    })
+    
+    return sections
+  }, [profile, currentRole])
   return (
     <ThemedView safe>
       <ThemedAppBar title="Account Settings" />
@@ -54,7 +85,7 @@ const Settings = () => {
           </View>
         ))}
 
-        <ThemedButton submit={false}>
+        <ThemedButton submit={false} onPress={handleLogout}>
           <ThemedText non_btn={true}>Logout</ThemedText>
         </ThemedButton>
       </ThemedKeyboardAwareScrollView>

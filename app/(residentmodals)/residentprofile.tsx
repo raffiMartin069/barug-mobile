@@ -12,6 +12,7 @@
   import ThemedView from '@/components/ThemedView'
   import { supabase } from '@/constants/supabase'
   import { useAccountRole } from '@/store/useAccountRole'
+  import { useStaffPuroks } from '@/hooks/useStaffPuroks'
   import { Ionicons } from '@expo/vector-icons'
   import AsyncStorage from '@react-native-async-storage/async-storage'
   import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -156,6 +157,18 @@
       ].filter(Boolean).join(' ')
       return fn || '—'
     }, [staffProfile])
+
+    // Get assigned puroks for staff
+    const { assignments: assignedPuroks } = useStaffPuroks()
+
+    // Check if user has multiple roles available
+    const hasMultipleRoles = useMemo(() => {
+      let roleCount = 0
+      if (profile?.person_id) roleCount++
+      if (profile?.is_business_owner) roleCount++
+      if (profile?.is_bhw && (profile?.staff_id || staffId)) roleCount++
+      return roleCount > 1
+    }, [profile, staffId])
 
     // Boot logs
     useEffect(() => {
@@ -401,6 +414,21 @@
             <InfoRow label="Civil Status:" value={profile?.civil_status ?? '—'} />
             <InfoRow label="Nationality:" value={profile?.nationality ?? '—'} />
             <InfoRow 
+              label="Account Status:" 
+              value={
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons 
+                    name='checkmark-circle' 
+                    size={16} 
+                    color='#22C55E' 
+                  />
+                  <ThemedText style={{ color: '#22C55E', fontWeight: '600' }}>
+                    {profile?.person_status_name || 'ACTIVE'}
+                  </ThemedText>
+                </View>
+              } 
+            />
+            <InfoRow 
               label="ID Status:" 
               value={
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -429,6 +457,28 @@
 
           {isStaff && (
             <>
+              {/* Assigned Puroks */}
+              {assignedPuroks.length > 0 && (
+                <>
+                  <ThemedCard style={[styles.cardPad, styles.shadow]}>
+                    <ThemedText style={styles.sectionTitle} title>Assigned Puroks</ThemedText>
+                    <Spacer height={8} />
+                    <View style={styles.purokContainer}>
+                      {assignedPuroks.map((assignment: any) => (
+                        <View key={assignment.staff_purok_id} style={styles.purokChip}>
+                          <Ionicons name="location" size={18} color={ACCENT} />
+                          <View style={styles.purokInfo}>
+                            <ThemedText style={styles.purokName}>{assignment.purok_sitio_name}</ThemedText>
+                            <ThemedText style={styles.purokCode}>{assignment.purok_sitio_code}</ThemedText>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </ThemedCard>
+                  <Spacer height={18} />
+                </>
+              )}
+
               <ThemedCard style={[styles.cardPad, styles.shadow]}>
                 <ThemedText style={styles.sectionTitle} title>Tools</ThemedText>
                 <Spacer height={8} />
@@ -557,35 +607,21 @@
                 </View>
               </ThemedCard>
 
-              <Spacer />
-
-              {/* OTHER SERVICES */}
-              <ThemedCard style={styles.cardPad}>
-                <ThemedText style={styles.sectionTitle} title>Other Services</ThemedText>
-                <Spacer height={6} />
-                <ThemedDivider />
-                <Spacer height={2} />
-                <Pressable onPress={() => router.push('/businessinfo')} style={styles.linkRow}>
-                  <View style={{ flexShrink: 1 }}>
-                    <ThemedText style={styles.linkTitle}>Business Profile</ThemedText>
-                    <ThemedText style={styles.linkSub}>Apply for a Business Profile</ThemedText>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} />
-                </Pressable>
-              </ThemedCard>
-
               <Spacer height={12} />
             </>
           )}
 
           {/* Switch Account / Logout */}
-          <View style={styles.actionsPad}>
-            <ThemedButton submit={false} onPress={confirmSwitchAccount}>
-              <ThemedText non_btn>Switch Account</ThemedText>
-            </ThemedButton>
-          </View>
-
-          <Spacer height={8} />
+          {hasMultipleRoles && (
+            <>
+              <View style={styles.actionsPad}>
+                <ThemedButton submit={false} onPress={confirmSwitchAccount}>
+                  <ThemedText non_btn>Switch Account</ThemedText>
+                </ThemedButton>
+              </View>
+              <Spacer height={8} />
+            </>
+          )}
 
           <View style={styles.actionsPad}>
             <ThemedButton submit={false} onPress={confirmLogout} style={{ backgroundColor: COLOR.primary }}>
@@ -612,27 +648,27 @@
   }
 
   const styles = StyleSheet.create({
-    cardPad: { paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, backgroundColor: '#fff' },
-    shadow: { elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
-    name: { fontSize: 18, fontWeight: '700', textAlign: 'center', letterSpacing: 0.3 },
-    badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, justifyContent: 'center' },
+    cardPad: { paddingVertical: 18, paddingHorizontal: 20, borderRadius: 16, backgroundColor: '#fff', marginHorizontal: 16 },
+    shadow: { elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+    name: { fontSize: 20, fontWeight: '700', textAlign: 'center', color: '#111827' },
+    badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, justifyContent: 'center' },
     badge: { marginRight: 6, marginBottom: 6 },
     staffBadge: { backgroundColor: ACCENT },
     staffIdBadge: { borderColor: ACCENT },
-    sectionTitle: { fontSize: 16, fontWeight: '700' },
-    row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, gap: 12 },
-    label: { flexShrink: 0, width: '48%', fontWeight: '600', opacity: 0.8 },
-    value: { flex: 1, textAlign: 'right', lineHeight: 20 },
-    toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 12, justifyContent: 'space-between' },
-    tool: { width: '48%', minHeight: 96, paddingVertical: 14, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1, borderColor: '#eee', backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    toolIconWrap: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#561C24', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 6, backgroundColor: '#fff' },
-    toolLabel: { fontWeight: '700', textAlign: 'center' },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 2 },
+    row: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 10, gap: 12 },
+    label: { flexShrink: 0, width: '45%', fontWeight: '600', fontSize: 13, color: '#6B7280' },
+    value: { flex: 1, textAlign: 'right', lineHeight: 20, fontSize: 13, color: '#111827', fontWeight: '500' },
+    toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 12, justifyContent: 'space-between' },
+    tool: { width: '47.5%', minHeight: 100, paddingVertical: 16, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FAFAFA', alignItems: 'center', justifyContent: 'center', gap: 8 },
+    toolIconWrap: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: '#561C24', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 6, backgroundColor: '#fff' },
+    toolLabel: { fontWeight: '700', textAlign: 'center', fontSize: 12, color: '#374151' },
     chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    memberChip: { marginRight: 6, marginBottom: 6 },
+    memberChip: { marginBottom: 4 },
     linkRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12 },
     linkTitle: { fontSize: 16, fontWeight: '700' },
     linkSub: { color: 'gray', flexWrap: 'wrap' },
-    actionsPad: { paddingHorizontal: 15 },
+    actionsPad: { paddingHorizontal: 16 },
     profileImageContainer: {
       width: 90,
       height: 90,
@@ -653,5 +689,35 @@
       width: 82,
       height: 82,
       borderRadius: 41,
+    },
+    purokContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+    },
+    purokChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f9fafb',
+      borderRadius: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      gap: 10,
+      minWidth: '47%',
+    },
+    purokInfo: {
+      flexDirection: 'column',
+    },
+    purokName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#111827',
+    },
+    purokCode: {
+      fontSize: 11,
+      color: '#6b7280',
+      marginTop: 2,
     },
   })

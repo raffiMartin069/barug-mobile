@@ -1,4 +1,6 @@
 // (business)/(tabs)/docreqhistory.tsx
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
@@ -9,8 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useRouter } from 'expo-router'
-import { Ionicons } from '@expo/vector-icons'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -20,11 +20,11 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 
-import { useAccountRole } from '@/store/useAccountRole'
 import {
   fetchMyDocRequests,
   type DocRequestListItem,
 } from '@/services/documentRequest'
+import { useAccountRole } from '@/store/useAccountRole'
 
 /* ───────── config ───────── */
 const TAG = '[DocReqHistory]'
@@ -35,6 +35,7 @@ const MUTED = '#6b7280'
 const OK = { bg: '#d1fae5', fg: '#065f46' }
 
 const BUSINESS_DOC_NAME = 'BARANGAY BUSINESS CLEARANCE'
+const CTC_DOC_NAME = 'CERTIFIED TRUE COPY'
 const NEW_REQ_ROUTE = '/(businessmodals)/business_doc_req'
 
 const STATUS_STYLE: Record<string, { label: string; bg: string; fg: string }> = {
@@ -67,17 +68,21 @@ function formatPhDateOnly(d: Date) {
 function isBusinessDoc(i: DocRequestListItem) {
   const names = (i.doc_types || []).map(s => String(s).toUpperCase().trim())
   return names.some(n =>
-    n === BUSINESS_DOC_NAME || n.includes('BUSINESS CLEARANCE') || n.includes('BARANGAY BUSINESS')
+    n === BUSINESS_DOC_NAME || n === CTC_DOC_NAME || n.includes('BUSINESS CLEARANCE') || n.includes('BARANGAY BUSINESS') || n.includes('CERTIFIED TRUE COPY')
   )
 }
-function addOneYear(d: Date) { const c = new Date(d); c.setFullYear(c.getFullYear() + 1); return c }
 function clamp(n: number, a: number, b: number) { return Math.max(a, Math.min(b, n)) }
 function getExpiryInfo(createdAt: string | Date) {
   const created = typeof createdAt === 'string' ? new Date(createdAt) : createdAt
   if (isNaN(created.getTime())) return { expiry: null, daysLeft: null, label: 'Unknown expiry', progress: 0 }
-  const expiry = addOneYear(created)
+  
+  // Expiry is December 31, 11:59 PM of the year the request was created
+  const expiry = new Date(created.getFullYear(), 11, 31, 23, 59, 59, 999)
+  
   const now = new Date()
-  const total = 365
+  const yearStart = new Date(created.getFullYear(), 0, 1)
+  const yearEnd = expiry
+  const total = Math.floor((yearEnd.getTime() - yearStart.getTime()) / 86400000)
   const daysGone = Math.floor((now.getTime() - created.getTime()) / 86400000)
   const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / 86400000)
   const label = daysLeft < 0 ? `Expired ${Math.abs(daysLeft)}d ago`
@@ -200,7 +205,7 @@ export default function DocReqHistory() {
 
   return (
     <ThemedView style={{ flex: 1 }} safe>
-      <ThemedAppBar title="Business Requests" />
+      <ThemedAppBar title="DocumentRequests" />
 
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -208,7 +213,7 @@ export default function DocReqHistory() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* HERO */}
-        <View style={styles.hero}>
+        {/* <View style={styles.hero}>
           <View style={styles.heroRow}>
             <Ionicons name="shield-checkmark-outline" size={18} color="#fff" />
             <ThemedText style={styles.heroTitle}>Business Status</ThemedText>
@@ -249,7 +254,7 @@ export default function DocReqHistory() {
               No business clearance yet. Start a request to generate your status.
             </ThemedText>
           )}
-        </View>
+        </View> */}
 
         {/* Search */}
         <Spacer height={12} />

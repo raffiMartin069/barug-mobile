@@ -11,8 +11,10 @@ import { indigentOptions, nhtsOptions } from '@/constants/formoptions'
 import { HOUSEHOLD_TYPE } from '@/constants/householdType'
 import { MONTHLY_INCOME } from '@/constants/monthlyIncome'
 import { RELATIONSHIP } from '@/constants/relationship'
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { FamilyRepository } from '@/repository/familyRepository'
 import { HouseholdRepository } from '@/repository/householdRepository'
+import { useAccountRole } from '@/store/useAccountRole'
 import { UpdateFamilyInformation } from '@/types/updateFamilyInformationType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
@@ -88,6 +90,7 @@ const UpdateFamInfo = () => {
 
   const repository = new HouseholdRepository()
   const familtRepository = new FamilyRepository()
+  const { showModal } = useNiceModal()
 
   const onSubmit = () => {
     console.log('Submitting updated family info with values: ' + Number(params.id ?? familyNum))
@@ -106,10 +109,11 @@ const UpdateFamInfo = () => {
           return
         }
 
-        console.log('Fetched familyId:', familyId, 'familyHeadId:', familyHeadId)
+        const profile = useAccountRole((s) => s.getProfile('resident'))
+        const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
 
         const data: UpdateFamilyInformation = {
-          p_performed_by: 0,
+          p_performed_by: parseInt(addedById ?? '0'),
           p_family_id: familyId,
           p_reason: 'Update Family Information',
           p_source_of_income: incomesource,
@@ -224,7 +228,14 @@ const UpdateFamInfo = () => {
         <Spacer height={15} />
 
         <View>
-          <ThemedButton disabled={!canSubmit} onPress={onSubmit}>
+          <ThemedButton disabled={!canSubmit} onPress={() => showModal({
+            title: 'Update Family Information',
+            message: 'Save changes to family information?',
+            variant: 'info',
+            primaryText: 'Save',
+            secondaryText: 'Cancel',
+            onPrimary: () => onSubmit(),
+          })}>
             <ThemedText btn>Save Changes</ThemedText>
           </ThemedButton>
         </View>

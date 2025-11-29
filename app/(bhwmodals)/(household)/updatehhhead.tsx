@@ -9,8 +9,10 @@ import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
 import { HouseholdException } from '@/exception/HouseholdException'
+import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { HouseholdRepository } from '@/repository/householdRepository'
+import { useAccountRole } from '@/store/useAccountRole'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, StyleSheet } from 'react-native'
@@ -74,7 +76,11 @@ const UpdateHhHead = () => {
     []
   )
 
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+
   const repo = new HouseholdRepository();
+  const { showModal } = useNiceModal()
 
   const canSubmit =
     !!newHeadId &&
@@ -110,7 +116,7 @@ const UpdateHhHead = () => {
           paresedNewHeadId = parseInt(newHeadId);
         }
 
-        const result = await repo.UpdatehouseholdHead(hhId, paresedNewHeadId, 0, finalReason)
+        const result = await repo.UpdatehouseholdHead(hhId, paresedNewHeadId, parseInt(addedById ?? '1'), finalReason)
         if (!result) {
           Alert.alert('Error', 'Failed to update household head. Please try again.');
           return;
@@ -232,7 +238,14 @@ const UpdateHhHead = () => {
 
           <Spacer height={20} />
 
-          <ThemedButton disabled={!canSubmit} onPress={handleSubmit}>
+          <ThemedButton disabled={!canSubmit} onPress={() => showModal({
+            title: 'Update Household Head',
+            message: 'Are you sure you want to update the household head?',
+            variant: 'info',
+            primaryText: 'Update',
+            secondaryText: 'Cancel',
+            onPrimary: () => { handleSubmit() },
+          })}>
             <ThemedText btn>Update Household Head</ThemedText>
           </ThemedButton>
         </ThemedCard>
