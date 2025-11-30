@@ -10,6 +10,7 @@ import { houseOwnership } from '@/constants/houseOwnership'
 import { houseType } from '@/constants/houseType'
 import { HouseholdException } from '@/exception/HouseholdException'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
+import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { HouseholdService } from '@/services/HouseholdService'
 import { useGeolocationStore } from '@/store/geolocationStore'
@@ -18,10 +19,8 @@ import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
 import { useDynamicRouteStore } from '@/store/useDynamicRouteStore'
 import { HouseholdUpdateType } from '@/types/request/householdUpdateType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-
-type Option = { label: string; value: string }
 
 const UpdateHhInfo = () => {
   const router = useRouter()
@@ -34,9 +33,7 @@ const UpdateHhInfo = () => {
     houseOwnership?: string
   }>()
 
-  // Context / read-only
-  const householdNum = params.householdNum ?? params.id ?? ''
-  const householdHeadName = params.householdHeadName ?? '—'
+  // Context / read-only (we use `houseHoldNumber` and `houseHead` from the store below)
 
   // Editable fields (prefill from params if provided)
   const [hAddress, setHAddress] = useState(params.address ?? '')
@@ -47,7 +44,6 @@ const UpdateHhInfo = () => {
   const houseHead = useBasicHouseholdInfoStore((state) => state.householdHead);
 
   const setReturnPath = useDynamicRouteStore((state) => state.setReturnTo);
-  const returnPath = useDynamicRouteStore((state) => state.returnTo);
 
   const getFullAddress = useGeolocationStore((state) => state.getFullAddress);
 
@@ -62,29 +58,61 @@ const UpdateHhInfo = () => {
   const sitio = useGeolocationStore((state) => state.purokSitio);
   const purokSitioCode = useGeolocationStore((state) => state.purokSitioCode);
 
+  const setStreet = useGeolocationStore((state) => state.setStreet);
+  const setBarangay = useGeolocationStore((state) => state.setBarangay);
+  const setCity = useGeolocationStore((state) => state.setCity);
+  const setLat = useGeolocationStore((state) => state.setLat);
+  const setLng = useGeolocationStore((state) => state.setLng);
+  const setPurokSitio = useGeolocationStore((state) => state.setPurokSitio);
+  const setPurokSitioCode = useGeolocationStore((state) => state.setPurokSitioCode);
+
+  useEffect(() => {
+    let mounted = true
+    const loadHouseholdDetails = async () => {
+      if (!houseHoldNumber) return
+
+      // If the geolocation store already has values (user returned from map), don't overwrite
+      if (street || barangay || city || sitio) {
+        const existing = getFullAddress()
+        if (existing) setHAddress(existing)
+        return
+      }
+
+      const household_cmd = new HouseholdCommand()
+      const details = await household_cmd.FetchActiveHouseholdByHouseholdNumber(houseHoldNumber)
+      if (!mounted || !details) return
+
+      setStreet(details.addresss.street ?? '')
+      setBarangay(details.addresss.barangay ?? '')
+      setCity(details.addresss.city ?? '')
+      setLat(details.addresss.latitude ?? '')
+      setLng(details.addresss.longitude ?? '')
+      setPurokSitio(details.addresss.purok_sitio.purok_sitio_name ?? '')
+      setPurokSitioCode(details.addresss.purok_sitio.purok_sitio_code ?? '')
+
+      const addrParts = [
+        details.household_num,
+        details.addresss.street,
+        details.addresss.purok_sitio?.purok_sitio_name,
+        details.addresss.barangay,
+        details.addresss.city,
+      ].filter(Boolean)
+      const composed = addrParts.join(', ')
+
+      // Only set hAddress if store doesn't already have a full address
+      if (!getFullAddress()) setHAddress(composed)
+    }
+
+    loadHouseholdDetails()
+    return () => { mounted = false }
+  }, [houseHoldNumber, street, barangay, city, sitio, getFullAddress, setStreet, setBarangay, setCity, setLat, setLng, setPurokSitio, setPurokSitioCode])
+
+
+
   const householdService = new HouseholdService(new HouseholdRepository());
   const { showModal } = useNiceModal()
 
-  // Dropdown options (stub—replace with your data)
-  const houseTypeItems: Option[] = useMemo(
-    () => [
-      { label: 'Concrete', value: 'CONCRETE' },
-      { label: 'Wooden', value: 'WOODEN' },
-      { label: 'Mixed', value: 'MIXED' },
-      { label: 'Makeshift', value: 'MAKESHIFT' },
-    ],
-    []
-  )
-
-  const houseOwnershipItems: Option[] = useMemo(
-    () => [
-      { label: 'Owned', value: 'OWNED' },
-      { label: 'Renting', value: 'RENTING' },
-      { label: 'Living with Relatives', value: 'WITH_RELATIVES' },
-      { label: 'Government Housing', value: 'GOV_HOUSING' },
-    ],
-    []
-  )
+  // Using shared `houseType` and `houseOwnership` constants for dropdowns
 
   const handleHomeAddress = () => {
     router.push({
@@ -93,11 +121,11 @@ const UpdateHhInfo = () => {
     })
   }
 
+  // Keep `hAddress` updated when the user picks an address on the map
   useEffect(() => {
-    if (!getFullAddress()) return;
-    console.log('Auto-updating full address from store:', getFullAddress());
-    setHAddress(getFullAddress());
-  }, [getFullAddress])
+    const full = getFullAddress()
+    if (full) setHAddress(full)
+  }, [street, barangay, city, sitio, purokSitioCode, getFullAddress])
 
   const canSubmit = !!hAddress && !!housetype && !!houseownership
 
@@ -119,9 +147,7 @@ const UpdateHhInfo = () => {
           p_latitude: lat,
           p_longitude: lng,
         };
-        console.log("Update Request:", updateRequest);
         const result = await householdService.ExecuteUpdateHouseholdInformation(updateRequest);
-        console.log("Update result:", result);
 
         if (!result) {
           showModal({ title: 'Error', message: 'Failed to update household information. Please try again.', variant: 'error', primaryText: 'OK' })
@@ -129,8 +155,17 @@ const UpdateHhInfo = () => {
         }
 
         showModal({ title: 'Success', message: 'Household information updated successfully.', variant: 'success', primaryText: 'OK', onPrimary: () => {
-          router.push({ pathname: '/householdlist' })
+          router.push({ pathname: '/designation' })
         } })
+
+        // clear the store values after successful update
+        setStreet('');
+        setBarangay('');
+        setCity('');
+        setLat(null);
+        setLng(null);
+        setPurokSitio('');
+        setPurokSitioCode('');
 
       } catch (error) {
         if (!(error instanceof HouseholdException)) {
