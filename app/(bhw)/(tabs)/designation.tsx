@@ -41,18 +41,18 @@ import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  findNodeHandle,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  UIManager,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    findNodeHandle,
+    KeyboardAvoidingView,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    UIManager,
+    useColorScheme,
+    View,
 } from "react-native";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -686,7 +686,18 @@ const HouseholdList = () => {
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <ThemedChip
                       label={"Add Family Unit"}
-                      onPress={() => router.push("/createfamily")}
+                      onPress={() => {
+                        // store household number in the basic household info store before navigating
+                        const hhNumAny = (selectedHousehold as any)?.householdNum ?? (selectedHousehold as any)?.householdNum ?? null;
+                        const hhNum = hhNumAny != null ? String(hhNumAny) : null;
+                        console.log('Adding family to household number:', hhNum);
+                        try {
+                          setHouseholdNumber(hhNum);
+                        } catch (e) {
+                          console.warn('setHouseholdNumber failed', e);
+                        }
+                        router.push("/createfamily");
+                      }}
                       filled={false}
                     />
                     <ThemedChip
