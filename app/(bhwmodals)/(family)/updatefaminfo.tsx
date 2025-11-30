@@ -140,7 +140,7 @@ const UpdateFamInfo = () => {
         showModal({ title: 'Error', message: 'Failed to update family information. Please try again.', variant: 'error', primaryText: 'OK' })
       }
     }
-    
+
     sendData();
   }
 
@@ -223,20 +223,21 @@ const UpdateFamInfo = () => {
             placeholder="Family Monthly Income"
             order={2}
           />
+
+          <Spacer height={15} />
+
+          <ThemedButton disabled={!canSubmit} onPress={() => showModal({
+            title: 'Update Family Information',
+            message: 'Save changes to family information?',
+            variant: 'info',
+            primaryText: 'Save',
+            secondaryText: 'Cancel',
+            onPrimary: () => onSubmit(),
+          })} label={undefined}>
+            <ThemedText btn>Save Changes</ThemedText>
+          </ThemedButton>
+
         </View>
-
-        <Spacer height={15} />
-
-        <ThemedButton disabled={!canSubmit} onPress={() => showModal({
-              title: 'Update Family Information',
-              message: 'Save changes to family information?',
-              variant: 'info',
-              primaryText: 'Save',
-              secondaryText: 'Cancel',
-              onPrimary: () => onSubmit(),
-            })} label={undefined}>
-          <ThemedText btn>Save Changes</ThemedText>
-        </ThemedButton>
 
       </ThemedKeyboardAwareScrollView>
     </ThemedView>
