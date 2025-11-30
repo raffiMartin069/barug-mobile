@@ -1,3 +1,16 @@
+/*
+    Header follows the grouping/style used in `designation.tsx`:
+    - Components
+    - Constants
+    - Hooks
+    - Repository / services
+    - Stores / types
+    - React / react-native
+
+    (This keeps imports organized and consistent across screens.)
+*/
+
+// --- Components
 import Spacer from "@/components/Spacer";
 import ThemedAppBar from "@/components/ThemedAppBar";
 import ThemedButton from "@/components/ThemedButton";
@@ -7,17 +20,27 @@ import ThemedSearchSelect from "@/components/ThemedSearchSelect";
 import ThemedText from "@/components/ThemedText";
 import ThemedTextInput from "@/components/ThemedTextInput";
 import ThemedView from "@/components/ThemedView";
+
+// --- Constants
 import { RELATIONSHIP } from "@/constants/relationship";
+
+// --- Hooks
 import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { useAddMember } from "@/hooks/useAddMember";
 import { usePersonSearchByKey } from "@/hooks/usePersonSearch";
+
+// --- Repository / Commands
 import { HouseholdCommand } from "@/repository/commands/HouseholdCommand";
 import { PersonCommands } from "@/repository/commands/PersonCommands";
 import { FamilyRepository } from "@/repository/familyRepository";
+
+// --- Stores / Types
 import { useHouseMateStore } from "@/store/houseMateStore";
 import { useAccountRole } from "@/store/useAccountRole";
 import { FamilyMembershipType } from "@/types/familyMembership";
 import { MgaKaHouseMates } from "@/types/houseMates";
+
+// --- React / React Native
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Platform, RefreshControl, StyleSheet, View } from "react-native";
 
@@ -191,8 +214,8 @@ const AddMember = () => {
     };
 
     return (
-        <ThemedView safe>
-            <ThemedAppBar title="Add Member" showNotif={false} showProfile={false} />
+        <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
+            <ThemedAppBar title="Add Member" showNotif={true} showProfile={true} />
 
             <ThemedKeyboardAwareScrollView
                 keyboardShouldPersistTaps="handled"
