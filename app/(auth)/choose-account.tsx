@@ -143,33 +143,32 @@ export default function ChooseAccount() {
   }, [loading, options.length])
 
   const handleChoose = (type: Option['type']) => {
+    // Check person status for all account types
+    if (details?.person_status_id === 3) {
+      setModalTitle('Account Deceased')
+      setModalMessage('The owner of this account is already DECEASED.')
+      setModalOpen(true)
+      return
+    }
+    if (details?.person_status_id === 2) {
+      setModalTitle('Account Inactive')
+      setModalMessage('Your account is INACTIVE. Please visit the barangay office to know why this happened.')
+      setModalOpen(true)
+      return
+    }
+    if (details?.person_status_id !== 1) {
+      setModalTitle('Access Denied')
+      setModalMessage('Your account status does not allow access. Please contact the barangay office.')
+      setModalOpen(true)
+      return
+    }
+
     if (type === 'resident') {
-      // Check person status before allowing access
-      if (details?.person_status_id === 2) {
-        setModalTitle('Account Inactive')
-        setModalMessage('Your account is INACTIVE. Please visit the barangay office to know why this happened.')
-        setModalOpen(true)
-        return
-      }
-      if (details?.person_status_id === 3) {
-        setModalTitle('Account Deceased')
-        setModalMessage('The owner of this account is already DECEASED.')
-        setModalOpen(true)
-        return
-      }
-      if (details?.person_status_id !== 1) {
-        setModalTitle('Access Denied')
-        setModalMessage('Your account status does not allow access. Please contact the barangay office.')
-        setModalOpen(true)
-        return
-      }
       store.setResident()
       return router.replace('/(resident)/(tabs)/residenthome')
     }
     if (type === 'business') {
-      // ✅ set the correct role
       store.setBusiness()
-      // Point this to your business owner home (adjust path to your routes)
       return router.replace('/(business)/(tabs)/businesshome')
     }
     if (type === 'staff') {

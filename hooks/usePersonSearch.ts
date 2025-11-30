@@ -6,15 +6,15 @@ import { useCallback, useState } from 'react'
 
 export function usePersonSearchByKey() {
     const [results, setResults] = useState<PersonSearchRequest[]>([])
-    const search = useCallback(async (query: string) => {
-        if (!query) return
-        const service = new PersonSearchService(query)
+    const search = useCallback(async (query: string, statusFilter?: 'ACTIVE' | 'INACTIVE' | 'ALL') => {
+        if (!query) {
+            setResults([])
+            return
+        }
+        const service = new PersonSearchService(query, statusFilter)
         const data = await service.execute()
-        setResults((prev) => {
-            const ids = new Set(prev.map((p) => p.person_id))
-            const newItems = data.filter((p) => !ids.has(p.person_id))
-            return [...prev, ...newItems]
-        })
+        // Replace results instead of accumulating
+        setResults(data)
     }, [])
     return { results, search }
 }
