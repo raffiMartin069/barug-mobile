@@ -12,12 +12,14 @@ import ThemedView from '@/components/ThemedView';
 import { RELATIONSHIP } from '@/constants/relationship';
 import { ResidencyException } from '@/exception/ResidencyException';
 import { useNiceModal } from '@/hooks/NiceModalProvider';
+import { PersonCommands } from '@/repository/commands/PersonCommands';
+import { FamilyRepository } from '@/repository/familyRepository';
 import { ResidentRepository } from '@/repository/residentRepository';
 import { useHouseMateStore } from '@/store/houseMateStore';
 import { MgaKaHouseMates } from '@/types/houseMates';
 import { PersonalDetails } from '@/types/personalDetails';
-import React, { useEffect } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 const MemberProfile = () => {
   const memberId = useHouseMateStore((state: MgaKaHouseMates) => state.memberId);
@@ -30,15 +32,17 @@ const MemberProfile = () => {
   const [relToHousehold, setRelToHousehold] = React.useState<number | null>(null)
   const [relToFamily, setRelToFamily] = React.useState<number | null>(null)
   const [relationshipPicker, setRelationshipPicker] = React.useState<'household' | 'family' | null>(null)
+  const familyNumber = useHouseMateStore((state: MgaKaHouseMates) => state.familyId)
 
-  useEffect(() => {
-    let isMounted = true;
+  const mountedRef = useRef(true)
+  const [refreshing, setRefreshing] = React.useState(false)
+
+  const load = useCallback(async (opts?: { refresh?: boolean }) => {
     const repo = new ResidentRepository();
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        const details: any = await repo.getAllResidentInfo(memberId);
+    try {
+      if (opts?.refresh) setRefreshing(true)
+      else setLoading(true);
+      const details: any = await repo.getAllResidentInfo(memberId);
         const ids: any[] = [];
         let profile_picture = null;
 
@@ -52,7 +56,125 @@ const MemberProfile = () => {
           ids.push(images);
         }
 
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
+
+        // attempt kinship-derived relations (same approach as addmember.tsx)
+        try {
+          const personCmd = new PersonCommands()
+          const kin = await personCmd.FetchKinshipBySrcPersonId(Number(memberId))
+
+          // Attempt multiple ways to resolve family/household heads and match kin edges.
+          const fRepo = new FamilyRepository()
+          let fid: any = null
+          let familyHeadId: any = null
+          let householdId: any = null
+          let householdHeadId: any = null
+
+          // Try store-provided familyNumber first
+          if (familyNumber) {
+            fid = await fRepo.getFamilyId(familyNumber)
+          }
+
+          // If fid not found, try resident details payload (family_id or family_num)
+          if (!fid && details?.[0]) {
+            const d = details[0]
+            if (d.family_num) {
+              fid = await fRepo.getFamilyId(d.family_num)
+            }
+            // if we already have a numeric family primary id on details, use it directly
+            if (!fid && d.family_id) {
+              fid = d.family_id
+            }
+          }
+
+          if (fid) {
+            try {
+              familyHeadId = await fRepo.GetFamilyHeadIdByFamilyId(fid)
+            } catch {
+            }
+            try {
+              householdId = await fRepo.GetHouseholdIdByFamilyId(fid)
+            } catch {
+            }
+            if (householdId) {
+              try {
+                householdHeadId = await fRepo.GetHouseholdHeadIdByHouseholdId(householdId)
+              } catch {
+              }
+            }
+          }
+
+          
+
+          const normalize = <T,>(v: T | T[] | null | undefined): T[] => {
+            if (Array.isArray(v)) return v as T[]
+            if (v == null) return []
+            return [v as T]
+          }
+
+          const extractPersonIds = (dp: any): number[] => {
+            const out: number[] = []
+            if (!dp) return out
+            if (dp.person_id != null) out.push(Number(dp.person_id))
+            if (dp.id != null) out.push(Number(dp.id))
+            if (dp.person && dp.person.person_id != null) out.push(Number(dp.person.person_id))
+            if (dp.person && dp.person.id != null) out.push(Number(dp.person.id))
+            return out
+          }
+
+          const extractRelId = (r: any): number | null => {
+            if (!r) return null
+            if (r.relationship_id != null) return Number(r.relationship_id)
+            if (r.id != null) return Number(r.id)
+            if (r.rel_id != null) return Number(r.rel_id)
+            if (r.relationship && r.relationship.relationship_id != null) return Number(r.relationship.relationship_id)
+            return null
+          }
+
+          if (Array.isArray(kin)) {
+            // look for family head reference
+            let famEdge: any = null
+            if (familyHeadId) {
+              famEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(Number(familyHeadId))))
+            }
+            // fallback: try matching against details.family_head_person_id if present
+            if (!famEdge && details?.[0]?.family_head_person_id) {
+              const fh = Number(details[0].family_head_person_id)
+              famEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(fh)))
+            }
+            
+                if (famEdge) {
+              const rel = normalize((famEdge as any).relationship)
+              if (rel.length > 0) {
+                const chosen = extractRelId(rel[0])
+                if (chosen != null) {
+                  setRelToFamily(chosen)
+                }
+              }
+            }
+
+            let hhEdge: any = null
+            if (householdHeadId) {
+              hhEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(Number(householdHeadId))))
+            }
+            // fallback: try matching against details.household_head_person_id
+            if (!hhEdge && details?.[0]?.household_head_person_id) {
+              const hh = Number(details[0].household_head_person_id)
+              hhEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(hh)))
+            }
+            
+            if (hhEdge) {
+              const rel = normalize((hhEdge as any).relationship)
+              if (rel.length > 0) {
+                const chosen = extractRelId(rel[0])
+                if (chosen != null) {
+                  setRelToHousehold(chosen)
+                }
+              }
+            }
+          }
+        } catch {
+        }
 
         setPersonalDetails({
           person_id: details[0].person_id,
@@ -75,16 +197,22 @@ const MemberProfile = () => {
           selfie_id_file: ids[2] ? ids[2].publicUrl : undefined,
           profile_picture: profile_picture ? profile_picture.publicUrl : undefined,
         });
-      } catch (e: any) {
-        Alert.alert('Error', e?.message || 'Failed to load member details.');
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
 
-    load();
-    return () => { isMounted = false; };
-  }, [memberId]);
+    } catch (e: any) {
+      showModal({ title: 'Error', message: e?.message || 'Failed to load member details.', variant: 'error', primaryText: 'OK', dismissible: true })
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+        setRefreshing(false)
+      }
+    }
+  }, [memberId, familyNumber, showModal]);
+
+  useEffect(() => {
+    mountedRef.current = true
+    load()
+    return () => { mountedRef.current = false }
+  }, [load])
 
   const handleConfirmResidency = () => {
     // open the centered modal to collect reason and relationships
@@ -93,21 +221,21 @@ const MemberProfile = () => {
 
   const submitConfirmResidency = async () => {
     const repo = new ResidentRepository();
-    try {
-      setSubmitting(true);
-      await repo.confirmResidency(Number(memberId), undefined, relToHousehold ?? null, relToFamily ?? null, reason ?? null)
-      Alert.alert('Success', 'Residency has been confirmed.')
-      setConfirmModalVisible(false)
-      setRelToHousehold(null)
-      setRelToFamily(null)
-      setReason('')
-    } catch (e: any) {
-      if (e instanceof ResidencyException) {
-        Alert.alert('Warning', e.message)
-        return
-      }
-      Alert.alert('Error', 'Failed to confirm residency.')
-    } finally {
+      try {
+        setSubmitting(true);
+        await repo.confirmResidency(Number(memberId), undefined, relToHousehold ?? null, relToFamily ?? null, reason ?? null)
+        showModal({ title: 'Success', message: 'Residency has been confirmed.', variant: 'success', primaryText: 'OK', dismissible: true })
+        setConfirmModalVisible(false)
+        setRelToHousehold(null)
+        setRelToFamily(null)
+        setReason('')
+      } catch (e: any) {
+        if (e instanceof ResidencyException) {
+          showModal({ title: 'Warning', message: e.message, variant: 'warn', primaryText: 'OK', dismissible: true })
+          return
+        }
+        showModal({ title: 'Error', message: 'Failed to confirm residency.', variant: 'error', primaryText: 'OK', dismissible: true })
+      } finally {
       setSubmitting(false)
     }
   }
@@ -143,7 +271,10 @@ const MemberProfile = () => {
       />
 
       <View style={styles.container}>
-        <ThemedKeyboardAwareScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        <ThemedKeyboardAwareScrollView
+          contentContainerStyle={{ paddingBottom: 120 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load({ refresh: true })} />}
+        >
           <ThemedCard>
             <View style={{ alignItems: 'center' }}>
               <ThemedImage
@@ -304,8 +435,7 @@ const MemberProfile = () => {
               <ThemedButton
                 submit={false}
                 style={{ flex: 1, borderRadius: 8, marginRight: 10, paddingVertical: 10 }}
-                onPress={() => setConfirmModalVisible(false)}
-              >
+                onPress={() => setConfirmModalVisible(false)} label={undefined}              >
                 <ThemedText non_btn>Close</ThemedText>
               </ThemedButton>
 
@@ -319,11 +449,10 @@ const MemberProfile = () => {
                   primaryText: 'Confirm',
                   secondaryText: 'Cancel',
                   onPrimary: async () => { await submitConfirmResidency(); },
-                  onSecondary: () => {},
+                  onSecondary: () => { },
                   dismissible: true,
                 })}
-                disabled={submitting || !(relToHousehold || relToFamily)}
-              >
+                disabled={submitting || !(relToHousehold || relToFamily)} label={undefined}              >
                 <ThemedText btn>Confirm</ThemedText>
               </ThemedButton>
             </View>
@@ -333,11 +462,11 @@ const MemberProfile = () => {
           <ThemedTextInput placeholder='Reason (optional)' value={reason} onChangeText={(t) => setReason(t)} />
           <Spacer height={8} />
           <Pressable onPress={() => setRelationshipPicker('household')} style={{ paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
-            <ThemedText>{relToHousehold ? (RELATIONSHIP.find(r => r.value === relToHousehold)?.label ?? 'Selected') : 'Select relationship to Household Head'}</ThemedText>
+            <ThemedText>{relToHousehold ? (RELATIONSHIP.find(r => Number(r.value) === Number(relToHousehold))?.label ?? 'Selected') : 'Select relationship to Household Head'}</ThemedText>
           </Pressable>
           <Spacer height={8} />
           <Pressable onPress={() => setRelationshipPicker('family')} style={{ paddingVertical: 12, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: '#e5e7eb' }}>
-            <ThemedText>{relToFamily ? (RELATIONSHIP.find(r => r.value === relToFamily)?.label ?? 'Selected') : 'Select relationship to Family Head'}</ThemedText>
+            <ThemedText>{relToFamily ? (RELATIONSHIP.find(r => Number(r.value) === Number(relToFamily))?.label ?? 'Selected') : 'Select relationship to Family Head'}</ThemedText>
           </Pressable>
           <CenteredModal
             visible={relationshipPicker === 'household' || relationshipPicker === 'family'}

@@ -199,7 +199,7 @@ const CreateHousehold = () => {
             primaryText: 'Create',
             secondaryText: 'Cancel',
             onPrimary: () => { handleSave() },
-          })}>
+          })} label={undefined}>
             <ThemedText btn>Create Household</ThemedText>
           </ThemedButton>
         </View>
