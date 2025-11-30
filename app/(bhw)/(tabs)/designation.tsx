@@ -87,10 +87,7 @@ const HouseholdList = () => {
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
   const [resolvedStaffId, setResolvedStaffId] = useState<number | null>(null)
 
-  // Gi set nalang nako ug -1 kay para dili mu display ang default nga fallback sa householdlist.tsx.
-  // Same raman gud sila ug file unya akoa rang gi condition ang staffId nga ma resolve siya sa staffRepository.
-  // Inig execute sa screen mu execute sad ni nga hook, ang resulta null ang staff id and i-fetch niya tanan.
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId ?? -1);
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId,  true);
 
   useEffect(() => {
     let mounted = true
@@ -552,7 +549,7 @@ const HouseholdList = () => {
 
                   <Spacer height={15} />
 
-                  <ThemedButton submit={false} onPress={() => openSheet(hh)}>
+                  <ThemedButton submit={false} label={undefined} onPress={() => openSheet(hh)}>
                     <ThemedText non_btn={true}>View Details</ThemedText>
                   </ThemedButton>
                 </ThemedCard>
