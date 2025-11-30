@@ -14,10 +14,8 @@ export class HouseholdListService {
     async execute(p_staff_id: number = null) {
         let households;
         if (!p_staff_id) {
-            console.log("Fetching all active households");
             households = await this.householdRepository.GetActiveHousehold();
         } else {
-            console.log(`Fetching households for staff ID: ${p_staff_id}`);
             households = await this.householdRepository.GetActiveDesignatedHouseholdByStaffId(p_staff_id);
         }
         const fullHouseholdData = [];

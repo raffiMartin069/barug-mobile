@@ -46,8 +46,6 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
   const [open, setOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'menu' | 'profile' | 'visit'>('menu');
 
-  
-
   // visit form state
   const [age, setAge] = useState('');
   const [weight, setWeight] = useState('');
