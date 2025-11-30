@@ -18,7 +18,7 @@ import { useAccountRole } from '@/store/useAccountRole'
 import { UpdateFamilyInformation } from '@/types/updateFamilyInformationType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
-import { Alert, StyleSheet, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 
 type Option = { label: string; value: string }
 
@@ -92,6 +92,9 @@ const UpdateFamInfo = () => {
   const familtRepository = new FamilyRepository()
   const { showModal } = useNiceModal()
 
+  const profile = useAccountRole((s) => s.getProfile('resident'))
+  const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
+
   const onSubmit = () => {
     console.log('Submitting updated family info with values: ' + Number(params.id ?? familyNum))
     const sendData = async () => {
@@ -99,18 +102,15 @@ const UpdateFamInfo = () => {
       try {
         const familyId = await repository.GetFamilyIdByFamilyNumber(familyNum)
         if (!familyId) {
-          Alert.alert('Warning', 'Family not found.')
+          showModal({ title: 'Warning', message: 'Family not found.', variant: 'warn', primaryText: 'OK' })
           return
         }
 
         const familyHeadId = await familtRepository.GetFamilyHeadIdByFamilyId(familyId)
         if (!familyHeadId) {
-          Alert.alert('Warning', 'Family head not found.')
+          showModal({ title: 'Warning', message: 'Family head not found.', variant: 'warn', primaryText: 'OK' })
           return
         }
-
-        const profile = useAccountRole((s) => s.getProfile('resident'))
-        const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
 
         const data: UpdateFamilyInformation = {
           p_performed_by: parseInt(addedById ?? '0'),
@@ -128,16 +128,16 @@ const UpdateFamInfo = () => {
 
         const result = await repository.UpdateFamilyInformation(data)
         console.log('UpdateFamilyInformation result:', result)
-        Alert.alert('Success', 'Family information updated successfully.', [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ])
-
+        showModal({ title: 'Success', message: 'Family information updated successfully.', variant: 'success', primaryText: 'OK', onPrimary: () => router.back() })
+        setHhheadrel('')
+        setHhType('')
+        setNhts('no')
+        setIndigent('no')
+        setIncomeSource('')
+        setFamMonthlyIncome('')
       } catch (error) {
         console.error('Error updating family information:', error)
-        Alert.alert('Error', 'Failed to update family information. Please try again.')
+        showModal({ title: 'Error', message: 'Failed to update family information. Please try again.', variant: 'error', primaryText: 'OK' })
       }
     }
     
@@ -148,8 +148,8 @@ const UpdateFamInfo = () => {
     <ThemedView safe>
       <ThemedAppBar
         title="Update Family Information"
-        showNotif={false}
-        showProfile={false}
+        showNotif={true}
+        showProfile={true}
       />
 
       <ThemedKeyboardAwareScrollView>
@@ -167,7 +167,7 @@ const UpdateFamInfo = () => {
 
           {/* --- Editable fields (same structure as CreateFamily, without changing Family # / Head) --- */}
           <ThemedDropdown
-            items={RELATIONSHIP}
+            items={RELATIONSHIP.filter(val => val.value !== 1 && val.value !== 2)}
             value={hhheadrel}
             setValue={setHhheadrel}
             placeholder="Relationship to Household Head"
@@ -227,18 +227,17 @@ const UpdateFamInfo = () => {
 
         <Spacer height={15} />
 
-        <View>
-          <ThemedButton disabled={!canSubmit} onPress={() => showModal({
-            title: 'Update Family Information',
-            message: 'Save changes to family information?',
-            variant: 'info',
-            primaryText: 'Save',
-            secondaryText: 'Cancel',
-            onPrimary: () => onSubmit(),
-          })}>
-            <ThemedText btn>Save Changes</ThemedText>
-          </ThemedButton>
-        </View>
+        <ThemedButton disabled={!canSubmit} onPress={() => showModal({
+              title: 'Update Family Information',
+              message: 'Save changes to family information?',
+              variant: 'info',
+              primaryText: 'Save',
+              secondaryText: 'Cancel',
+              onPrimary: () => onSubmit(),
+            })} label={undefined}>
+          <ThemedText btn>Save Changes</ThemedText>
+        </ThemedButton>
+
       </ThemedKeyboardAwareScrollView>
     </ThemedView>
   )

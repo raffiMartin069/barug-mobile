@@ -690,7 +690,6 @@ const HouseholdList = () => {
                         // store household number in the basic household info store before navigating
                         const hhNumAny = (selectedHousehold as any)?.householdNum ?? (selectedHousehold as any)?.householdNum ?? null;
                         const hhNum = hhNumAny != null ? String(hhNumAny) : null;
-                        console.log('Adding family to household number:', hhNum);
                         try {
                           setHouseholdNumber(hhNum);
                         } catch (e) {
