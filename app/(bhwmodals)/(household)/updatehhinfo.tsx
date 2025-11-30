@@ -19,7 +19,7 @@ import { useDynamicRouteStore } from '@/store/useDynamicRouteStore'
 import { HouseholdUpdateType } from '@/types/request/householdUpdateType'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
-import { Alert, Pressable, StyleSheet, View } from 'react-native'
+import { Pressable, StyleSheet, View } from 'react-native'
 
 type Option = { label: string; value: string }
 
@@ -124,28 +124,21 @@ const UpdateHhInfo = () => {
         console.log("Update result:", result);
 
         if (!result) {
-          Alert.alert("Error", "Failed to update household information. Please try again.");
+          showModal({ title: 'Error', message: 'Failed to update household information. Please try again.', variant: 'error', primaryText: 'OK' })
           return;
         }
 
-        Alert.alert("Success", `Household information updated successfully.`, [
-          {
-            text: "OK",
-            onPress: () => {
-              router.push({
-                pathname: '/householdlist',
-              });
-            },
-          },
-        ]);
+        showModal({ title: 'Success', message: 'Household information updated successfully.', variant: 'success', primaryText: 'OK', onPrimary: () => {
+          router.push({ pathname: '/householdlist' })
+        } })
 
       } catch (error) {
         if (!(error instanceof HouseholdException)) {
           console.error("Unexpected error:", error);
-          Alert.alert("An unexpected error occurred. Please try again.");
+          showModal({ title: 'Error', message: 'An unexpected error occurred. Please try again.', variant: 'error', primaryText: 'OK' })
           return;
         }
-        Alert.alert("Error", error.message);
+        showModal({ title: 'Error', message: String(error?.message ?? 'An error occurred'), variant: 'error', primaryText: 'OK' })
         return;
       }
     }
@@ -156,8 +149,8 @@ const UpdateHhInfo = () => {
     <ThemedView safe>
       <ThemedAppBar
         title="Update Household Information"
-        showNotif={false}
-        showProfile={false}
+        showNotif={true}
+        showProfile={true}
       />
 
       <ThemedKeyboardAwareScrollView>
@@ -207,11 +200,9 @@ const UpdateHhInfo = () => {
             placeholder="House Ownership"
             order={1}
           />
-        </View>
 
-        <Spacer height={15} />
+          <Spacer height={15} />
 
-        <View>
           <ThemedButton disabled={!canSubmit} onPress={() => showModal({
             title: 'Update Household Information',
             message: 'Are you sure you want to save these changes?',
@@ -219,10 +210,12 @@ const UpdateHhInfo = () => {
             primaryText: 'Save',
             secondaryText: 'Cancel',
             onPrimary: () => { onSubmit() },
-          })}>
+          })} label={undefined}>
             <ThemedText btn>Save Changes</ThemedText>
           </ThemedButton>
+
         </View>
+
       </ThemedKeyboardAwareScrollView>
     </ThemedView>
   )
