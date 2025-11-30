@@ -11,6 +11,7 @@ import ThemedView from '@/components/ThemedView'
 import { HouseholdException } from '@/exception/HouseholdException'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
+import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
 import { HouseholdRepository } from '@/repository/householdRepository'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -69,6 +70,8 @@ const UpdateFamHead = () => {
   const [searchText, setSearchText] = useState('')
   const [newHeadId, setNewHeadId] = useState<string>('')
   const [residentList, setResidentList] = useState<Resident[]>([])
+
+
 
   // Reason
   const [reason, setReason] = useState<ChangeReason | null>(null)

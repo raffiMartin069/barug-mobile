@@ -14,6 +14,8 @@ type Props = {
   order?: number;
   /** NEW: decide if an item should be disabled */
   getItemDisabled?: (item: DDItem) => boolean;
+  /** disable the whole dropdown */
+  disabled?: boolean;
 };
 
 const ThemedDropdown = ({

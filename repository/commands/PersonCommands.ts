@@ -65,6 +65,37 @@ export type PersonDto = {
     }[] | null;
 };
 
+// DTO for person kinship
+export type PersonKinshipDto = {
+    kinship_id: number;
+    src_person_id?: number | null;
+    dst_person_id?: number | null;
+    relationship_id?: number | null;
+    is_active?: boolean;
+    start_date?: string | null;
+    end_date?: string | null;
+    notes?: string | null;
+    added_at?: string | null;
+    added_by_id?: number | null;
+    relationship?: { relationship_id: number; relationship_name: string }[] | null;
+    dst_person?: {
+        person_id: number;
+        person_code?: string | null;
+        first_name?: string | null;
+        middle_name?: string | null;
+        last_name?: string | null;
+        suffix?: string | null;
+        birthdate?: string | null;
+        age?: number | null;
+            sex?: { sex_id: number; sex_name: string }[] | null;
+    }[] | null;
+    added_by?: {
+        staff_id: number;
+        staff_code?: string | null;
+        person?: { person_id: number; first_name?: string | null; last_name?: string | null }[] | null;
+    }[] | null;
+};
+
 export class PersonCommands {
     private readonly SELECT_QUERY = `
         person_id, supabase_uid, person_code, person_img,
@@ -210,6 +241,43 @@ export class PersonCommands {
             return (data as PersonDto | null);
         } catch (e: any) {
             console.error('FetchResidentByPersonId exception:', e);
+            throw e;
+        }
+    }
+
+    /**
+     * Fetch person kinship records where the given person is the source (`src_person_id`)
+     */
+    async FetchKinshipBySrcPersonId(srcPersonId: number): Promise<PersonKinshipDto[]> {
+        try {
+            const SELECT_KINSHIP = `
+                kinship_id, src_person_id, dst_person_id, relationship_id, is_active,
+                start_date, end_date, notes, added_at, added_by_id,
+                relationship:relationship_id (relationship_id, relationship_name),
+                dst_person:dst_person_id (
+                    person_id, person_code, first_name, middle_name, last_name, suffix, birthdate, age,
+                    sex:sex_id (sex_id, sex_name)
+                ),
+                added_by:added_by_id (
+                    staff_id, staff_code,
+                    person:person_id (person_id, first_name, last_name)
+                )
+            `;
+
+            const { data, error } = await supabase
+                .from('person_kinship')
+                .select(SELECT_KINSHIP)
+                .eq('src_person_id', srcPersonId)
+                .order('kinship_id', { ascending: true });
+
+            if (error) {
+                console.error('FetchKinshipBySrcPersonId error:', error);
+                throw new Error(error.message);
+            }
+
+            return (data ?? []) as PersonKinshipDto[];
+        } catch (e: any) {
+            console.error('FetchKinshipBySrcPersonId exception:', e);
             throw e;
         }
     }

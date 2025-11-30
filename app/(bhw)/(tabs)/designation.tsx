@@ -87,7 +87,7 @@ const HouseholdList = () => {
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
   const [resolvedStaffId, setResolvedStaffId] = useState<number | null>(null)
   const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId ?? 5);
-
+  
   useEffect(() => {
     let mounted = true
     const resolveStaff = async () => {
@@ -135,7 +135,7 @@ const HouseholdList = () => {
 
   const isFocused = useIsFocused();
 
-  const fetchHouseholds = async () => {
+  const fetchHouseholds = React.useCallback(async () => {
     const service = new HouseholdListService(new FamilyRepository(), new HouseholdRepository());
     setLoadingHouseholds(true);
     try {
@@ -143,13 +143,13 @@ const HouseholdList = () => {
     } finally {
       setLoadingHouseholds(false);
     }
-  };
+  }, [getHouseholds]);
 
   useEffect(() => {
     if (!isFocused) return;
+    // ensure we fetch when screen becomes focused or when resolvedStaffId updates
     fetchHouseholds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFocused]);
+  }, [isFocused, resolvedStaffId]);
 
 
 

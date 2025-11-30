@@ -16,6 +16,7 @@ export function usePersonSearchByKey() {
             return [...prev, ...newItems]
         })
     }, [])
+    console.log("usePersonSearchByKey results:", results);
     return { results, search }
 }
 
