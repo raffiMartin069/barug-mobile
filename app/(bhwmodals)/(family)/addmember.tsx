@@ -254,6 +254,15 @@ const AddMember = () => {
                         disabled={!!famheadrel}
                     />
 
+                    {String(famheadrel).length === 0 && (
+                        <>
+                            <Spacer height={6} />
+                            <ThemedText style={styles.required}>
+                                * Relationship to Family Head is required.
+                            </ThemedText>
+                        </>
+                    )}
+
                     <Spacer height={10} />
 
                     <ThemedDropdown
@@ -264,6 +273,15 @@ const AddMember = () => {
                         order={1}
                         disabled={!!hhheadrel}
                     />
+
+                    {String(hhheadrel).length === 0 && (
+                        <>
+                            <Spacer height={6} />
+                            <ThemedText style={styles.required}>
+                                * Relationship to Household Head is required.
+                            </ThemedText>
+                        </>
+                    )}
 
                     <Spacer height={10} />
                     <View style={styles.row}>
@@ -324,7 +342,14 @@ const AddMember = () => {
                             secondaryText: 'Cancel',
                             onPrimary: () => submitHandler(),
                         })}
-                        disabled={!residentId || !famheadrel || !hhheadrel || isFetchingResident || isChecking || loading}
+                        disabled={
+                            !residentId ||
+                            String(famheadrel).length === 0 ||
+                            String(hhheadrel).length === 0 ||
+                            isFetchingResident ||
+                            isChecking ||
+                            loading
+                        }
                     >
                         <ThemedText btn>{isFetchingResident || isChecking || loading ? 'Loading...' : 'Continue'}</ThemedText>
                     </ThemedButton>
@@ -341,4 +366,5 @@ const styles = StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'flex-start' },
     col: { flex: 1 },
     colRight: { marginRight: 10 },
+    required: { color: '#b00020', fontSize: 12, marginBottom: 6 },
 });
