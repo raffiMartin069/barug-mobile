@@ -13,6 +13,7 @@ import { HouseholdException } from '@/exception/HouseholdException'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
 import { HouseholdRepository } from '@/repository/householdRepository'
+import { FamilyQuery } from '@/repository/queries/FamilyQuery'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
@@ -24,6 +25,7 @@ type Hhead = {
   person_code?: string
   address?: string
   family_id?: string
+  family_num?: string
 }
 
 /** Demo data. Replace with your fetched residents list */
@@ -84,36 +86,62 @@ const UpdateHhHead = () => {
     setIsLoadingMembers(true)
     try {
       if (!householdNum) return
+
+      // fetch household first to get household_id and current head
+      const hh = await membersRepo.FetchHouseholdByHouseholdNumber(householdNum)
+      currentHeadId = hh?.household_head_id ? String(hh.household_head_id) : ''
+
       const data = await membersRepo.FetchMembersByHouseholdNumber(householdNum)
-      currentHeadId = await membersRepo.FetchHouseholdByHouseholdNumber(householdNum).then(hh => hh?.household_head_id ? String(hh.household_head_id) : '')
       if (!mounted || !Array.isArray(data)) return
 
+      // build family_id -> family_num map from member payload if available
+      const familyMap: Record<string, string> = {}
+      data.forEach((m: any) => {
+        const fid = m?.family_id ? String(m.family_id) : undefined
+        const fnum = m?.family?.family_num ?? m?.family_num
+        if (fid && fnum) familyMap[fid] = String(fnum)
+      })
+
+      // if map empty, fetch families for this household to populate family_num
+      if (Object.keys(familyMap).length === 0 && hh?.household_id) {
+        try {
+          const fq = new FamilyQuery()
+          const families = await fq.FetchFamiliesByHouseholdId(hh.household_id)
+          if (Array.isArray(families)) {
+            families.forEach((f: any) => {
+              if (f && f.family_id) {
+                familyMap[String(f.family_id)] = f.family_num ? String(f.family_num) : String(f.family_id)
+              }
+            })
+          }
+        } catch (e) {
+          console.warn('Fetch families for family_num mapping failed', e)
+        }
+      }
+
       const mapped: Hhead[] = data.map((m: any) => {
-        if(m.person.person_id === currentHeadId) {
-          // skip current head
-          return null
-        }
-
-        if(!m.is_active || m.person.person_status.person_status_id !== 1) {
-          // skip inactive members
-          return null
-        }
-
         const p = (m.person ?? {})
+        if (!p.person_id) return null
+        if (String(p.person_id) === String(currentHeadId)) return null
+        if (!m.is_active || p.person_status?.person_status_id !== 1) return null
+
         const middleInitial = p.middle_name ? `${String(p.middle_name).trim()[0].toUpperCase()}.` : ''
         const fullName = `${String(p.first_name ?? '').toUpperCase()} ${middleInitial} ${String(p.last_name ?? '').toUpperCase()}`.replace(/\s+/g, ' ').trim()
+
+        const familyId = m.family_id ? String(m.family_id) : undefined
+        const familyNum = m?.family?.family_num ?? m?.family_num ?? (familyId ? familyMap[familyId] : undefined) ?? familyId
+
         return {
           person_id: String(p.person_id),
           full_name: fullName,
           person_code: p.person_code,
           address: (p.addresss ? [p.addresss.street, p.addresss.barangay, p.addresss.city].filter(Boolean).join(', ') : ''),
-          family_id: m.family_id ? String(m.family_id) : undefined,
+          family_id: familyId,
+          family_num: familyNum ? String(familyNum) : undefined,
         }
       }).filter(Boolean)
 
-      // exclude current head (defensive)
-      const heads = mapped.filter(h => String(h.person_id) !== String(currentHeadId))
-      setHhHeadList(heads)
+      setHhHeadList(mapped)
     } catch (e) {
       console.error('fetchMembers error', e)
     } finally {
@@ -310,28 +338,33 @@ const UpdateHhHead = () => {
           ) : hhHeadList.length === 0 ? (
             <ThemedText>No household members found.</ThemedText>
           ) : (
-            // group members by family_id
+            // group members by family_num (fallback to family_id)
             Object.entries(hhHeadList.reduce((acc: Record<string, Hhead[]>, cur) => {
-              const k = cur.family_id ?? 'unknown'
+              const k = cur.family_num ?? cur.family_id ?? 'unknown'
               if (!acc[k]) acc[k] = []
               acc[k].push(cur)
               return acc
-            }, {})).map(([familyId, members]) => (
-              <View key={familyId} style={{ marginBottom: 8 }}>
-                <ThemedText style={styles.familyHeader}>{familyId === 'unknown' ? 'Family' : `Family ${familyId}`}</ThemedText>
-                {members.map((p) => (
-                  <Pressable
-                    key={p.person_id}
-                    onPress={() => {
-                      setNewHeadId(String(p.person_id))
-                      setNewHeadName(p.full_name)
-                      setModalVisible(false)
-                    }}
-                    style={{ paddingVertical: 8 }}
-                  >
-                    <ThemedText>{p.full_name}{p.person_code ? ` · ${p.person_code}` : ''}</ThemedText>
-                  </Pressable>
-                ))}
+            }, {})).map(([familyKey, members]) => (
+              <View key={familyKey} style={{ marginBottom: 8 }}>
+                <ThemedText style={styles.familyHeader}>{familyKey === 'unknown' ? 'Family' : `Family ${familyKey}`}</ThemedText>
+                    {members.map((p) => (
+                      <Pressable
+                        key={p.person_id}
+                        onPress={() => {
+                          setNewHeadId(String(p.person_id))
+                          setNewHeadName(p.full_name)
+                          setModalVisible(false)
+                        }}
+                        style={{ paddingVertical: 0 }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
+                          <ThemedText>{p.full_name}{p.person_code ? ` · ${p.person_code}` : ''}</ThemedText>
+                          {String(p.person_id) === String(newHeadId) && (
+                            <ThemedText style={{ color: Colors.primary }}>✓</ThemedText>
+                          )}
+                        </View>
+                      </Pressable>
+                    ))}
               </View>
             ))
           )}

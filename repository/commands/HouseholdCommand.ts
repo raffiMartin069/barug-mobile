@@ -560,17 +560,15 @@ export class HouseholdCommand {
     async FetchMembersByHouseholdNumber(householdNum: string): Promise<HouseMemberDto[]> {
         try {
             if (!householdNum) return [];
-
             const hh = await this.FetchHouseholdByHouseholdNumber(householdNum);
             if (!hh || !hh.household_id) return [];
 
-            const householdId = Number(householdNum);
+            const householdId = Number(hh.household_id);
             if (!Number.isFinite(householdId)) return [];
 
             const fq = new FamilyQuery();
-            const families = await fq.FetchFamiliesByHouseholdId(56);
+            const families = await fq.FetchFamiliesByHouseholdId(householdId);
             if (!Array.isArray(families) || families.length === 0) return [];
-
             const aggregated: HouseMemberDto[] = [];
             for (const fam of families) {
                 try {
@@ -584,7 +582,6 @@ export class HouseholdCommand {
                     // continue to next family on error
                 }
             }
-
             return aggregated;
         } catch (e: any) {
             console.error('FetchMembersByHouseholdNumber exception:', e);
