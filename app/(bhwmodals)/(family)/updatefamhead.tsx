@@ -4,19 +4,22 @@ import ThemedButton from '@/components/ThemedButton'
 import ThemedCard from '@/components/ThemedCard'
 import ThemedDropdown from '@/components/ThemedDropdown'
 import ThemedKeyboardAwareScrollView from '@/components/ThemedKeyboardAwareScrollView'
-import ThemedSearchSelect from '@/components/ThemedSearchSelect'
+// ThemedSearchSelect removed; selection is via CenteredModal
+import CenteredModal from '@/components/custom/CenteredModal'
 import ThemedText from '@/components/ThemedText'
 import ThemedTextInput from '@/components/ThemedTextInput'
 import ThemedView from '@/components/ThemedView'
+import { Colors } from '@/constants/Colors'
 import { HouseholdException } from '@/exception/HouseholdException'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
-import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
-import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
+// usePersonSearchByKey removed; selection is via CenteredModal
+// HouseholdCommand not used in this screen
 import { HouseholdRepository } from '@/repository/householdRepository'
+import { FamilyQuery } from '@/repository/queries/FamilyQuery'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useEffect, useMemo, useState } from 'react'
-import { Alert, StyleSheet } from 'react-native'
+import React, { useMemo, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
 
 type Resident = {
   person_id: string
@@ -26,12 +29,7 @@ type Resident = {
 }
 
 /** Demo data. Replace with your fetched residents list */
-const RESIDENTS: Resident[] = [
-  { person_id: 'P-001', full_name: 'Rogelio Santos', person_code: 'P03-R001', address: 'Purok 3, Sto. Niño' },
-  { person_id: 'P-002', full_name: 'Maria Santos',   person_code: 'P03-R002', address: 'Purok 3, Sto. Niño' },
-  { person_id: 'P-003', full_name: 'Juan Dela Cruz', person_code: 'P05-R010', address: 'Purok 5, Sto. Niño' },
-  { person_id: 'P-004', full_name: 'Luz Rivera',     person_code: 'P01-R020', address: 'Purok 1, Sto. Niño' },
-]
+// Demo residents removed - real data fetched from FamilyQuery
 
 type ChangeReason =
   | 'MOVED OUT'
@@ -55,22 +53,30 @@ const CHANGE_REASONS: ChangeReason[] = [
 const UpdateFamHead = () => {
   const router = useRouter()
   const params = useLocalSearchParams<{
-    householdId?: string
+    id?: string
     familyNum?: string
-    currentHeadId?: string
+    householdNum?: string
     currentHeadName?: string
   }>()
 
-  const householdId     = params.householdId ?? ''
+  const householdId     = params.id ?? ''
   const familyNum       = params.familyNum ?? ''
-  const currentHeadId   = params.currentHeadId ?? ''
+  const householdNum   = params.householdNum ?? ''
   const currentHeadName = params.currentHeadName ?? '—'
 
-  // New head selection
-  const [searchText, setSearchText] = useState('')
-  const [newHeadId, setNewHeadId] = useState<string>('')
-  const [residentList, setResidentList] = useState<Resident[]>([])
+  console.log('UpdateFamHead params:', {
+    householdId,
+    familyNum,
+    householdNum,
+    currentHeadName,
+  });
 
+  // New head selection
+  const [newHeadId, setNewHeadId] = useState<string>('')
+  const [newHeadName, setNewHeadName] = useState<string>('')
+  const [residentList, setResidentList] = useState<Resident[]>([])
+  const [modalVisible, setModalVisible] = useState(false)
+  const [isLoadingMembers, setIsLoadingMembers] = useState(false)
 
 
   // Reason
@@ -80,7 +86,6 @@ const UpdateFamHead = () => {
   const profile = useAccountRole((s) => s.getProfile('resident'))
   const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
   
-  const residentItems = useMemo(() => residentList, [residentList])
   const reasonItems = useMemo(
     () => CHANGE_REASONS.map(r => ({ label: r, value: r })),
     []
@@ -89,22 +94,67 @@ const UpdateFamHead = () => {
   const repository = new HouseholdRepository()
   const { showModal } = useNiceModal()
 
-  const { results, search } = usePersonSearchByKey()
-  
-    useEffect(() => {
-      if (!results || !Array.isArray(results)) return;
-  
-      setResidentList(prev => {
-        const newItems = results.filter(
-          r => !prev.some(p => p.person_id === r.person_id)
-        );
-        return [...prev, ...newItems];
-      });
-    }, [results]);
+  const famQuery = useMemo(() => new FamilyQuery(), [])
+
+  // fetch family members when modal opens
+  const fetchFamilyMembers = async () => {
+    if (!familyNum) return
+    setIsLoadingMembers(true)
+    try {
+      const fam = await famQuery.FetchActiveFamilyByFamilyNum(familyNum)
+      const familyId = fam?.family_id
+      if (!familyId) {
+        showModal({ title: 'Family Not Found', message: 'Family not found. Please check the family number.', variant: 'warn', primaryText: 'OK' })
+        setResidentList([])
+        return
+      }
+      const members = await famQuery.FetchAllFamilyMemberByFamilyId(Number(familyId))
+      if (!Array.isArray(members)) {
+        setResidentList([])
+        return
+      }
+
+      const currentHeadId = await famQuery.FetchActiveFamilyByFamilyNum(familyNum).then(f => f?.family_head_id ?? null)
+
+      const active: Resident[] = members
+        .filter((m: any) => Boolean(m.is_active))
+        .map((m: any) => {
+          console.log('Family member data:', m)
+
+          // exclude the current family head
+          if (String(m.person_id) === String(currentHeadId)) return null
+
+          if (!m.is_active 
+              || m.person.person_status.person_status_name !== "ACTIVE" 
+              || m.person.residential_status.residential_status_name !== "RESIDENT"
+            ) {
+            return null
+          }
+
+          const p = m.person ?? {}
+          const middleInitial = p.middle_name ? `${String(p.middle_name).trim()[0].toUpperCase()}.` : ''
+          const fullName = `${String(p.first_name ?? '').toUpperCase()} ${middleInitial} ${String(p.last_name ?? '').toUpperCase()}`.replace(/\s+/g, ' ').trim()
+          return {
+            person_id: String(p.person_id),
+            full_name: fullName,
+            person_code: p.person_code,
+            address: '',
+          }
+        })
+        .filter(Boolean) as Resident[]
+
+      setResidentList(active)
+    } catch (e) {
+      console.error('fetchFamilyMembers error', e)
+      setResidentList([])
+    } finally {
+      setIsLoadingMembers(false)
+    }
+  }
 
   const canSubmit =
     !!newHeadId &&
-    newHeadId !== currentHeadId &&
+    newHeadId !== familyNum &&
     !!reason &&
     (reason !== 'OTHER' || otherReason.trim().length > 2)
 
@@ -114,32 +164,22 @@ const UpdateFamHead = () => {
         const finalReason = reason === "OTHER" ? otherReason.trim() : reason!;
         const familyId = await repository.GetFamilyIdByFamilyNumber(familyNum);
         if (!familyId) {
-          Alert.alert('Warning', 'Family not found. Please check the family number and try again.');
+          showModal({ title: 'Warning', message: 'Family not found. Please check the family number and try again.', variant: 'warn', primaryText: 'OK' })
           return;
         }
         const result = await repository.UpdateFamilyHead(familyId, Number(newHeadId), parseInt(addedById ?? '1'), finalReason);
         if (!result) {
-          Alert.alert('Error', 'Failed to update family head. Please try again.');
+          showModal({ title: 'Error', message: 'Failed to update family head. Please try again.', variant: 'error', primaryText: 'OK' })
           return;
         }
-        Alert.alert(
-          'Success',
-          'Family head updated successfully.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back(),
-            },
-          ],
-          { cancelable: false }
-        );
+        showModal({ title: 'Success', message: 'Family head updated successfully.', variant: 'success', primaryText: 'OK', onPrimary: () => router.back() })
       } catch (error) {
         if (error instanceof HouseholdException) {
-          Alert.alert('Warning', error.message);
+          showModal({ title: 'Warning', message: error.message, variant: 'warn', primaryText: 'OK' })
           return;
         }
         console.error('Failed to update family head:', error);
-        Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
+        showModal({ title: 'Error', message: 'An unexpected error occurred. Please try again later.', variant: 'error', primaryText: 'OK' })
       }
     }
     updateInfo();
@@ -169,38 +209,18 @@ const UpdateFamHead = () => {
 
           {/* New family head search & select */}
           <ThemedText style={styles.label}>New Family Head</ThemedText>
-          <ThemedSearchSelect<Resident>
-            items={residentItems}
-            getLabel={(p) =>
-              p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
-            }
-            getSubLabel={(p) => p.address}
-            inputValue={searchText}
-            onInputValueChange={(t) => {
-              setSearchText(t)
-              search(t)
-              if (!t) setNewHeadId('')
-            }}
-            placeholder="Search (Name / Resident ID)"
-            filter={(p, q) => {
-              const query = q.toLowerCase()
-              return (
-                p.full_name.toLowerCase().includes(query) ||
-                (p.person_code || '').toLowerCase().includes(query) ||
-                (p.address || '').toLowerCase().includes(query) ||
-                query.includes(p.full_name.toLowerCase()) ||
-                (p.person_code && query.includes(p.person_code.toLowerCase()))
-              )
-            }}
-            onSelect={(p) => {
-              setNewHeadId(p.person_id)
-              setSearchText(
-                p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
-              )
-            }}
+          <ThemedText style={styles.link} onPress={() => { setModalVisible(true); fetchFamilyMembers(); }}>
+            Choose from family members
+          </ThemedText>
+
+          <ThemedTextInput
+            placeholder="Selected Family Head"
+            value={newHeadName}
+            editable={false}
+            onChangeText={() => {}}
           />
 
-          {newHeadId === currentHeadId && newHeadId !== '' && (
+          {newHeadId === familyNum && newHeadId !== '' && (
             <ThemedText style={styles.helper}>
               Selected resident is already the current family head.
             </ThemedText>
@@ -240,10 +260,39 @@ const UpdateFamHead = () => {
             primaryText: 'Update',
             secondaryText: 'Cancel',
             onPrimary: () => handleSubmit(),
-          })}>
+          })} label={undefined}>
             <ThemedText btn>Update Family Head</ThemedText>
           </ThemedButton>
         </ThemedCard>
+
+        <CenteredModal visible={modalVisible} title="Select New Family Head" onClose={() => setModalVisible(false)}>
+          {isLoadingMembers ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+            </View>
+          ) : residentList.length === 0 ? (
+            <ThemedText>No family members found.</ThemedText>
+          ) : (
+            residentList.map((p) => (
+              <Pressable
+                key={p.person_id}
+                onPress={() => {
+                  setNewHeadId(p.person_id)
+                  setNewHeadName(p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name)
+                  setModalVisible(false)
+                }}
+                style={{ paddingVertical: 8 }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <ThemedText>{p.full_name}{p.person_code ? ` · ${p.person_code}` : ''}</ThemedText>
+                  {String(p.person_id) === String(newHeadId) && (
+                    <ThemedText style={{ color: Colors.primary }}>✓</ThemedText>
+                  )}
+                </View>
+              </Pressable>
+            ))
+          )}
+        </CenteredModal>
 
         <Spacer height={20} />
       </ThemedKeyboardAwareScrollView>
@@ -263,5 +312,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  link: {
+    fontSize: 12,
+    color: Colors.primary,
+    textDecorationLine: 'underline',
   },
 })

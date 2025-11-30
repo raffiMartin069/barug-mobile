@@ -371,6 +371,45 @@ export class FamilyQuery {
     }
 
     /**
+     * Fetch all house_member records for a given family_id (no is_active filter)
+     */
+    async FetchAllFamilyMemberByFamilyId(familyId: number): Promise<HouseMemberDto[]> {
+        const SELECT_MEMBER = `
+            house_member_id, date_joined, is_active, family_id,
+            relationship_to_hholdhead_id, relationship_to_family_head_id,
+            registration_method_id, person_id, added_by_id,
+            is_quarterly_confirmed, quarterly_confirmed_by_id,
+            relationship_to_hhold_head:relationship_to_hholdhead_id (relationship_id, relationship_name),
+            relationship_to_fam_head:relationship_to_family_head_id (relationship_id, relationship_name),
+            person:person_id (
+                person_id, person_code, first_name, middle_name, last_name, suffix, birthdate, age, 
+                person_status:person_status_id(person_status_id, person_status_name), 
+                residential_status:residential_status_id(residential_status_id, residential_status_name),
+                sex:sex_id (sex_id, sex_name),
+                civil_status:civil_status_id (civil_status_id, civil_status_name)
+            )
+        `;
+
+        try {
+            const { data, error } = await supabase
+                .from('house_member')
+                .select(SELECT_MEMBER)
+                .eq('family_id', familyId)
+                .order('house_member_id', { ascending: true });
+
+            if (error) {
+                console.error('FetchAllFamilyMemberByFamilyId error:', error)
+                throw new Error(error.message)
+            }
+
+            return (data ?? []) as unknown as HouseMemberDto[]
+        } catch (e: any) {
+            console.error('FetchAllFamilyMemberByFamilyId exception:', e)
+            throw e
+        }
+    }
+
+    /**
      * Fetch family unit by family_head_id
      */
     async FetchFamilyByFamilyHeadId(familyHeadId: number): Promise<FamilyUnitDto | null> {
