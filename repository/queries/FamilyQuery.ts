@@ -157,7 +157,7 @@ export class FamilyQuery {
             throw e
         }
     }
-
+    
     /**
      * Fetch all active family units
      */

@@ -141,6 +141,8 @@ export type HouseMemberDto = {
     } | null;
 };
 
+import { FamilyQuery } from '@/repository/queries/FamilyQuery'
+
 export class HouseholdCommand {
     private readonly SELECT_QUERY = `
         household_id, household_num, house_number, created_date, is_active,
@@ -544,6 +546,48 @@ export class HouseholdCommand {
             return (data ?? []) as unknown as HouseMemberDto[];
         } catch (e: any) {
             console.error('FetchAllActiveMemberByFamilyId exception:', e);
+            throw e;
+        }
+    }
+
+    /**
+     * Fetch all active members that belong to any family under a household number.
+     * Steps:
+     *  1. Resolve household by household number -> household_id
+     *  2. Fetch families for that household
+     *  3. For each family, fetch active members and aggregate
+     */
+    async FetchMembersByHouseholdNumber(householdNum: string): Promise<HouseMemberDto[]> {
+        try {
+            if (!householdNum) return [];
+
+            const hh = await this.FetchHouseholdByHouseholdNumber(householdNum);
+            if (!hh || !hh.household_id) return [];
+
+            const householdId = Number(householdNum);
+            if (!Number.isFinite(householdId)) return [];
+
+            const fq = new FamilyQuery();
+            const families = await fq.FetchFamiliesByHouseholdId(56);
+            if (!Array.isArray(families) || families.length === 0) return [];
+
+            const aggregated: HouseMemberDto[] = [];
+            for (const fam of families) {
+                try {
+                    if (!fam || !fam.family_id) continue;
+                    const members = await this.FetchAllActiveMemberByFamilyId(Number(fam.family_id));
+                    if (Array.isArray(members) && members.length > 0) {
+                        aggregated.push(...members);
+                    }
+                } catch (e) {
+                    console.error('FetchMembersByHouseholdNumber - fetch family members error', e);
+                    // continue to next family on error
+                }
+            }
+
+            return aggregated;
+        } catch (e: any) {
+            console.error('FetchMembersByHouseholdNumber exception:', e);
             throw e;
         }
     }

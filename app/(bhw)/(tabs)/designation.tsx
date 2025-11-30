@@ -595,6 +595,7 @@ const HouseholdList = () => {
                         label: 'Update Household Head',
                         onPress: () => {
                           closeMenuPortal()
+                          console.log('Updating household head for household:', selectedHousehold);
                           router.push({
                             pathname: '/updatehhhead',
                             params: {
