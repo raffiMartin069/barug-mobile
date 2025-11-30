@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Alert, View } from 'react-native'
+import { Alert, Platform, StyleSheet, View } from 'react-native'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -46,7 +46,8 @@ const CreateFamily = () => {
     const [householdHeadText, setHouseholdHeadText] = useState('')
     const [ufcNum, setUfcNum] = useState<string>('')
     const [errors, setErrors] = useState<{ [key: string]: string }>({})
-    const [emoji, setEmoji] = useState<string>('')
+    const [isLoadingHousehold, setIsLoadingHousehold] = useState(false)
+    const [isLoadingKinship, setIsLoadingKinship] = useState(false)
     const { isValid, err } = useEmojiRemover()
     const householdNumber = useBasicHouseholdInfoStore((s) => s.householdNumber)
 
@@ -62,6 +63,7 @@ const CreateFamily = () => {
         let mounted = true
         const fetchHousehold = async () => {
             if (!householdNumber) return
+            setIsLoadingHousehold(true)
             try {
                 const cmd = new HouseholdCommand()
                 const hh = await cmd.FetchHouseholdByHouseholdNumber(String(householdNumber))
@@ -79,6 +81,8 @@ const CreateFamily = () => {
                 }
             } catch (e: any) {
                 console.error('fetchHousehold error', e)
+            } finally {
+                if (mounted) setIsLoadingHousehold(false)
             }
         }
 
@@ -90,11 +94,23 @@ const CreateFamily = () => {
     useEffect(() => {
         let mounted = true
         const deriveKinship = async () => {
-            if (!famhead || !householdHeadId) return
+            // Clear relationship if family head is empty or household head not present
+            if (!famhead || !householdHeadId) {
+                setHhheadrel('')
+                setIsLoadingKinship(false)
+                return
+            }
+
             const famId = Number(famhead)
             const hhId = Number(householdHeadId)
-            if (!Number.isFinite(famId) || !Number.isFinite(hhId)) return
+            if (!Number.isFinite(famId) || !Number.isFinite(hhId)) {
+                setHhheadrel('')
+                setIsLoadingKinship(false)
+                return
+            }
 
+            setIsLoadingKinship(true)
+            let found = false
             try {
                 const personCmd = new PersonCommands()
 
@@ -110,27 +126,38 @@ const CreateFamily = () => {
                         if (relId) {
                             // store as number so it matches RELATIONSHIP item values
                             setHhheadrel(Number(relId))
-                            return
+                            found = true
                         }
                     }
                 }
 
                 // 2) If not found, try reverse: household head as source, family head as destination
-                const kinFromHh = await personCmd.FetchKinshipBySrcPersonId(hhId)
-                if (mounted && Array.isArray(kinFromHh) && kinFromHh.length > 0) {
-                    const edge2 = kinFromHh.find(k => normalize((k as any).dst_person).some((dp: any) => Number(dp.person_id) === famId))
-                    if (edge2) {
-                        const relArr2 = normalize((edge2 as any).relationship)
-                        const relObj2 = relArr2[0] ?? null
-                        const relId2 = relObj2?.relationship_id ?? (edge2 as any).relationship_id ?? null
-                        if (relId2) {
-                            setHhheadrel(Number(relId2))
-                            return
+                if (!found) {
+                    const kinFromHh = await personCmd.FetchKinshipBySrcPersonId(hhId)
+                    if (mounted && Array.isArray(kinFromHh) && kinFromHh.length > 0) {
+                        const edge2 = kinFromHh.find(k => normalize((k as any).dst_person).some((dp: any) => Number(dp.person_id) === famId))
+                        if (edge2) {
+                            const relArr2 = normalize((edge2 as any).relationship)
+                            const relObj2 = relArr2[0] ?? null
+                            const relId2 = relObj2?.relationship_id ?? (edge2 as any).relationship_id ?? null
+                            if (relId2) {
+                                setHhheadrel(Number(relId2))
+                                found = true
+                            }
                         }
                     }
                 }
+
+                // If no kinship was found, clear the relationship field
+                if (!found) {
+                    setHhheadrel('')
+                }
             } catch (e) {
                 console.error('deriveKinship error', e)
+                // on error, clear relationship to avoid showing stale data
+                if (mounted) setHhheadrel('')
+            } finally {
+                if (mounted) setIsLoadingKinship(false)
             }
         }
 
@@ -155,7 +182,7 @@ const CreateFamily = () => {
         incomesource, fammnthlyincome])
 
     const { results: residentItems, search } = usePersonSearchByKey()
-    const { createFamily, loading, error, success } = useFamilyCreation()
+    const { createFamily, loading, error } = useFamilyCreation()
     const profile = useAccountRole((s) => s.getProfile('resident'))
     const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
         const { showModal } = useNiceModal()
@@ -218,22 +245,26 @@ const CreateFamily = () => {
     }
 
     return (
-        <ThemedView safe>
+        <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
             <ThemedAppBar
                 title='Register Family Unit'
-                showNotif={false}
-                showProfile={false}
+                showNotif={true}
+                showProfile={true}
             />
-            <ThemedKeyboardAwareScrollView>
-                <View>
+            <ThemedKeyboardAwareScrollView
+                keyboardShouldPersistTaps="handled"
+                extraScrollHeight={Platform.OS === 'ios' ? 20 : 100}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start', padding: 20 }}
+            >
+                <View style={styles.container}>
 
                     <ThemedTextInput
                         placeholder='Household Head (locked)'
-                        value={householdHeadText}
+                        value={isLoadingHousehold ? 'Loading...' : householdHeadText}
                         editable={false}
                         onChangeText={() => {}}
                     />
-                    {errors.householdHeadId && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.householdHeadId}</ThemedText>}
+                    {errors.householdHeadId && <ThemedText style={styles.required}>{errors.householdHeadId}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedTextInput
@@ -242,7 +273,7 @@ const CreateFamily = () => {
                         onChangeText={setFamnum}
                         keyboardType="numeric"
                     />
-                    {errors.famnum && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.famnum}</ThemedText>}
+                    {errors.famnum && <ThemedText style={styles.required}>{errors.famnum}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedSearchSelect<PersonSearchRequest>
@@ -277,18 +308,18 @@ const CreateFamily = () => {
                             )
                         }}
                     />
-                    {errors.famhead && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.famhead}</ThemedText>}
+                    {errors.famhead && <ThemedText style={styles.required}>{errors.famhead}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
                         items={RELATIONSHIP}
                         value={hhheadrel}
                         setValue={setHhheadrel}
-                        placeholder='Relationship to Household Head'
+                        placeholder={isLoadingKinship ? 'Loading relationship...' : 'Relationship to Household Head'}
                         order={0}
                         disabled={true}
                     />
-                    {errors.hhheadrel && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.hhheadrel}</ThemedText>}
+                    {errors.hhheadrel && <ThemedText style={styles.required}>{errors.hhheadrel}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
@@ -298,7 +329,7 @@ const CreateFamily = () => {
                         placeholder='Household Type'
                         order={1}
                     />
-                    {errors.hhtype && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.hhtype}</ThemedText>}
+                    {errors.hhtype && <ThemedText style={styles.required}>{errors.hhtype}</ThemedText>}
                     <Spacer height={15} />
 
                     <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
@@ -329,7 +360,7 @@ const CreateFamily = () => {
                         onChangeText={setUfcNum}
                         keyboardType="numeric"
                     />
-                    {errors.ufcNum && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.ufcNum}</ThemedText>}
+                    {errors.ufcNum && <ThemedText style={styles.required}>{errors.ufcNum}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedTextInput
@@ -337,7 +368,7 @@ const CreateFamily = () => {
                         value={incomesource}
                         onChangeText={setIncomeSource}
                     />
-                    {errors.incomesource && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.incomesource}</ThemedText>}
+                    {errors.incomesource && <ThemedText style={styles.required}>{errors.incomesource}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
@@ -347,11 +378,10 @@ const CreateFamily = () => {
                         placeholder='Family Monthly Income'
                         order={2}
                     />
-                    {errors.fammnthlyincome && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.fammnthlyincome}</ThemedText>}
-                </View>
-                <Spacer height={15} />
+                    {errors.fammnthlyincome && <ThemedText style={styles.required}>{errors.fammnthlyincome}</ThemedText>}
 
-                <View>
+                    <Spacer height={15} />
+
                     <ThemedButton label="Continue" onPress={() => showModal({
                         title: 'Create Family Unit',
                         message: 'Create this family unit?',
@@ -441,3 +471,8 @@ const CreateFamily = () => {
 }
 
 export default CreateFamily
+
+const styles = StyleSheet.create({
+    container: { paddingHorizontal: 8 },
+    required: { color: '#b00020', fontSize: 12, marginBottom: 6 },
+})
