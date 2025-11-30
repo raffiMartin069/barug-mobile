@@ -19,7 +19,7 @@ import { FamilyQuery } from '@/repository/queries/FamilyQuery'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useMemo, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, View } from 'react-native'
 
 type Resident = {
   person_id: string
@@ -77,6 +77,7 @@ const UpdateFamHead = () => {
   const [residentList, setResidentList] = useState<Resident[]>([])
   const [modalVisible, setModalVisible] = useState(false)
   const [isLoadingMembers, setIsLoadingMembers] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
 
   // Reason
@@ -99,6 +100,7 @@ const UpdateFamHead = () => {
   // fetch family members when modal opens
   const fetchFamilyMembers = async () => {
     if (!familyNum) return
+    setRefreshing(true)
     setIsLoadingMembers(true)
     try {
       const fam = await famQuery.FetchActiveFamilyByFamilyNum(familyNum)
@@ -149,6 +151,7 @@ const UpdateFamHead = () => {
       setResidentList([])
     } finally {
       setIsLoadingMembers(false)
+      setRefreshing(false)
     }
   }
 
@@ -189,11 +192,13 @@ const UpdateFamHead = () => {
     <ThemedView style={{ flex: 1 }} safe>
       <ThemedAppBar
         title="Update Family Head"
-        showNotif={false}
-        showProfile={false}
+        showNotif={true}
+        showProfile={true}
       />
 
-      <ThemedKeyboardAwareScrollView>
+      <ThemedKeyboardAwareScrollView
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchFamilyMembers} />}
+      >
         <ThemedCard>
           <ThemedText title>
             {'FAM-001'}
@@ -209,9 +214,16 @@ const UpdateFamHead = () => {
 
           {/* New family head search & select */}
           <ThemedText style={styles.label}>New Family Head</ThemedText>
-          <ThemedText style={styles.link} onPress={() => { setModalVisible(true); fetchFamilyMembers(); }}>
-            Choose from family members
-          </ThemedText>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <ThemedText style={styles.link} onPress={() => { setModalVisible(true); fetchFamilyMembers(); }}>
+              Choose from family members
+            </ThemedText>
+            {isLoadingMembers && (
+              <View style={{ marginLeft: 8 }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+              </View>
+            )}
+          </View>
 
           <ThemedTextInput
             placeholder="Selected Family Head"
