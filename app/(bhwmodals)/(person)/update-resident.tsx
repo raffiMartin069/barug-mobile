@@ -154,6 +154,7 @@ const UpdateResident = () => {
   const { results: searchResults, search } = usePersonSearchByKey()
   const [searchText, setSearchText] = useState('')
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
 
   /** 2) Central store */
   const store = useResidentFormStore()
@@ -757,12 +758,63 @@ const UpdateResident = () => {
 
           <Spacer height={8} />
 
+          {/* Status Filter */}
+          <View style={styles.filterRow}>
+            <Pressable
+              style={[styles.filterChip, statusFilter === 'ACTIVE' && styles.filterChipActive]}
+              onPress={() => {
+                setStatusFilter('ACTIVE')
+                setSearchText('') // Clear search when switching filters
+                search('', 'ACTIVE') // Clear results
+              }}
+            >
+              <Ionicons name="checkmark-circle" size={16} color={statusFilter === 'ACTIVE' ? '#22C55E' : '#6B7280'} />
+              <ThemedText style={[styles.filterText, statusFilter === 'ACTIVE' && styles.filterTextActive]}>Active</ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, statusFilter === 'INACTIVE' && styles.filterChipActive]}
+              onPress={() => {
+                setStatusFilter('INACTIVE')
+                setSearchText('') // Clear search when switching filters
+                search('', 'INACTIVE') // Clear results
+              }}
+            >
+              <Ionicons name="alert-circle" size={16} color={statusFilter === 'INACTIVE' ? '#F59E0B' : '#6B7280'} />
+              <ThemedText style={[styles.filterText, statusFilter === 'INACTIVE' && styles.filterTextActive]}>Inactive</ThemedText>
+            </Pressable>
+            <Pressable
+              style={[styles.filterChip, statusFilter === 'ALL' && styles.filterChipActive]}
+              onPress={() => {
+                setStatusFilter('ALL')
+                setSearchText('') // Clear search when switching filters
+                search('', 'ALL') // Clear results
+              }}
+            >
+              <Ionicons name="people" size={16} color={statusFilter === 'ALL' ? '#2563EB' : '#6B7280'} />
+              <ThemedText style={[styles.filterText, statusFilter === 'ALL' && styles.filterTextActive]}>All</ThemedText>
+            </Pressable>
+          </View>
+
+          <Spacer height={8} />
+
+          {/* Info Label */}
+          <View style={styles.infoBox}>
+            <Ionicons name="information-circle" size={16} color="#6B7280" />
+            <ThemedText style={styles.infoText}>
+              {statusFilter === 'ACTIVE' && 'Searching active residents only (excludes deceased and inactive)'}
+              {statusFilter === 'INACTIVE' && 'Searching inactive residents only'}
+              {statusFilter === 'ALL' && 'Searching all residents (active and inactive, excludes deceased)'}
+            </ThemedText>
+          </View>
+
+          <Spacer height={8} />
+
           <ThemedSearchSelect<PersonSearchRequest>
             items={searchResults}
             getLabel={(p) => p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name}
             getSubLabel={(p) => p.address}
             inputValue={searchText}
-            onInputValueChange={(t) => { setSearchText(t); search(t) }}
+            onInputValueChange={(t) => { setSearchText(t); search(t, statusFilter) }}
             placeholder="Search by name or resident ID…"
             emptyText="No matches"
             onSelect={onSelectResident}
@@ -1379,5 +1431,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  filterChipActive: {
+    borderColor: '#441010',
+    backgroundColor: '#FFF6F6',
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterTextActive: {
+    color: '#441010',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
   },
 })

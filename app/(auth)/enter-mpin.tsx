@@ -1,10 +1,10 @@
 // app/(auth)/enter-mpin.tsx
 // at top
-import { registerMyDevice } from '@/services/push'
 import NiceModal, { ModalVariant } from '@/components/NiceModal'
 import Spacer from '@/components/Spacer'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
+import { registerMyDevice } from '@/services/push'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { router } from 'expo-router'
