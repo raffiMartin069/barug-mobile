@@ -36,8 +36,13 @@ const ThemedAppBar = ({
   const ACCENT = theme.link
 
   const [showNotifCard, setShowNotifCard] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
-  const { items, unread, markAllRead } = useNotifications({
+  React.useEffect(() => {
+    if (refreshTrigger > 0) refresh()
+  }, [refreshTrigger])
+
+  const { items, unread, markAllRead, refresh } = useNotifications({
     userTypeId: 1, // Resident appbar; for staff screens use 2
     personId: 4,
     staffId: undefined,

@@ -144,6 +144,8 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
       }
     }, [])
 
+    const [notifRefreshKey, setNotifRefreshKey] = useState(0)
+
     const onRefresh = useCallback(async () => {
       setRefreshing(true)
       try {
@@ -153,6 +155,7 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
             loadIdValidationRequest(details.person_id),
             loadProfileImage(details.person_id)
           ])
+          setNotifRefreshKey(k => k + 1)
         }
       } catch (error) {
         console.error('[ResidentHome] Refresh failed:', error)
@@ -215,6 +218,7 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
           showNotif={true}
           showProfile={true}
           onPressProfile={pushProfile}
+          notificationRefreshTrigger={notifRefreshKey}
         />
 
         <KeyboardAvoidingView>

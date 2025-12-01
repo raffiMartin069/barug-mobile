@@ -82,5 +82,20 @@ export function useNotifications({ userTypeId, personId = null, staffId = null }
     setItems(prev => prev.map(i => ({ ...i, is_read: true })));
   }
 
-  return { items, unread, markAllRead };
+  async function refresh() {
+    if ((userTypeId === 1 && !personId) || (userTypeId === 2 && !staffId)) return;
+    const q = supabase
+      .from('notification')
+      .select('*')
+      .eq('user_type_id', userTypeId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    const { data, error } = await q;
+    if (!error) {
+      const mineOnly = (data || []).filter(mine) as NotifItem[];
+      setItems(mineOnly);
+    }
+  }
+
+  return { items, unread, markAllRead, refresh };
 }
