@@ -54,6 +54,7 @@ import {
     useColorScheme,
     View,
 } from "react-native";
+import { useNavigationStore } from "@/store/useNavigation";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -132,6 +133,8 @@ const HouseholdList = () => {
 
   const setHouseholdNumber = useBasicHouseholdInfoStore((state) => state.setHouseholdNumber);
   const setHouseholdHead = useBasicHouseholdInfoStore((state) => state.setHouseholdHead);
+
+  const setTo = useNavigationStore((state: NavigationState) => state.setTo)
 
   const clearAddress = useGeolocationStore((state) => state.clear);
 
@@ -692,6 +695,7 @@ const HouseholdList = () => {
                         const hhNum = hhNumAny != null ? String(hhNumAny) : null;
                         try {
                           setHouseholdNumber(hhNum);
+                          setTo("designation");
                         } catch (e) {
                           console.warn('setHouseholdNumber failed', e);
                         }

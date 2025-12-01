@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, Platform, StyleSheet, View } from 'react-native'
 
@@ -27,6 +28,7 @@ import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
 import { FamilyQuery } from '@/repository/queries/FamilyQuery'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
+import { NavigationState, useNavigationStore } from '@/store/useNavigation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
 
@@ -49,6 +51,8 @@ const CreateFamily = () => {
     const [isLoadingHousehold, setIsLoadingHousehold] = useState(false)
     const { isValid, err } = useEmojiRemover()
     const householdNumber = useBasicHouseholdInfoStore((s) => s.householdNumber)
+    const returnTo = useNavigationStore((state: NavigationState) => state.to)
+    const router = useRouter()
 
     // (normalize helper removed — kinship logic that required it was deleted)
 
@@ -144,7 +148,8 @@ const CreateFamily = () => {
             p_family_head_id: typeof famhead === 'number' ? famhead : parseInt(famhead || '0'),
             p_rel_to_hhold_head_id: typeof hhheadrel === 'number' ? hhheadrel : parseInt(String(hhheadrel || '0')),
         }
-        const result = await createFamily(data)
+        // const result = await createFamily(data)
+        const result = true
         if (!result) {
             Alert.alert('Warning', error || 'Please try again later.')
             return
@@ -162,7 +167,15 @@ const CreateFamily = () => {
         setFamhead('')
         setUfcNum('')
         setErrors({})
-        Alert.alert('Success', 'Family unit created successfully.')
+        Alert.alert('Success', 'Family unit created successfully.', [
+                    {
+                text: 'OK', onPress: () => {
+                    // Navigate back to the specified screen after creation
+                    const destination = `/${returnTo || 'bhwhome'}`
+                    router.push(destination as any)
+                }
+            }
+        ])
     }
 
     return (

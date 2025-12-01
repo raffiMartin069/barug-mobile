@@ -27,6 +27,8 @@ import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
+import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
+import { NavigationState, useNavigationStore } from '@/store/useNavigation'
 
 const CreateHousehold = () => {
   const router = useRouter()
@@ -53,6 +55,11 @@ const CreateHousehold = () => {
   const lat = useGeolocationStore((state: GeolocationType) => state.lat)
   const lng = useGeolocationStore((state: GeolocationType) => state.lng)
   const sitioCode = useGeolocationStore((state: GeolocationType) => state.purokSitioCode)
+
+  const setCurrentHouseholdHead = useBasicHouseholdInfoStore((state) => state.setHouseholdHead)
+  const setCurrentHouseholdNumber = useBasicHouseholdInfoStore((state) => state.setHouseholdNumber)
+
+  const setTo = useNavigationStore((state: NavigationState) => state.setTo)
 
   const { results: residentItems, search } = usePersonSearchByKey()
   const { saveHousehold } = useHouseholdCreation()
@@ -97,6 +104,11 @@ const CreateHousehold = () => {
       p_longitude: parseFloat(lng) || 0,
     }
     const id = await saveHousehold(data);
+
+    setCurrentHouseholdHead(householdHead)
+    setCurrentHouseholdNumber(householdNumber)
+    setTo('bhwhome')
+
     if(id) {
       setHeadSearchText('')
       router.push('/(bhwmodals)/(family)/createfamily')
