@@ -49,6 +49,17 @@ const HomeAddress = () => {
         setLat(lat)
         setLng(lng)
         setSitioCode(sitioCode)
+        console.log('Geolocation Store Updated: ', {
+            houseNumber: hnum,
+            street: streetState,
+            purokSitio: puroksitio,
+            barangay: brgyState,
+            city: cityState,
+            lat: lat,
+            lng: lng,
+            purokSitioCode: sitioCode
+        });
+
     }, [
         hnum, streetState, puroksitio, 
         brgyState, cityState, lat, 
@@ -60,6 +71,16 @@ const HomeAddress = () => {
   const router = useRouter()
 
   const submitAddress = () => {
+    console.log('Geolocation Store Updated: ', {
+            houseNumber: hnum,
+            street: streetState,
+            purokSitio: puroksitio,
+            barangay: brgyState,
+            city: cityState,
+            lat: lat,
+            lng: lng,
+            purokSitioCode: sitioCode
+        });
     router.push({
         pathname: returnToPath ? returnToPath as typeof router.push.arguments[0]['pathname'] : '/createhousehold',
         params: {
@@ -118,7 +139,7 @@ const HomeAddress = () => {
             </View>
             <Spacer height={15}/>
             <View>
-                <ThemedButton onPress={submitAddress}>
+                <ThemedButton onPress={submitAddress} label={undefined}>
                     <ThemedText btn={true}>Continue</ThemedText>
                 </ThemedButton>
             </View>

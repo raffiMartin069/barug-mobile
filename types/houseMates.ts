@@ -9,9 +9,11 @@
  */
 
 export type MgaKaHouseMates = {
+    householdHeadId: number | null;
     memberId: number | null;
     householdId: number | null;
     familyId: number | null;
+    setHouseholdHeadId: (id: number) => void;
     setMemberId: (id: number) => void;
     setHouseholdId: (id: number) => void;
     setFamilyId: (id: number) => void;

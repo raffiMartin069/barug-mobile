@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react'
-import { Alert, StyleSheet, View } from 'react-native'
+import { useRouter } from 'expo-router'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Alert, Platform, StyleSheet, View } from 'react-native'
 
 import Spacer from '@/components/Spacer'
 import ThemedAppBar from '@/components/ThemedAppBar'
@@ -22,16 +23,22 @@ import { usePersonSearchByKey } from '@/hooks/usePersonSearch'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { useEmojiRemover } from '@/hooks/useEmojiRemover'
 import { useFamilyCreation } from '@/hooks/useFamilyCreation'
+import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
+// PersonCommands and kinship logic removed — relationships are chosen manually now
+import { FamilyQuery } from '@/repository/queries/FamilyQuery'
 import { useAccountRole } from '@/store/useAccountRole'
+import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
+import { NavigationState, useNavigationStore } from '@/store/useNavigation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
+
 
 const CreateFamily = () => {
 
     const [famnum, setFamnum] = useState('')
-    const [famhead, setFamhead] = useState('')
+    const [famhead, setFamhead] = useState<number | string>('')
     const [famHeadText, setFamHeadText] = useState('')
-    const [hhheadrel, setHhheadrel] = useState('')
+    const [hhheadrel, setHhheadrel] = useState<number | string>('')
     const [nhts, setNhts] = useState<'yes' | 'no'>('no')
     const [indigent, setIndigent] = useState<'yes' | 'no'>('no')
     const [incomesource, setIncomeSource] = useState('')
@@ -41,8 +48,47 @@ const CreateFamily = () => {
     const [householdHeadText, setHouseholdHeadText] = useState('')
     const [ufcNum, setUfcNum] = useState<string>('')
     const [errors, setErrors] = useState<{ [key: string]: string }>({})
-    const [emoji, setEmoji] = useState<string>('')
+    const [isLoadingHousehold, setIsLoadingHousehold] = useState(false)
     const { isValid, err } = useEmojiRemover()
+    const householdNumber = useBasicHouseholdInfoStore((s) => s.householdNumber)
+    const returnTo = useNavigationStore((state: NavigationState) => state.to)
+    const router = useRouter()
+
+    // (normalize helper removed — kinship logic that required it was deleted)
+
+    // Prefill household head when household number is provided
+    useEffect(() => {
+        let mounted = true
+        const fetchHousehold = async () => {
+            if (!householdNumber) return
+            setIsLoadingHousehold(true)
+            try {
+                const cmd = new HouseholdCommand()
+                const hh = await cmd.FetchHouseholdByHouseholdNumber(String(householdNumber))
+                if (!mounted || !hh) return
+
+                // try multiple naming conventions for the household head
+                const hhObj = (hh as any).household_head ?? (hh as any).householdHead ?? null
+                if (hhObj) {
+                    const pid = (hhObj as any).person_id ?? (hhObj as any).personId ?? null
+                    if (pid) {
+                        setHouseholdHeadId(String(pid))
+                        const nameParts = [ (hhObj as any).first_name, (hhObj as any).middle_name, (hhObj as any).last_name ].filter(Boolean)
+                        setHouseholdHeadText(nameParts.join(' ').trim())
+                    }
+                }
+            } catch (e: any) {
+                console.error('fetchHousehold error', e)
+            } finally {
+                if (mounted) setIsLoadingHousehold(false)
+            }
+        }
+
+        fetchHousehold()
+        return () => { mounted = false }
+    }, [householdNumber])
+
+    // Kinship prefill removed: relationships are now selected manually by the user.
 
     const handleValidation = useMemo(() => {
         const newErrors: { [key: string]: string } = {}
@@ -61,10 +107,12 @@ const CreateFamily = () => {
         incomesource, fammnthlyincome])
 
     const { results: residentItems, search } = usePersonSearchByKey()
-    const { createFamily, loading, error, success } = useFamilyCreation()
+    const { createFamily, loading, error } = useFamilyCreation()
     const profile = useAccountRole((s) => s.getProfile('resident'))
     const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
         const { showModal } = useNiceModal()
+
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const integrityCheck = () => {
         /**
@@ -76,13 +124,14 @@ const CreateFamily = () => {
         const validationErrors = handleValidation
         if (validationErrors) {
             setErrors(validationErrors)
-            return;
+            return false
         }
         setErrors({})
         if (!isValid({ famnum, incomesource, ufcNum })) {
             Alert.alert('Invalid Input', err || 'Emojis are not allowed');
-            return;
+            return false
         }
+        return true
     }
 
     const handleSubmit = async () => {
@@ -96,10 +145,11 @@ const CreateFamily = () => {
             p_nhts_status_id: nhts === 'yes' ? 1 : 2,
             p_indigent_status_id: indigent === 'yes' ? 1 : 2,
             p_household_type_id: parseInt(hhtype),
-            p_family_head_id: parseInt(famhead),
-            p_rel_to_hhold_head_id: parseInt(hhheadrel),
+            p_family_head_id: typeof famhead === 'number' ? famhead : parseInt(famhead || '0'),
+            p_rel_to_hhold_head_id: typeof hhheadrel === 'number' ? hhheadrel : parseInt(String(hhheadrel || '0')),
         }
         const result = await createFamily(data)
+        // const result = true
         if (!result) {
             Alert.alert('Warning', error || 'Please try again later.')
             return
@@ -117,52 +167,38 @@ const CreateFamily = () => {
         setFamhead('')
         setUfcNum('')
         setErrors({})
-        Alert.alert('Success', 'Family unit created successfully.')
+        Alert.alert('Success', 'Family unit created successfully.', [
+                    {
+                text: 'OK', onPress: () => {
+                    // Navigate back to the specified screen after creation
+                    const destination = `/${returnTo || 'bhwhome'}`
+                    router.push(destination as any)
+                }
+            }
+        ])
     }
 
     return (
-        <ThemedView safe>
+        <ThemedView style={{ flex: 1, justifyContent: 'flex-start' }} safe={true}>
             <ThemedAppBar
                 title='Register Family Unit'
-                showNotif={false}
-                showProfile={false}
+                showNotif={true}
+                showProfile={true}
             />
-            <ThemedKeyboardAwareScrollView>
-                <View>
+            <ThemedKeyboardAwareScrollView
+                keyboardShouldPersistTaps="handled"
+                extraScrollHeight={Platform.OS === 'ios' ? 20 : 100}
+                contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-start', padding: 20 }}
+            >
+                <View style={styles.container}>
 
-                    <ThemedSearchSelect<PersonSearchRequest>
-                        items={residentItems}
-                        getLabel={(p) =>
-                            p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name
-                        }
-                        getSubLabel={(p) => p.address}
-                        inputValue={householdHeadText}
-                        onInputValueChange={(t) => {
-                            setHouseholdHeadText(t)
-                            search(t)
-                            if (!t) setHouseholdHeadId('')
-                        }}
-                        placeholder='Household Head (Name / Resident ID)'
-                        filter={(p, q) => {
-                            const query = q.toLowerCase()
-                            return (
-                                p.full_name.toLowerCase().includes(query) ||
-                                (p.person_code || '').toLowerCase().includes(query) ||
-                                (p.address || '').toLowerCase().includes(query) ||
-                                query.includes(p.full_name.toLowerCase()) ||
-                                (p.person_code && query.includes(p.person_code.toLowerCase()))
-                            )
-                        }}
-                        onSelect={(p) => {
-                            setHouseholdHeadId(p.person_id)
-                            setHouseholdHeadText(
-                                p.person_code
-                                    ? `${p.full_name} · ${p.person_code}`
-                                    : p.full_name
-                            )
-                        }}
+                    <ThemedTextInput
+                        placeholder='Household Head (locked)'
+                        value={isLoadingHousehold ? 'Loading...' : householdHeadText}
+                        editable={false}
+                        onChangeText={() => {}}
                     />
-                    {errors.householdHeadId && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.householdHeadId}</ThemedText>}
+                    {errors.householdHeadId && <ThemedText style={styles.required}>{errors.householdHeadId}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedTextInput
@@ -171,7 +207,7 @@ const CreateFamily = () => {
                         onChangeText={setFamnum}
                         keyboardType="numeric"
                     />
-                    {errors.famnum && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.famnum}</ThemedText>}
+                    {errors.famnum && <ThemedText style={styles.required}>{errors.famnum}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedSearchSelect<PersonSearchRequest>
@@ -206,17 +242,17 @@ const CreateFamily = () => {
                             )
                         }}
                     />
-                    {errors.famhead && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.famhead}</ThemedText>}
+                    {errors.famhead && <ThemedText style={styles.required}>{errors.famhead}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
                         items={RELATIONSHIP}
                         value={hhheadrel}
                         setValue={setHhheadrel}
-                        placeholder='Relationship to Household Head'
+                        placeholder={'Relationship to Household Head'}
                         order={0}
                     />
-                    {errors.hhheadrel && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.hhheadrel}</ThemedText>}
+                    {errors.hhheadrel && <ThemedText style={styles.required}>{errors.hhheadrel}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
@@ -226,7 +262,7 @@ const CreateFamily = () => {
                         placeholder='Household Type'
                         order={1}
                     />
-                    {errors.hhtype && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.hhtype}</ThemedText>}
+                    {errors.hhtype && <ThemedText style={styles.required}>{errors.hhtype}</ThemedText>}
                     <Spacer height={15} />
 
                     <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
@@ -257,7 +293,7 @@ const CreateFamily = () => {
                         onChangeText={setUfcNum}
                         keyboardType="numeric"
                     />
-                    {errors.ufcNum && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.ufcNum}</ThemedText>}
+                    {errors.ufcNum && <ThemedText style={styles.required}>{errors.ufcNum}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedTextInput
@@ -265,7 +301,7 @@ const CreateFamily = () => {
                         value={incomesource}
                         onChangeText={setIncomeSource}
                     />
-                    {errors.incomesource && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.incomesource}</ThemedText>}
+                    {errors.incomesource && <ThemedText style={styles.required}>{errors.incomesource}</ThemedText>}
                     <Spacer height={10} />
 
                     <ThemedDropdown
@@ -275,21 +311,92 @@ const CreateFamily = () => {
                         placeholder='Family Monthly Income'
                         order={2}
                     />
-                    {errors.fammnthlyincome && <ThemedText style={{ color: 'red', fontSize: 12 }}>{errors.fammnthlyincome}</ThemedText>}
-                </View>
-                <Spacer height={15} />
+                    {errors.fammnthlyincome && <ThemedText style={styles.required}>{errors.fammnthlyincome}</ThemedText>}
 
-                <View>
-                    <ThemedButton onPress={() => showModal({
+                    <Spacer height={15} />
+
+                    <ThemedButton label="Continue" onPress={() => showModal({
                         title: 'Create Family Unit',
                         message: 'Create this family unit?',
                         variant: 'info',
                         primaryText: 'Create',
                         secondaryText: 'Cancel',
-                        onPrimary: () => { integrityCheck(); handleSubmit(); },
-                    })} loading={loading} disabled={loading}>
-                        <ThemedText btn>Continue</ThemedText>
-                    </ThemedButton>
+                        onPrimary: async () => {
+                            setIsSubmitting(true)
+                            try {
+                                const ok = integrityCheck()
+                                if (!ok) {
+                                    setIsSubmitting(false)
+                                    return
+                                }
+
+                                // Pre-flight: ensure the selected family head is not already an active house member
+                                try {
+                                    const famId = typeof famhead === 'number' ? famhead : parseInt(String(famhead || '0'))
+                                    if (Number.isFinite(famId) && famId > 0) {
+                                        const hhCmd = new HouseholdCommand()
+                                        const existing = await hhCmd.FetchActiveHouseMemberByPersonId(famId)
+                                        if (existing) {
+                                            // show a NiceModal warning and abort submit
+                                            showModal({
+                                                title: 'Warning',
+                                                message: 'This person is an active member of a family.',
+                                                variant: 'warn',
+                                                primaryText: 'OK'
+                                            })
+                                            setIsSubmitting(false)
+                                            return
+                                        }
+                                    }
+                                } catch (errCheck) {
+                                    console.error('active-member preflight error', errCheck)
+                                    // allow submit to proceed if the preflight check itself errors
+                                }
+
+                                // Pre-flight: check for existing family number
+                                try {
+                                    const familyQuery = new FamilyQuery()
+                                    const existingFamNum = await familyQuery.FetchFamilyByFamilyNum(famnum.trim())
+                                    if (existingFamNum) {
+                                        showModal({
+                                            title: 'Duplicate Family Number',
+                                            message: `Family number "${famnum}" already exists. Please use a different number.`,
+                                            variant: 'warn',
+                                            primaryText: 'OK'
+                                        })
+                                        setIsSubmitting(false)
+                                        return
+                                    }
+                                } catch (errCheck) {
+                                    console.error('family number check error', errCheck)
+                                    // allow submit to proceed if the preflight check itself errors
+                                }
+
+                                // Pre-flight: check for existing UFC number
+                                try {
+                                    const familyQuery = new FamilyQuery()
+                                    const existingUfc = await familyQuery.FetchFamilyByUfcNum(ufcNum.trim())
+                                    if (existingUfc) {
+                                        showModal({
+                                            title: 'Duplicate UFC Number',
+                                            message: `UFC number "${ufcNum}" already exists. Please use a different number.`,
+                                            variant: 'warn',
+                                            primaryText: 'OK'
+                                        })
+                                        setIsSubmitting(false)
+                                        return
+                                    }
+                                } catch (errCheck) {
+                                    console.error('UFC number check error', errCheck)
+                                    // allow submit to proceed if the preflight check itself errors
+                                }
+
+                                await handleSubmit()
+                            } finally {
+                                setIsSubmitting(false)
+                            }
+                        },
+                    })} loading={loading || isSubmitting} disabled={loading || isSubmitting || handleValidation !== null} />
                 </View>
             </ThemedKeyboardAwareScrollView>
         </ThemedView>
@@ -298,4 +405,7 @@ const CreateFamily = () => {
 
 export default CreateFamily
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+    container: { paddingHorizontal: 8 },
+    required: { color: '#b00020', fontSize: 12, marginBottom: 6 },
+})

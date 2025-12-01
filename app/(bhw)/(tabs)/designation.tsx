@@ -41,19 +41,20 @@ import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  findNodeHandle,
-  KeyboardAvoidingView,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  UIManager,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    findNodeHandle,
+    KeyboardAvoidingView,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    UIManager,
+    useColorScheme,
+    View,
 } from "react-native";
+import { NavigationState, useNavigationStore } from "@/store/useNavigation";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -86,7 +87,8 @@ const HouseholdList = () => {
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
   const [resolvedStaffId, setResolvedStaffId] = useState<number | null>(null)
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId ?? 5);
+
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId,  true);
 
   useEffect(() => {
     let mounted = true
@@ -131,11 +133,13 @@ const HouseholdList = () => {
   const setHouseholdNumber = useBasicHouseholdInfoStore((state) => state.setHouseholdNumber);
   const setHouseholdHead = useBasicHouseholdInfoStore((state) => state.setHouseholdHead);
 
+  const setTo = useNavigationStore((state: NavigationState) => state.setTo)
+
   const clearAddress = useGeolocationStore((state) => state.clear);
 
   const isFocused = useIsFocused();
 
-  const fetchHouseholds = async () => {
+  const fetchHouseholds = React.useCallback(async () => {
     const service = new HouseholdListService(new FamilyRepository(), new HouseholdRepository());
     setLoadingHouseholds(true);
     try {
@@ -143,13 +147,13 @@ const HouseholdList = () => {
     } finally {
       setLoadingHouseholds(false);
     }
-  };
+  }, [getHouseholds]);
 
   useEffect(() => {
     if (!isFocused) return;
+    // ensure we fetch when screen becomes focused or when resolvedStaffId updates
     fetchHouseholds();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFocused]);
+  }, [isFocused, resolvedStaffId]);
 
 
 
@@ -547,7 +551,7 @@ const HouseholdList = () => {
 
                   <Spacer height={15} />
 
-                  <ThemedButton submit={false} onPress={() => openSheet(hh)}>
+                  <ThemedButton submit={false} label={undefined} onPress={() => openSheet(hh)}>
                     <ThemedText non_btn={true}>View Details</ThemedText>
                   </ThemedButton>
                 </ThemedCard>
@@ -684,7 +688,18 @@ const HouseholdList = () => {
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <ThemedChip
                       label={"Add Family Unit"}
-                      onPress={() => router.push("/createfamily")}
+                      onPress={() => {
+                        // store household number in the basic household info store before navigating
+                        const hhNumAny = (selectedHousehold as any)?.householdNum ?? (selectedHousehold as any)?.householdNum ?? null;
+                        const hhNum = hhNumAny != null ? String(hhNumAny) : null;
+                        try {
+                          setHouseholdNumber(hhNum);
+                          setTo("designation");
+                        } catch (e) {
+                          console.warn('setHouseholdNumber failed', e);
+                        }
+                        router.push("/createfamily");
+                      }}
                       filled={false}
                     />
                     <ThemedChip

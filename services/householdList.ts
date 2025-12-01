@@ -11,13 +11,16 @@ export class HouseholdListService {
         this.householdRepository = householdRepository;
     }
 
-    async execute(p_staff_id: number = null) {
+    async execute(p_staff_id: number = null, isExit: boolean = false) {
         let households;
+
+        if (!p_staff_id && isExit) {
+            return [];
+        }
+
         if (!p_staff_id) {
-            console.log("Fetching all active households");
             households = await this.householdRepository.GetActiveHousehold();
         } else {
-            console.log(`Fetching households for staff ID: ${p_staff_id}`);
             households = await this.householdRepository.GetActiveDesignatedHouseholdByStaffId(p_staff_id);
         }
         const fullHouseholdData = [];
