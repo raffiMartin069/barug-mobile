@@ -52,12 +52,33 @@ export default function BusinessLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
-        name="(tabs)/docreqhistory"
+        name="(tabs)/businesses"
         options={{
-          title: 'Document Request',
+          title: 'Businesses',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'business' : 'business-outline'} size={20} color={color} />
+          ),
+        }}
+      />
+      
+      <Tabs.Screen
+        name="(tabs)/activities"
+        options={{
+          title: 'Activities',
           tabBarIcon: ({ focused, color }) => (
             <Ionicons name={focused ? 'newspaper' : 'newspaper-outline'} size={20} color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="(tabs)/paymenthistory"
+        options={{
+          title: 'Transaction History',
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={20} color={color} />
           ),
         }}
       />
