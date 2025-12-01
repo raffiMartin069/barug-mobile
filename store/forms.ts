@@ -21,6 +21,8 @@ type ResidentFormState = {
   city: string
   mobnum: string
   email: string
+  residencyMonth: string
+  residencyYear: string
 
   // SOCIOECON
   educattainment: string
@@ -69,6 +71,7 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
   haddress: '', street: '', purokSitio: '', brgy: '', city: '',
   latitude: '', longitude: '',
   mobnum: '', email: '',
+  residencyMonth: '', residencyYear: '',
 
   // SOCIOECON
   educattainment: '', employmentstat: '', occupation: '',
@@ -91,6 +94,7 @@ export const useResidentFormStore = create<ResidentFormState>((set, get) => ({
       haddress: '', street: '', purokSitio: '', brgy: '', city: '',
       latitude: '', longitude: '',
       mobnum: '', email: '',
+      residencyMonth: '', residencyYear: '',
       educattainment: '', employmentstat: '', occupation: '',
       mnthlypersonalincome: '', govprogrm: '',
       govprogIds: [],

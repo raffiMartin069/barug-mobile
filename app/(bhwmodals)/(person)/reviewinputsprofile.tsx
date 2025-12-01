@@ -145,7 +145,22 @@ const ReviewInputsProfile = () => {
 
               // TODO: replace with actual logged-in staff/BHW person_id
               const performerId = 5
-              const residencyPeriod = 0
+              
+              // Calculate residency period in months
+              const residencyPeriod = (() => {
+                const month = Number(data.residencyMonth)
+                const year = Number(data.residencyYear)
+                console.log('[ReviewInputs] Residency data:', { month, year, raw: { residencyMonth: data.residencyMonth, residencyYear: data.residencyYear } })
+                if (!month || !year) return 0
+                
+                const now = new Date()
+                const startDate = new Date(year, month - 1, 1)
+                const yearsDiff = now.getFullYear() - startDate.getFullYear()
+                const monthsDiff = now.getMonth() - startDate.getMonth()
+                const totalMonths = yearsDiff * 12 + monthsDiff
+                console.log('[ReviewInputs] Calculated residency period:', totalMonths, 'months')
+                return totalMonths
+              })()
 
               const payload: ProfileResidentArgs = {
                 p_performer_id: performerId,
@@ -361,6 +376,16 @@ const ReviewInputsProfile = () => {
           <View style={styles.row}>
             <ThemedText subtitle>Are you still a student?</ThemedText>
             <ThemedText subtitle>{isStudent ? 'Yes' : 'No'}</ThemedText>
+          </View>
+
+          <Spacer height={10} />
+          <View style={styles.row}>
+            <ThemedText subtitle>Resident Since:</ThemedText>
+            <ThemedText subtitle>
+              {data.residencyMonth && data.residencyYear
+                ? `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(data.residencyMonth) - 1]} ${data.residencyYear}`
+                : '—'}
+            </ThemedText>
           </View>
 
           <Spacer height={20} />

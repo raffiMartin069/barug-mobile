@@ -135,6 +135,8 @@ const SocioeconomicInfo = () => {
     occupation,
     mnthlypersonalincome,
     govprogrm, // CSV ("1,3,5")
+    residencyMonth,
+    residencyYear,
     setMany,
   } = useResidentFormStore()
 
@@ -163,6 +165,22 @@ const SocioeconomicInfo = () => {
   const setIncome = (next: string | ((curr: string) => string)) =>
     setMany({ mnthlypersonalincome: String(typeof next === 'function' ? next(mnthlypersonalincome) : next) })
   const setOcc = (v: string) => setMany({ occupation: v })
+  
+  const setResidencyMonth = (v: string | ((curr: string) => string)) => {
+    const value = typeof v === 'function' ? v(residencyMonth) : v
+    console.log('[SocioeconomicInfo] Setting residency month:', value)
+    setMany({ residencyMonth: value })
+  }
+  const setResidencyYear = (v: string | ((curr: string) => string)) => {
+    const value = typeof v === 'function' ? v(residencyYear) : v
+    console.log('[SocioeconomicInfo] Setting residency year:', value)
+    setMany({ residencyYear: value })
+  }
+  
+  // Log current values whenever they change
+  React.useEffect(() => {
+    console.log('[SocioeconomicInfo] Current residency values:', { residencyMonth, residencyYear })
+  }, [residencyMonth, residencyYear])
 
   // Government Programs
   const NONE_VALUE = '7'
@@ -246,6 +264,44 @@ const SocioeconomicInfo = () => {
             placeholder={`Monthly Personal Income${REQUIRED.mnthlypersonalincome ? ' *' : ''}`}
             order={2}
           />
+
+          <Spacer height={10} />
+
+          {/* --- Residency Period --- */}
+          <View style={styles.card}>
+            <ThemedText subtitle>When did you start being a resident in Sto. Niño?</ThemedText>
+            <Spacer height={8} />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <ThemedDropdown
+                  items={[
+                    { label: 'January', value: '1' }, { label: 'February', value: '2' },
+                    { label: 'March', value: '3' }, { label: 'April', value: '4' },
+                    { label: 'May', value: '5' }, { label: 'June', value: '6' },
+                    { label: 'July', value: '7' }, { label: 'August', value: '8' },
+                    { label: 'September', value: '9' }, { label: 'October', value: '10' },
+                    { label: 'November', value: '11' }, { label: 'December', value: '12' },
+                  ]}
+                  value={residencyMonth}
+                  setValue={setResidencyMonth}
+                  placeholder="Month"
+                  order={3}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <ThemedDropdown
+                  items={Array.from({ length: 100 }, (_, i) => {
+                    const year = new Date().getFullYear() - i
+                    return { label: String(year), value: String(year) }
+                  })}
+                  value={residencyYear}
+                  setValue={setResidencyYear}
+                  placeholder="Year"
+                  order={4}
+                />
+              </View>
+            </View>
+          </View>
 
           <Spacer height={10} />
 

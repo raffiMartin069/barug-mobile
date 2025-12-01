@@ -538,6 +538,7 @@
                 <Spacer height={2} />
 
                 <InfoRow label="Home Address:" value={address} />
+                <InfoRow label="Resident Since:" value={profile?.resident_since ?? '—'} />
                 <InfoRow label="Residency Period:" value={profile?.residency_period ?? '—'} />
                 <InfoRow label="Residential Status:" value={profile?.residential_status ?? '—'} />
               </ThemedCard>
