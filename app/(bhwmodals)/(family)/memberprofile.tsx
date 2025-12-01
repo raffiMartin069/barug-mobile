@@ -41,18 +41,6 @@ const MemberProfile = () => {
       if (opts?.refresh) setRefreshing(true)
       else setLoading(true);
       const details: any = await repo.getAllResidentInfo(memberId);
-        const ids: any[] = [];
-        let profile_picture = null;
-
-        if (details?.[0]?.profile_picture) {
-          profile_picture = await repo.getDocuments(details[0].profile_picture);
-        }
-
-        for (let doc of (details?.[0]?.valid_id_files || [])) {
-          if (!doc) continue;
-          const images = await repo.getDocuments(doc);
-          ids.push(images);
-        }
 
         if (!mountedRef.current) return;
 
@@ -69,6 +57,7 @@ const MemberProfile = () => {
         } catch {
         }
 
+        // Use image paths directly from the details response
         setPersonalDetails({
           person_id: details[0].person_id,
           first_name: details[0].first_name,
@@ -85,10 +74,10 @@ const MemberProfile = () => {
           occupation: details[0].occupation,
           personal_monthly_income: details[0].personal_monthly_income,
           gov_program: details[0].gov_program,
-          front_id_file: ids[0] ? ids[0].publicUrl : undefined,
-          back_id_file: ids[1] ? ids[1].publicUrl : undefined,
-          selfie_id_file: ids[2] ? ids[2].publicUrl : undefined,
-          profile_picture: profile_picture ? profile_picture.publicUrl : undefined,
+          front_id_file: details[0].valid_id_front_path || undefined,
+          back_id_file: details[0].valid_id_back_path || undefined,
+          selfie_id_file: details[0].selfie_with_id || undefined,
+          profile_picture: details[0].profile_picture || undefined,
         });
 
     } catch (e: any) {
