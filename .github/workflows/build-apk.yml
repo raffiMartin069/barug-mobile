@@ -35,6 +35,8 @@ jobs:
 
       - name: Build APK with EAS
         run: eas build --platform android --profile preview --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       - name: Wait for build completion and download APK
         run: |
