@@ -9,19 +9,18 @@ import ThemedIcon from "@/components/ThemedIcon";
 import ThemedText from "@/components/ThemedText";
 import ThemedTextInput from "@/components/ThemedTextInput";
 import ThemedView from "@/components/ThemedView";
-import { FILTER_BY_STATUS } from "@/constants/filterByStatus";
-import { FILTER_BY_WEEK } from "@/constants/filterByWeek";
 
 import { useFetchHouseAndFamily } from "@/hooks/useFetchHouseAndFamily";
 import { useMemberRemoval } from "@/hooks/useMemberRemoval";
 
 import { FamilyRepository } from "@/repository/familyRepository";
-import { HealthWorkerRepository } from "@/repository/HealthWorkerRepository";
+// removed HealthWorkerRepository import — client-side search will be used instead
 import { HouseholdRepository } from "@/repository/householdRepository";
+import { StaffRepository } from '@/repository/StaffRepository';
 
 import { HouseholdListService } from "@/services/householdList";
 import { MemberRemovalService } from "@/services/memberRemovalService";
-import { SearchSchedulingService } from "@/services/SearchSchedulingService";
+// SearchSchedulingService removed — client-side search will be used instead
 import { useGeolocationStore } from "@/store/geolocationStore";
 
 import { useHouseMateStore } from "@/store/houseMateStore";
@@ -32,15 +31,15 @@ import { Family } from "@/types/familyTypes";
 import { Household } from "@/types/householdType";
 import { MgaKaHouseMates } from "@/types/houseMates";
 import { Member } from "@/types/memberTypes";
-import { HouseholdDataTransformation } from "@/utilities/HouseholdDataTransformation";
+// HouseholdDataTransformation removed — client-side filtering will be used instead
 
-import CenteredModal from '@/components/maternal/CenteredModal';
+import CenteredModal from '@/components/custom/CenteredModal';
 import { Colors } from '@/constants/Colors';
 import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { Ionicons } from "@expo/vector-icons";
 import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -86,8 +85,31 @@ const HouseholdList = () => {
   const setMemberId = useHouseMateStore((state: MgaKaHouseMates) => state.setMemberId);
   const setHouseholdId = useHouseMateStore((state: MgaKaHouseMates) => state.setHouseholdId);
   const setFamilyId = useHouseMateStore((state: MgaKaHouseMates) => state.setFamilyId);
-  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(5);
+  const [resolvedStaffId, setResolvedStaffId] = useState<number | null>(null)
+  const { households, setHouseholds, getHouseholds, selectedHousehold, setSelectedHousehold } = useFetchHouseAndFamily(resolvedStaffId ?? 5);
+
+  useEffect(() => {
+    let mounted = true
+    const resolveStaff = async () => {
+      try {
+        const personId = staffId
+        if (!personId) return
+        const repo = new StaffRepository()
+        const staff = await repo.GetStaffByPersonId(Number(personId))
+        if (!mounted) return
+        if (staff && staff.staff_id) setResolvedStaffId(Number(staff.staff_id))
+      } catch (err) {
+        console.error('[Designation] failed to resolve staff id:', err)
+      }
+    }
+
+    resolveStaff()
+    return () => { mounted = false }
+  }, [staffId])
   const [search, setSearch] = useState('')
+  const [visibleHouseholds, setVisibleHouseholds] = useState<any[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 5
   const [status, setStatus] = useState()
   const [weekRange, setWeekRange] = useState()
   const [menuPortal, setMenuPortal] = useState<MenuPortalState>({ visible: false, x: 0, y: 0, w: 0, h: 0, items: [] })
@@ -126,6 +148,7 @@ const HouseholdList = () => {
   useEffect(() => {
     if (!isFocused) return;
     fetchHouseholds();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFocused]);
 
 
@@ -169,7 +192,7 @@ const HouseholdList = () => {
 
   const closeSheet = () => setOpen(false);
 
-  const searchService = new SearchSchedulingService(new HealthWorkerRepository());
+  // client-side search: no remote service instance required
 
   const onFamiliesScroll = (e: any) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -331,32 +354,86 @@ const HouseholdList = () => {
   const getLabelFor = (items: { label: string; value: any }[], val: any) => items.find((i) => i.value === val)?.label ?? String(val ?? '')
 
   const findHousehold = async (key: string | number, executionType: number) => {
-
-    /* This function allows users to execute search functionality and retrieve household information.
-
-      - Checks if the search key and execution type are valid.
-      - If not, it fetches all households.
-      - If valid, it uses the search service to get filtered household data.
-      - Parses and transforms the data into a structured format.
-      - Updates the state with the transformed household data.
-      
-      By: raf
+    /* Client-side search: filter the currently loaded `households` instead of calling the backend.
+       - If key/executionType are missing or executionType === 0, refresh the full list.
+       - Otherwise, perform a case-insensitive substring search against a few visible fields.
     */
-
     if (!key || !executionType || executionType === 0) {
-      await fetchHouseholds()
+      await fetchHouseholds();
       return;
     }
-    if (typeof key === "string") key = key.trim();
+
+    const q = String(key).trim().toLowerCase();
     try {
-      const filteredHouseholdData = await searchService.Execute(key, executionType);
-      const parsedData = filteredHouseholdData.map((item: string) => JSON.parse(item));
-      const transformedHouseholds = HouseholdDataTransformation.TransformFilteredAndSearchHouseholdData(parsedData);
-      setHouseholds(transformedHouseholds);
+      const filtered = (households || []).filter((hh: any) => {
+        const householdNum = String(hh.householdNum ?? '').toLowerCase();
+        const head = String(hh.householdHead ?? '').toLowerCase();
+        const address = String(hh.address ?? '').toLowerCase();
+        const familiesCount = hh.families ? String(hh.families.length) : '';
+        const id = String(hh.id ?? '');
+
+        // search families and members
+        let familyMatch = false;
+        if (Array.isArray(hh.families)) {
+          for (const fam of hh.families) {
+            const famNum = String(fam.familyNum ?? '').toLowerCase();
+            const famHead = String(fam.headName ?? '').toLowerCase();
+            if (famNum.includes(q) || famHead.includes(q)) {
+              familyMatch = true;
+              break;
+            }
+            if (Array.isArray(fam.members)) {
+              for (const m of fam.members) {
+                if (String(m.name ?? '').toLowerCase().includes(q)) {
+                  familyMatch = true;
+                  break;
+                }
+              }
+              if (familyMatch) break;
+            }
+          }
+        }
+
+        return (
+          householdNum.includes(q) ||
+          head.includes(q) ||
+          address.includes(q) ||
+          familiesCount.includes(q) ||
+          id.includes(q) ||
+          familyMatch
+        );
+      });
+
+      setVisibleHouseholds(filtered);
+      setCurrentPage(1);
     } catch (error) {
-      console.error("Error searching households:", error);
+      console.error('Error performing client-side search:', error);
     }
   };
+
+  // sync visibleHouseholds to source when households change
+  useEffect(() => {
+    setVisibleHouseholds(households ?? []);
+    setCurrentPage(1);
+  }, [households]);
+
+  // debounce search input and trigger find
+   
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const key = search ?? '';
+      if (!key) {
+        findHousehold('', 0);
+      } else {
+        findHousehold(key, 1);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+  const displayed = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return (visibleHouseholds || []).slice(start, start + itemsPerPage);
+  }, [visibleHouseholds, currentPage]);
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
@@ -375,7 +452,7 @@ const HouseholdList = () => {
               setStatus(undefined)
               setWeekRange(undefined)
               setSearch(text)
-              findHousehold(text, 1)
+              setCurrentPage(1)
             }} />
             <Spacer height={10} />
             {/* <View style={styles.filtersWrap}>
@@ -418,7 +495,7 @@ const HouseholdList = () => {
           </View>
           {/* END SEARCH AND FILTERS SECTION */}
 
-          {households.map((hh) => (
+          {displayed.map((hh) => (
             <View key={hh.id}>
               <Pressable onPress={() => openSheet(hh)}>
                 <ThemedCard>
@@ -479,6 +556,13 @@ const HouseholdList = () => {
               <Spacer />
             </View>
           ))}
+
+          {/* Pagination controls */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8, gap: 8 }}>
+            <ThemedButton label="Prev" onPress={() => setCurrentPage((p) => Math.max(1, p - 1))} />
+            <ThemedText>Page {currentPage} of {Math.max(1, Math.ceil((visibleHouseholds || []).length / itemsPerPage))}</ThemedText>
+            <ThemedButton label="Next" onPress={() => setCurrentPage((p) => Math.min(Math.max(1, Math.ceil((visibleHouseholds || []).length / itemsPerPage)), p + 1))} />
+          </View>
         </ScrollView>
 
         {/* overlay spinner */}
@@ -791,14 +875,13 @@ const HouseholdList = () => {
             <ThemedButton
               submit={false}
               onPress={() => setRemoveOpen(false)}
-              style={{ flex: 1 }}
+              style={{ flex: 1 }} label={undefined}              
             >
               <ThemedText non_btn>Cancel</ThemedText>
             </ThemedButton>
             <View style={{ width: 10 }} />
             <ThemedButton
-              style={{ flex: 1 }}
-            >
+              style={{ flex: 1 }} label={undefined}            >
               <ThemedText onPress={() => confirmMemberRemoval(pendingRemoval?.member.id)} btn>Confirm Remove</ThemedText>
             </ThemedButton>
           </View>

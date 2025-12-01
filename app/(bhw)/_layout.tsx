@@ -75,6 +75,17 @@ const BhwLayout = () => {
             />
 
             <Tabs.Screen
+                name='(tabs)/child_visit'
+                options={{title: 'Child Visit', tabBarIcon: ({focused}) => (
+                    <Ionicons
+                    name={focused ? 'medkit' : 'medkit-outline'}
+                    size={20}
+                    color={focused ? theme.tabIconSelected : theme.tabIconDefault}
+                    />
+                )}}
+            />
+
+            <Tabs.Screen
                 name='(tabs)/postpartum'
                 options={{title: 'Postpartum', tabBarIcon: ({focused}) => (
                     <Ionicons
