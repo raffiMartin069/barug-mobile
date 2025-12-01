@@ -23,7 +23,7 @@ import { useNiceModal } from '@/hooks/NiceModalProvider'
 import { useEmojiRemover } from '@/hooks/useEmojiRemover'
 import { useFamilyCreation } from '@/hooks/useFamilyCreation'
 import { HouseholdCommand } from '@/repository/commands/HouseholdCommand'
-import { PersonCommands } from '@/repository/commands/PersonCommands'
+// PersonCommands and kinship logic removed — relationships are chosen manually now
 import { FamilyQuery } from '@/repository/queries/FamilyQuery'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
@@ -47,16 +47,10 @@ const CreateFamily = () => {
     const [ufcNum, setUfcNum] = useState<string>('')
     const [errors, setErrors] = useState<{ [key: string]: string }>({})
     const [isLoadingHousehold, setIsLoadingHousehold] = useState(false)
-    const [isLoadingKinship, setIsLoadingKinship] = useState(false)
     const { isValid, err } = useEmojiRemover()
     const householdNumber = useBasicHouseholdInfoStore((s) => s.householdNumber)
 
-    // normalize helper to handle Supabase returning object or array for nested selects
-    const normalize = <T,>(v: T | T[] | null | undefined): T[] => {
-        if (Array.isArray(v)) return v as T[]
-        if (v == null) return []
-        return [v as T]
-    }
+    // (normalize helper removed — kinship logic that required it was deleted)
 
     // Prefill household head when household number is provided
     useEffect(() => {
@@ -90,80 +84,7 @@ const CreateFamily = () => {
         return () => { mounted = false }
     }, [householdNumber])
 
-    // When family head is selected, fetch kinship from family head -> household head and prefill relationship
-    useEffect(() => {
-        let mounted = true
-        const deriveKinship = async () => {
-            // Clear relationship if family head is empty or household head not present
-            if (!famhead || !householdHeadId) {
-                setHhheadrel('')
-                setIsLoadingKinship(false)
-                return
-            }
-
-            const famId = Number(famhead)
-            const hhId = Number(householdHeadId)
-            if (!Number.isFinite(famId) || !Number.isFinite(hhId)) {
-                setHhheadrel('')
-                setIsLoadingKinship(false)
-                return
-            }
-
-            setIsLoadingKinship(true)
-            let found = false
-            try {
-                const personCmd = new PersonCommands()
-
-                // 1) Try kinship where family head is source and household head is destination
-                const kinFromFam = await personCmd.FetchKinshipBySrcPersonId(famId)
-                if (mounted && Array.isArray(kinFromFam) && kinFromFam.length > 0) {
-                    const edge = kinFromFam.find(k => normalize((k as any).dst_person).some((dp: any) => Number(dp.person_id) === hhId))
-                    if (edge) {
-                        // relationship may be nested or a direct id
-                        const relArr = normalize((edge as any).relationship)
-                        const relObj = relArr[0] ?? null
-                        const relId = relObj?.relationship_id ?? (edge as any).relationship_id ?? null
-                        if (relId) {
-                            // store as number so it matches RELATIONSHIP item values
-                            setHhheadrel(Number(relId))
-                            found = true
-                        }
-                    }
-                }
-
-                // 2) If not found, try reverse: household head as source, family head as destination
-                if (!found) {
-                    const kinFromHh = await personCmd.FetchKinshipBySrcPersonId(hhId)
-                    if (mounted && Array.isArray(kinFromHh) && kinFromHh.length > 0) {
-                        const edge2 = kinFromHh.find(k => normalize((k as any).dst_person).some((dp: any) => Number(dp.person_id) === famId))
-                        if (edge2) {
-                            const relArr2 = normalize((edge2 as any).relationship)
-                            const relObj2 = relArr2[0] ?? null
-                            const relId2 = relObj2?.relationship_id ?? (edge2 as any).relationship_id ?? null
-                            if (relId2) {
-                                setHhheadrel(Number(relId2))
-                                found = true
-                            }
-                        }
-                    }
-                }
-
-                // If no kinship was found, clear the relationship field
-                if (!found) {
-                    setHhheadrel('')
-                }
-            } catch (e) {
-                console.error('deriveKinship error', e)
-                // on error, clear relationship to avoid showing stale data
-                if (mounted) setHhheadrel('')
-            } finally {
-                if (mounted) setIsLoadingKinship(false)
-            }
-        }
-
-        deriveKinship()
-        return () => { mounted = false }
-    }, [famhead, householdHeadId])
+    // Kinship prefill removed: relationships are now selected manually by the user.
 
     const handleValidation = useMemo(() => {
         const newErrors: { [key: string]: string } = {}
@@ -315,9 +236,8 @@ const CreateFamily = () => {
                         items={RELATIONSHIP}
                         value={hhheadrel}
                         setValue={setHhheadrel}
-                        placeholder={isLoadingKinship ? 'Loading relationship...' : 'Relationship to Household Head'}
+                        placeholder={'Relationship to Household Head'}
                         order={0}
-                        disabled={true}
                     />
                     {errors.hhheadrel && <ThemedText style={styles.required}>{errors.hhheadrel}</ThemedText>}
                     <Spacer height={10} />

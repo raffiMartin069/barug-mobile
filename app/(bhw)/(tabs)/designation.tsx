@@ -612,7 +612,6 @@ const HouseholdList = () => {
                           closeMenuPortal()
                           setHouseholdNumber(selectedHousehold.householdNum)
                           setHouseholdHead(selectedHousehold.householdHead)
-                          console.log(selectedHousehold)
                           clearAddress();
                           router.push({
                             pathname: '/updatehhinfo',

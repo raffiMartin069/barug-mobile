@@ -40,7 +40,6 @@ const UpdateFamInfo = () => {
   // --- Context (read-only) ---
   const familyNum = params.familyNum ?? params.id ?? ''
   const familyHeadName = params.familyHeadName ?? '—'
-  console.log('UpdateFamInfo params:', params)
 
   // --- Editable fields (prefill if provided) ---
   const [hhheadrel, setHhheadrel] = useState<string>(params.relationshipToHh ?? '')
@@ -96,7 +95,6 @@ const UpdateFamInfo = () => {
   const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
 
   const onSubmit = () => {
-    console.log('Submitting updated family info with values: ' + Number(params.id ?? familyNum))
     const sendData = async () => {
 
       try {

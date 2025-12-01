@@ -81,7 +81,6 @@ const UpdateHhInfo = () => {
       const household_cmd = new HouseholdCommand()
       const details = await household_cmd.FetchActiveHouseholdByHouseholdNumber(houseHoldNumber)
       if (!mounted || !details) return
-
       setStreet(details.addresss.street ?? '')
       setBarangay(details.addresss.barangay ?? '')
       setCity(details.addresss.city ?? '')

@@ -64,13 +64,6 @@ const UpdateFamHead = () => {
   const householdNum   = params.householdNum ?? ''
   const currentHeadName = params.currentHeadName ?? '—'
 
-  console.log('UpdateFamHead params:', {
-    householdId,
-    familyNum,
-    householdNum,
-    currentHeadName,
-  });
-
   // New head selection
   const [newHeadId, setNewHeadId] = useState<string>('')
   const [newHeadName, setNewHeadName] = useState<string>('')
@@ -121,7 +114,6 @@ const UpdateFamHead = () => {
       const active: Resident[] = members
         .filter((m: any) => Boolean(m.is_active))
         .map((m: any) => {
-          console.log('Family member data:', m)
 
           // exclude the current family head
           if (String(m.person_id) === String(currentHeadId)) return null

@@ -12,8 +12,7 @@ import ThemedView from '@/components/ThemedView';
 import { RELATIONSHIP } from '@/constants/relationship';
 import { ResidencyException } from '@/exception/ResidencyException';
 import { useNiceModal } from '@/hooks/NiceModalProvider';
-import { PersonCommands } from '@/repository/commands/PersonCommands';
-import { FamilyRepository } from '@/repository/familyRepository';
+import { HouseMemberCommand } from '@/repository/queries/HouseMemberCommand';
 import { ResidentRepository } from '@/repository/residentRepository';
 import { useHouseMateStore } from '@/store/houseMateStore';
 import { MgaKaHouseMates } from '@/types/houseMates';
@@ -32,7 +31,6 @@ const MemberProfile = () => {
   const [relToHousehold, setRelToHousehold] = React.useState<number | null>(null)
   const [relToFamily, setRelToFamily] = React.useState<number | null>(null)
   const [relationshipPicker, setRelationshipPicker] = React.useState<'household' | 'family' | null>(null)
-  const familyNumber = useHouseMateStore((state: MgaKaHouseMates) => state.familyId)
 
   const mountedRef = useRef(true)
   const [refreshing, setRefreshing] = React.useState(false)
@@ -58,120 +56,15 @@ const MemberProfile = () => {
 
         if (!mountedRef.current) return;
 
-        // attempt kinship-derived relations (same approach as addmember.tsx)
+        // attempt relationship-prefill: try house_member records first, then fallback to kinship DTO
         try {
-          const personCmd = new PersonCommands()
-          const kin = await personCmd.FetchKinshipBySrcPersonId(Number(memberId))
-
-          // Attempt multiple ways to resolve family/household heads and match kin edges.
-          const fRepo = new FamilyRepository()
-          let fid: any = null
-          let familyHeadId: any = null
-          let householdId: any = null
-          let householdHeadId: any = null
-
-          // Try store-provided familyNumber first
-          if (familyNumber) {
-            fid = await fRepo.getFamilyId(familyNumber)
-          }
-
-          // If fid not found, try resident details payload (family_id or family_num)
-          if (!fid && details?.[0]) {
-            const d = details[0]
-            if (d.family_num) {
-              fid = await fRepo.getFamilyId(d.family_num)
-            }
-            // if we already have a numeric family primary id on details, use it directly
-            if (!fid && d.family_id) {
-              fid = d.family_id
-            }
-          }
-
-          if (fid) {
-            try {
-              familyHeadId = await fRepo.GetFamilyHeadIdByFamilyId(fid)
-            } catch {
-            }
-            try {
-              householdId = await fRepo.GetHouseholdIdByFamilyId(fid)
-            } catch {
-            }
-            if (householdId) {
-              try {
-                householdHeadId = await fRepo.GetHouseholdHeadIdByHouseholdId(householdId)
-              } catch {
-              }
-            }
-          }
-
-          
-
-          const normalize = <T,>(v: T | T[] | null | undefined): T[] => {
-            if (Array.isArray(v)) return v as T[]
-            if (v == null) return []
-            return [v as T]
-          }
-
-          const extractPersonIds = (dp: any): number[] => {
-            const out: number[] = []
-            if (!dp) return out
-            if (dp.person_id != null) out.push(Number(dp.person_id))
-            if (dp.id != null) out.push(Number(dp.id))
-            if (dp.person && dp.person.person_id != null) out.push(Number(dp.person.person_id))
-            if (dp.person && dp.person.id != null) out.push(Number(dp.person.id))
-            return out
-          }
-
-          const extractRelId = (r: any): number | null => {
-            if (!r) return null
-            if (r.relationship_id != null) return Number(r.relationship_id)
-            if (r.id != null) return Number(r.id)
-            if (r.rel_id != null) return Number(r.rel_id)
-            if (r.relationship && r.relationship.relationship_id != null) return Number(r.relationship.relationship_id)
-            return null
-          }
-
-          if (Array.isArray(kin)) {
-            // look for family head reference
-            let famEdge: any = null
-            if (familyHeadId) {
-              famEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(Number(familyHeadId))))
-            }
-            // fallback: try matching against details.family_head_person_id if present
-            if (!famEdge && details?.[0]?.family_head_person_id) {
-              const fh = Number(details[0].family_head_person_id)
-              famEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(fh)))
-            }
-            
-                if (famEdge) {
-              const rel = normalize((famEdge as any).relationship)
-              if (rel.length > 0) {
-                const chosen = extractRelId(rel[0])
-                if (chosen != null) {
-                  setRelToFamily(chosen)
-                }
-              }
-            }
-
-            let hhEdge: any = null
-            if (householdHeadId) {
-              hhEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(Number(householdHeadId))))
-            }
-            // fallback: try matching against details.household_head_person_id
-            if (!hhEdge && details?.[0]?.household_head_person_id) {
-              const hh = Number(details[0].household_head_person_id)
-              hhEdge = kin.find((k: any) => normalize(k.dst_person).some((dp: any) => extractPersonIds(dp).includes(hh)))
-            }
-            
-            if (hhEdge) {
-              const rel = normalize((hhEdge as any).relationship)
-              if (rel.length > 0) {
-                const chosen = extractRelId(rel[0])
-                if (chosen != null) {
-                  setRelToHousehold(chosen)
-                }
-              }
-            }
+          const houseCmd = new HouseMemberCommand()
+          const hm = await houseCmd.FetchActiveHouseMemberByPersonId(Number(memberId))
+          if (hm) {
+            const hhRel = hm.relationship_to_hholdhead_id ?? hm.relationship_to_household_head_id ?? hm.relationship_to_household_id ?? hm.rel_to_hhold_head_id ?? null
+            const famRel = hm.relationship_to_family_head_id ?? hm.relationship_to_family_id ?? hm.rel_to_family_head_id ?? null
+            if (hhRel != null) setRelToHousehold(Number(hhRel))
+            if (famRel != null) setRelToFamily(Number(famRel))
           }
         } catch {
         }
@@ -206,7 +99,7 @@ const MemberProfile = () => {
         setRefreshing(false)
       }
     }
-  }, [memberId, familyNumber, showModal]);
+  }, [memberId, showModal]);
 
   useEffect(() => {
     mountedRef.current = true

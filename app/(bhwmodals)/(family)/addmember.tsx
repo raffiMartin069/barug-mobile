@@ -135,36 +135,13 @@ const AddMember = () => {
             setNationality(normalize(details?.nationality)[0]?.nationality_name ?? "");
             setSex(normalize(details?.sex)[0]?.sex_name ?? "");
 
-            // kinship-derived relations
-            const kin = await personRepo.FetchKinshipBySrcPersonId(Number(personId));
-            if (familyId) {
-                const repo = new FamilyRepository();
-                const familyHeadId = await repo.GetFamilyHeadIdByFamilyId(familyId);
-                const householdId = await repo.GetHouseholdIdByFamilyId(familyId);
-                const householdHeadId = householdId ? await repo.GetHouseholdHeadIdByHouseholdId(householdId) : null;
-
-                if (familyHeadId) {
-                    const famEdge = (kin ?? []).find(k => normalize(k.dst_person).some(dp => Number((dp as any).person_id) === Number(familyHeadId)));
-                    if (famEdge) {
-                        const rel = normalize((famEdge as any).relationship);
-                        if (rel.length > 0) setFamHeadRel(rel[0].relationship_id ?? "");
-                    }
-                }
-
-                if (householdHeadId) {
-                    const hhEdge = (kin ?? []).find(k => normalize(k.dst_person).some(dp => Number((dp as any).person_id) === Number(householdHeadId)));
-                    if (hhEdge) {
-                        const rel = normalize((hhEdge as any).relationship);
-                        if (rel.length > 0) setHhHeadReal(rel[0].relationship_id ?? "");
-                    }
-                }
-            }
+            // Kinship prefill removed: user will select relationships manually.
         } catch (e) {
             console.error('fetchResidentInfo error', e);
         } finally {
             setIsFetchingResident(false);
         }
-    }, [familyId]);
+    }, []);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
@@ -274,7 +251,6 @@ const AddMember = () => {
                         value={famheadrel}
                         setValue={setFamHeadRel}
                         placeholder="Relationship to Family Head"
-                        disabled={!!famheadrel}
                     />
 
                     {String(famheadrel).length === 0 && (
@@ -294,7 +270,6 @@ const AddMember = () => {
                         setValue={setHhHeadReal}
                         placeholder="Relationship to Household Head"
                         order={1}
-                        disabled={!!hhheadrel}
                     />
 
                     {String(hhheadrel).length === 0 && (

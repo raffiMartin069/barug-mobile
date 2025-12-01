@@ -40,8 +40,6 @@ export class ResidentRepository {
             p_reason: p_reason ?? null,
         }
 
-        console.log('confirmResidency params:', params)
-
         const { data, error } = await supabase.rpc(func, params)
         if (error) {
             console.error(`Error calling ${func}:`, error)
