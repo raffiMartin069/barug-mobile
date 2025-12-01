@@ -148,8 +148,8 @@ const CreateFamily = () => {
             p_family_head_id: typeof famhead === 'number' ? famhead : parseInt(famhead || '0'),
             p_rel_to_hhold_head_id: typeof hhheadrel === 'number' ? hhheadrel : parseInt(String(hhheadrel || '0')),
         }
-        // const result = await createFamily(data)
-        const result = true
+        const result = await createFamily(data)
+        // const result = true
         if (!result) {
             Alert.alert('Warning', error || 'Please try again later.')
             return
