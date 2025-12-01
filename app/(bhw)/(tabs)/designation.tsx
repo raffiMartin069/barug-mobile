@@ -54,7 +54,7 @@ import {
     useColorScheme,
     View,
 } from "react-native";
-import { useNavigationStore } from "@/store/useNavigation";
+import { NavigationState, useNavigationStore } from "@/store/useNavigation";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -108,7 +108,6 @@ const HouseholdList = () => {
     resolveStaff()
     return () => { mounted = false }
   }, [staffId])
-
   const [search, setSearch] = useState('')
   const [visibleHouseholds, setVisibleHouseholds] = useState<any[]>([])
   const [currentPage, setCurrentPage] = useState(1)

@@ -8,6 +8,9 @@ import ThemedImage from '@/components/ThemedImage'
 import ThemedText from '@/components/ThemedText'
 import ThemedView from '@/components/ThemedView'
 import { supabase } from '@/constants/supabase'
+import { useBusinessStats } from '@/hooks/useBusinessStats'
+import { useExpiringBusinesses } from '@/hooks/useExpiringBusinesses'
+import { useRecentActivity } from '@/hooks/useRecentActivity'
 import { useAccountRole } from '@/store/useAccountRole'
 import { useRouter } from 'expo-router'
 import React, { useCallback, useEffect, useState } from 'react'
@@ -20,6 +23,15 @@ const BusinessHome = () => {
   const residentProfile = getProfile('resident')
   const profile = businessProfile || residentProfile
   const [profileImage, setProfileImage] = useState<string | null>(null)
+  
+  // Fetch business stats
+  const { stats, loading: statsLoading } = useBusinessStats(profile?.person_id)
+  
+  // Fetch expiring businesses
+  const { expiringBusinesses, loading: expiringLoading } = useExpiringBusinesses(profile?.person_id)
+  
+  // Fetch recent activity
+  const { activities, loading: activitiesLoading } = useRecentActivity(profile?.person_id, 5)
 
   // Load profile image
   const loadProfileImage = useCallback(async (personId: number) => {
@@ -98,125 +110,191 @@ const BusinessHome = () => {
 
             <View style={styles.container}>
               <View style={styles.subcontainer}>
-                <ThemedIcon name="briefcase" iconColor="#3B82F6" bgColor="#E0ECFF" />
-                <ThemedText style={styles.statLabel}>Registered</ThemedText>
-                <ThemedText style={styles.statValue}>2</ThemedText>
+                <ThemedIcon name="time-outline" iconColor="#724d24ff" bgColor="#eeede8ff" containerSize={45} size={20} />
+                <ThemedText style={styles.statLabel}>Pending</ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {statsLoading ? '...' : stats.pending_count}
+                </ThemedText>
               </View>
 
               <View style={styles.subcontainer}>
-                <ThemedIcon name="document-text" iconColor="#16A34A" bgColor="#DFF5E0" />
-                <ThemedText style={styles.statLabel}>Active Clearances</ThemedText>
-                <ThemedText style={styles.statValue}>1</ThemedText>
+                <ThemedIcon name="checkmark-circle" iconColor="#6b4c3b" bgColor="#f2e5d7" containerSize={45} size={20} />
+                <ThemedText style={styles.statLabel}>Active</ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {statsLoading ? '...' : stats.active_count}
+                </ThemedText>
               </View>
 
               <View style={styles.subcontainer}>
-                <ThemedIcon name="time" iconColor="#8B5CF6" bgColor="#EEE8FD" />
-                <ThemedText style={styles.statLabel}>Pending Requests</ThemedText>
-                <ThemedText style={styles.statValue}>3</ThemedText>
+                <ThemedIcon name="alert-circle" iconColor="#4a5c6a" bgColor="#dfe3e6" containerSize={45} size={20} />
+                <ThemedText style={styles.statLabel}>Expired</ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {statsLoading ? '...' : stats.expired_count}
+                </ThemedText>
+              </View>
+
+              <View style={styles.subcontainer}>
+                <ThemedIcon name="close-circle" iconColor="#4e6151" bgColor="#dce5dc" containerSize={45} size={20} />
+                <ThemedText style={styles.statLabel}>Closed</ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {statsLoading ? '...' : stats.closed_count}
+                </ThemedText>
               </View>
             </View>
           </ThemedCard>
 
           <Spacer height={20} />
 
-          {/* Quick Actions — same layout as Services */}
-          <ThemedCard>
-            <ThemedText style={styles.text} subtitle>Quick Actions</ThemedText>
-
-            <View style={styles.container}>
-              <View style={styles.subcontainer}>
-                <TouchableOpacity onPress={() => router.push('/')}>
-                  <ThemedIcon name="newspaper" iconColor="#6b4c3b" bgColor="#f2e5d7" />
-                </TouchableOpacity>
-                <ThemedText style={styles.icontext}>Apply/Renew Clearance</ThemedText>
-              </View>
-
-              <View style={styles.subcontainer}>
-                <TouchableOpacity onPress={() => router.push('/')}>
-                  <ThemedIcon name="create" iconColor="#4a5c6a" bgColor="#dfe3e6" />
-                </TouchableOpacity>
-                <ThemedText style={styles.icontext}>Update Business Info</ThemedText>
-              </View>
-
-              <View style={styles.subcontainer}>
-                <TouchableOpacity onPress={() => router.push('/')}>
-                  <ThemedIcon name="folder-open" iconColor="#4e6151" bgColor="#dce5dc" />
-                </TouchableOpacity>
-                <ThemedText style={styles.icontext}>View Requests</ThemedText>
-              </View>
-            </View>
-          </ThemedCard>
+          {/* Expiring Businesses Alert */}
+          {!expiringLoading && expiringBusinesses.length > 0 && (
+            <>
+              <ThemedCard>
+                <View style={styles.cardHeader}>
+                  <ThemedIcon 
+                    name="warning" 
+                    iconColor="#291414ff" 
+                    bgColor="#f3eaeaff" 
+                    containerSize={40}
+                    size={20}
+                  />
+                  <ThemedText style={[styles.text, { marginLeft: 10 }]} subtitle>
+                    Businesses Expiring Soon
+                  </ThemedText>
+                </View>
+                
+                <Spacer height={10} />
+                
+                {expiringBusinesses.slice(0, 3).map((business) => {
+                  const urgencyColors = {
+                    critical: { bg: '#FEE2E2', text: '#DC2626', badge: '#EF4444' },
+                    warning: { bg: '#FEF3C7', text: '#D97706', badge: '#F59E0B' },
+                    info: { bg: '#DBEAFE', text: '#2563EB', badge: '#3B82F6' },
+                  };
+                  const colors = urgencyColors[business.urgency];
+                  
+                  return (
+                    <View key={business.business_id}>
+                      <View style={[styles.expiringItem, { backgroundColor: colors.bg }]}>
+                        <View style={{ flex: 1 }}>
+                          <ThemedText style={[styles.expiringBusinessName, { color: colors.text }]}>
+                            {business.business_name}
+                          </ThemedText>
+                          <ThemedText style={styles.expiringDetails}>
+                            Expires: Dec 31, {business.expiry_year}
+                          </ThemedText>
+                          <ThemedText style={styles.expiringDetails}>
+                            Renew by: Jan 20, {business.expiry_year + 1}
+                          </ThemedText>
+                        </View>
+                        <View style={styles.expiringRight}>
+                          <View style={[styles.urgencyBadge, { backgroundColor: colors.badge }]}>
+                            <ThemedText style={styles.urgencyBadgeText}>
+                              {business.days_until_deadline < 0 
+                                ? 'OVERDUE' 
+                                : `${business.days_until_deadline} days`}
+                            </ThemedText>
+                          </View>
+                        </View>
+                      </View>
+                      <Spacer height={10} />
+                    </View>
+                  );
+                })}
+                
+                {expiringBusinesses.length > 3 && (
+                  <TouchableOpacity onPress={() => router.push('/(business)/(tabs)/businesses')}>
+                    <ThemedText style={styles.viewAllText}>
+                      View all {expiringBusinesses.length} expiring businesses →
+                    </ThemedText>
+                  </TouchableOpacity>
+                )}
+              </ThemedCard>
+              
+              <Spacer height={20} />
+            </>
+          )}
 
           <Spacer height={20} />
 
-          {/* Recent Activity — same row look as your Activities */}
+          {/* Recent Activity */}
           <ThemedCard>
             <ThemedText style={styles.text} subtitle>Recent Activity</ThemedText>
 
-            <View style={styles.activityItem}>
-              <ThemedIcon
-                name="document-text"
-                iconColor="#6b4c3b"
-                bgColor="#f2e5d7"
-                shape="square"
-                containerSize={50}
-                size={20}
-              />
-              <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityTitle}>Business Clearance Renewal</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Submitted: Sep 8, 2025</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Ref: BCLR-2025-0142</ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: '#ffe082' }]}>
-                <ThemedText style={styles.badgeText}>Processing</ThemedText>
-              </View>
-            </View>
-
-            <Spacer height={15} />
-            <ThemedDivider />
-            <Spacer height={15} />
-
-            <View style={styles.activityItem}>
-              <ThemedIcon
-                name="create"
-                iconColor="#4a5c6a"
-                bgColor="#dfe3e6"
-                shape="square"
-                containerSize={50}
-                size={20}
-              />
-              <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityTitle}>Business Profile Update</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Updated: Sep 5, 2025</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Fields: Address, Operating Hours</ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: '#c8e6c9' }]}>
-                <ThemedText style={styles.badgeText}>Approved</ThemedText>
-              </View>
-            </View>
-
-            <Spacer height={15} />
-            <ThemedDivider />
-            <Spacer height={15} />
-
-            <View style={styles.activityItem}>
-              <ThemedIcon
-                name="cash"
-                iconColor="#4e6151"
-                bgColor="#dce5dc"
-                shape="square"
-                containerSize={50}
-                size={20}
-              />
-              <View style={styles.activityDetails}>
-                <ThemedText style={styles.activityTitle}>OR #102938 — Clearance Fee</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Posted: Sep 3, 2025</ThemedText>
-                <ThemedText style={styles.activitySubtext}>Amount: ₱500.00</ThemedText>
-              </View>
-              <View style={[styles.badge, { backgroundColor: '#b3e5fc' }]}>
-                <ThemedText style={styles.badgeText}>Paid</ThemedText>
-              </View>
-            </View>
+            <ScrollView 
+              style={styles.activityScrollView}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled={true}
+            >
+              {activitiesLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ThemedText style={styles.loadingText}>Loading activities...</ThemedText>
+                </View>
+              ) : activities.length === 0 ? (
+                <View style={styles.emptyActivityContainer}>
+                  <ThemedIcon
+                    name="calendar-outline"
+                    iconColor="#9CA3AF"
+                    bgColor="#F3F4F6"
+                    containerSize={60}
+                    size={30}
+                  />
+                  <ThemedText style={styles.emptyActivityText}>No recent activity</ThemedText>
+                  <ThemedText style={styles.emptyActivitySubtext}>
+                    Your business activities will appear here
+                  </ThemedText>
+                </View>
+              ) : (
+                <>
+                  {activities.map((activity, index) => (
+                    <React.Fragment key={activity.activity_id}>
+                      {index > 0 && (
+                        <>
+                          <Spacer height={15} />
+                          <ThemedDivider />
+                          <Spacer height={15} />
+                        </>
+                      )}
+                      <View style={styles.activityItem}>
+                        <ThemedIcon
+                          name={activity.icon.name as any}
+                          iconColor={activity.icon.color}
+                          bgColor={activity.icon.bgColor}
+                          shape="square"
+                          containerSize={50}
+                          size={20}
+                        />
+                        <View style={styles.activityDetails}>
+                          <ThemedText style={styles.activityTitle}>{activity.title}</ThemedText>
+                          <ThemedText style={styles.activitySubtext}>
+                            {activity.business_name}
+                          </ThemedText>
+                          <ThemedText style={styles.activitySubtext}>
+                            {new Date(activity.timestamp).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </ThemedText>
+                          {activity.reference && (
+                            <ThemedText style={styles.activitySubtext}>
+                              Ref: {activity.reference}
+                            </ThemedText>
+                          )}
+                        {activity.amount && (
+                          <ThemedText style={styles.activitySubtext}>
+                            Amount: ₱{activity.amount.toLocaleString()}
+                          </ThemedText>
+                        )}
+                      </View>
+                      <View style={[styles.badge, { backgroundColor: activity.badge.color }]}>
+                        <ThemedText style={styles.badgeText}>{activity.badge.text}</ThemedText>
+                      </View>
+                    </View>
+                  </React.Fragment>
+                ))}
+              </>
+            )}
+            </ScrollView>
           </ThemedCard>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -237,7 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 10,
-    width: 90,
+    width: 70,
   },
   text: {
     textAlign: 'center',
@@ -251,14 +329,14 @@ const styles = StyleSheet.create({
   // stats text
   statLabel: {
     textAlign: 'center',
-    marginTop: 8,
-    fontSize: 12,
+    marginTop: 6,
+    fontSize: 10,
     color: '#6B7280',
   },
   statValue: {
     textAlign: 'center',
     marginTop: 2,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#111827',
   },
@@ -312,5 +390,73 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
+  },
+  // Expiring businesses styles
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  expiringItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  expiringBusinessName: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  expiringDetails: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  expiringRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  urgencyBadge: {
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  urgencyBadgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  viewAllText: {
+    textAlign: 'center',
+    color: '#561C24',
+    fontWeight: '600',
+    fontSize: 13,
+    marginTop: 5,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  emptyActivityContainer: {
+    alignItems: 'center',
+    paddingVertical: 30,
+  },
+  emptyActivityText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 12,
+    color: '#6B7280',
+  },
+  emptyActivitySubtext: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  activityScrollView: {
+    maxHeight: 250,
   },
 })
