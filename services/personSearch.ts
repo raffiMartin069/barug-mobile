@@ -1,5 +1,5 @@
-import { HouseholdCreation } from "@/repository/householCreation";
 import { supabase } from "@/constants/supabase";
+import { PersonCommands } from "@/repository/commands/PersonCommands";
 import { PersonSearchRequest } from "@/types/householdHead";
 
 export class PersonSearchService {
@@ -10,6 +10,10 @@ export class PersonSearchService {
     constructor(key: string, statusFilter?: 'ACTIVE' | 'INACTIVE' | 'ALL') {
         this.key = key;
         this.statusFilter = statusFilter || 'ACTIVE';
+    }
+
+    public async FindNonResidentActivePerson() {
+        return await new PersonCommands().FindNonResidentActivePerson(this.key);
     }
 
     public async execute(): Promise<PersonSearchRequest[]> {

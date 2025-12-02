@@ -29,6 +29,7 @@ import { PersonSearchRequest } from '@/types/householdHead'
 import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
 import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
 import { NavigationState, useNavigationStore } from '@/store/useNavigation'
+import { usePersonSearchActiveNonResident } from '@/hooks/usePersonSearchActiveNonResident'
 
 const CreateHousehold = () => {
   const router = useRouter()
@@ -61,7 +62,9 @@ const CreateHousehold = () => {
 
   const setTo = useNavigationStore((state: NavigationState) => state.setTo)
 
-  const { results: residentItems, search } = usePersonSearchByKey()
+  const { results: residentItems, search } = usePersonSearchActiveNonResident()
+
+
   const { saveHousehold } = useHouseholdCreation()
   const profile = useAccountRole((s) => s.getProfile('resident'))
   const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null

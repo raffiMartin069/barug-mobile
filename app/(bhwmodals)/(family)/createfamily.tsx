@@ -31,6 +31,7 @@ import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
 import { NavigationState, useNavigationStore } from '@/store/useNavigation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { FamilyCreationRequest } from '@/types/request/familyCreationRequest'
+import { usePersonSearchActiveNonResident } from '@/hooks/usePersonSearchActiveNonResident'
 
 
 const CreateFamily = () => {
@@ -106,7 +107,7 @@ const CreateFamily = () => {
         hhheadrel, hhtype, ufcNum,
         incomesource, fammnthlyincome])
 
-    const { results: residentItems, search } = usePersonSearchByKey()
+    const { results: residentItems, search } = usePersonSearchActiveNonResident()
     const { createFamily, loading, error } = useFamilyCreation()
     const profile = useAccountRole((s) => s.getProfile('resident'))
     const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
