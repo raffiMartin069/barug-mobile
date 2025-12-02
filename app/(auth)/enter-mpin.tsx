@@ -50,8 +50,18 @@ const Mpin = () => {
   const [modalPrimaryText, setModalPrimaryText] = useState('Got it')
   const [modalSecondaryText, setModalSecondaryText] = useState<string | undefined>(undefined)
 
+  // DEBUG: log modal state
+  useEffect(() => {
+    console.log('[MPIN] modalOpen:', modalOpen, 'busy:', busy, 'isLocked:', isLocked)
+  }, [modalOpen, busy, isLocked])
+
   const isLocked = lockedUntil > Date.now()
   const secondsLeft = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000))
+
+  // DEBUG: log modal state
+  useEffect(() => {
+    console.log('[MPIN] modalOpen:', modalOpen, 'busy:', busy, 'isLocked:', isLocked)
+  }, [modalOpen, busy, isLocked])
 
   // ===== DEBUG: log access token from Supabase + AsyncStorage once on mount =====
   // useEffect(() => {
@@ -160,6 +170,7 @@ const Mpin = () => {
   }, [isLocked, lockedUntil])
 
   const keys = useMemo(() => ['1','2','3','4','5','6','7','8','9','blank','0','back'], [])
+  console.log('[MPIN] Rendering - keys available:', keys.length)
 
   const openModal = (
     title: string,
@@ -170,8 +181,8 @@ const Mpin = () => {
     setModalTitle(title)
     setModalMsg(message)
     setModalVariant(variant)
-    setModalPrimary(() => opts?.onPrimary)
-    setModalSecondary(() => opts?.onSecondary)
+    setModalPrimary(opts?.onPrimary ? () => opts.onPrimary : undefined)
+    setModalSecondary(opts?.onSecondary ? () => opts.onSecondary : undefined)
     setModalPrimaryText(opts?.primaryText ?? 'Got it')
     setModalSecondaryText(opts?.secondaryText)
     setModalOpen(true)

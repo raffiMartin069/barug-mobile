@@ -191,7 +191,7 @@ const HouseholdList = () => {
     setFamilyId(Number(fam.familyNum.split("-")[1]));
     setHouseholdId(Number(fam.familyNum.split("-")[0]));
     router.push({
-      pathname: "/(bhwmodals)/(family)/memberprofile",
+      pathname: "/(bhwmodals)/(family)/memberprofile_readonly",
     });
   };
 

@@ -130,7 +130,12 @@ export class HouseholdRepository {
 
     async RemoveMember(req: MemberRemovalType) {
         const func = "remove_house_member";
-        const { data, error } = await supabase.rpc(func, req);
+        console.log('Removing member with request:', req);
+        const { data, error } = await supabase.rpc(func, {
+            p_house_member_id: req.p_house_member_id,
+            p_performed_by: req.p_performed_by,
+            p_reason: req.p_reason,
+        });
         if (error) {
             const code = String(error.code ?? "").trim();
             if (MemberRemovalException.getErrorCodes().has(code)) {

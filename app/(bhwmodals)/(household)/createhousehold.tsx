@@ -27,6 +27,9 @@ import { GeolocationType } from '@/types/geolocation'
 import { HouseholdCreation } from '@/types/householdCreation'
 import { PersonSearchRequest } from '@/types/householdHead'
 import { HouseholdCreationRequest } from '@/types/request/householdCreationRequest'
+import { useBasicHouseholdInfoStore } from '@/store/useBasicHouseholdInfoStore'
+import { NavigationState, useNavigationStore } from '@/store/useNavigation'
+import { usePersonSearchActiveNonResident } from '@/hooks/usePersonSearchActiveNonResident'
 
 const CreateHousehold = () => {
   const router = useRouter()
@@ -54,7 +57,14 @@ const CreateHousehold = () => {
   const lng = useGeolocationStore((state: GeolocationType) => state.lng)
   const sitioCode = useGeolocationStore((state: GeolocationType) => state.purokSitioCode)
 
-  const { results: residentItems, search } = usePersonSearchByKey()
+  const setCurrentHouseholdHead = useBasicHouseholdInfoStore((state) => state.setHouseholdHead)
+  const setCurrentHouseholdNumber = useBasicHouseholdInfoStore((state) => state.setHouseholdNumber)
+
+  const setTo = useNavigationStore((state: NavigationState) => state.setTo)
+
+  const { results: residentItems, search } = usePersonSearchActiveNonResident()
+
+
   const { saveHousehold } = useHouseholdCreation()
   const profile = useAccountRole((s) => s.getProfile('resident'))
   const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null
@@ -97,6 +107,11 @@ const CreateHousehold = () => {
       p_longitude: parseFloat(lng) || 0,
     }
     const id = await saveHousehold(data);
+
+    setCurrentHouseholdHead(householdHead)
+    setCurrentHouseholdNumber(householdNumber)
+    setTo('bhwhome')
+
     if(id) {
       setHeadSearchText('')
       router.push('/(bhwmodals)/(family)/createfamily')
@@ -199,7 +214,7 @@ const CreateHousehold = () => {
             primaryText: 'Create',
             secondaryText: 'Cancel',
             onPrimary: () => { handleSave() },
-          })}>
+          })} label={undefined}>
             <ThemedText btn>Create Household</ThemedText>
           </ThemedButton>
         </View>

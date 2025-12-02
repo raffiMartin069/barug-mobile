@@ -11,16 +11,18 @@ import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { useSession } from '@/providers/SessionProvider';
 import { ChildHealthCommands } from '@/repository/commands/ChildHealthCommands';
 import ChildHealthQueryClass from '@/repository/queries/ChildHealthQuery';
+import ChildVisitQuery, { ChildMonitoringLogDto } from '@/repository/queries/ChildVisitQuery';
 import ChildVisitScheduleQuery from '@/repository/queries/ChildVisitScheduleQuery';
 import { StaffRepository } from '@/repository/StaffRepository';
 import validateChildVisitData, { ChildVisitDomainException } from '@/repository/validators/ChildVisitValidator';
 import { useAccountRole } from '@/store/useAccountRole';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 const query = new ChildHealthQueryClass();
 const commands = new ChildHealthCommands();
 const visitQuery = new ChildVisitScheduleQuery();
+const childVisitQuery = new ChildVisitQuery();
 const staffRepo = new StaffRepository();
 
 // Format an ISO date/time (or parsable date string) into a short date + 12-hour time
@@ -44,9 +46,14 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
     : null;
   const familyNum = item.family?.family_num ?? null;
   const [open, setOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'menu' | 'profile' | 'visit'>('menu');
-
+  const [viewMode, setViewMode] = useState<'menu' | 'profile' | 'visit' | 'logList' | 'logDetail'>('menu');
   
+  // monitoring log states
+  const [monitoringLogs, setMonitoringLogs] = useState<ChildMonitoringLogDto[]>([]);
+  const [selectedLog, setSelectedLog] = useState<ChildMonitoringLogDto | null>(null);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [logPage, setLogPage] = useState(1);
+  const logsPerPage = 5;
 
   // visit form state
   const [age, setAge] = useState('');
@@ -58,6 +65,22 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
   const session = useSession()
   const staffId = useAccountRole((s) => s.staffId)
   const { showModal } = useNiceModal()
+
+  // Load monitoring logs when user clicks "Monitoring Log"
+  const handleLoadMonitoringLogs = React.useCallback(async () => {
+    setLoadingLogs(true);
+    setLogPage(1); // Reset to first page
+    try {
+      const logs = await childVisitQuery.GetMonitoringLogsByChildRecordId(item.child_record_id);
+      setMonitoringLogs(logs ?? []);
+      setViewMode('logList');
+    } catch (err) {
+      console.error('Failed to load monitoring logs', err);
+      showModal({ title: 'Error', message: 'Failed to load monitoring logs', variant: 'error' });
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [item.child_record_id, showModal]);
 
   const handleSaveVisit = React.useCallback(async () => {
     // validate payload using centralized validator (throws ChildVisitDomainException on validation errors)
@@ -140,7 +163,8 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
     if (viewMode === 'menu') {
       return [
         { label: 'View Child Information', onPress: () => setViewMode('profile'), submit: false },
-        { label: 'Add Visit', onPress: () => setViewMode('visit'), submit: false },
+        { label: 'Add Monitoring', onPress: () => setViewMode('visit'), submit: false },
+        { label: 'Monitoring Log', onPress: handleLoadMonitoringLogs, submit: false },
       ];
     }
 
@@ -157,8 +181,27 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
       ];
     }
 
+    if (viewMode === 'logList') {
+      return [
+        { label: 'Back', onPress: () => setViewMode('menu'), submit: false },
+      ];
+    }
+
+    if (viewMode === 'logDetail') {
+      return [
+        { label: 'Back to List', onPress: () => setViewMode('logList'), submit: false },
+      ];
+    }
+
     return [];
-  }, [viewMode, handleSaveVisit]);
+  }, [viewMode, handleSaveVisit, handleLoadMonitoringLogs]);
+
+  // Paginate monitoring logs
+  const totalLogPages = Math.max(1, Math.ceil(monitoringLogs.length / logsPerPage));
+  const displayedLogs = React.useMemo(() => {
+    const start = (logPage - 1) * logsPerPage;
+    return monitoringLogs.slice(start, start + logsPerPage);
+  }, [monitoringLogs, logPage, logsPerPage]);
 
   return (
     <ThemedCard style={[styles.card, { position: 'relative' }]}> 
@@ -183,18 +226,138 @@ const MinimalCard = ({ item, onSaved }: { item: any; onSaved?: () => void }) => 
         />
       </View>
 
-      {/* CenteredModal: menu -> profile or visit */}
+      {/* CenteredModal: menu -> profile or visit or logList or logDetail */}
       <CenteredModal
         visible={open}
-        title={viewMode === 'profile' ? name : viewMode === 'visit' ? 'New Visit' : 'Actions'}
+        title={
+          viewMode === 'profile' ? name 
+          : viewMode === 'visit' ? 'New Visit' 
+          : viewMode === 'logList' ? 'Monitoring Dates'
+          : viewMode === 'logDetail' ? 'Monitoring Details'
+          : 'Actions'
+        }
         actions={modalActions}
-        onClose={() => { setOpen(false); setViewMode('menu'); }}
+        onClose={() => { setOpen(false); setViewMode('menu'); setSelectedLog(null); }}
         contentStyle={{ padding: 12 }}
         titleStyle={{ marginBottom: 6 }}
       >
         {viewMode === 'menu' && (
           <View>
             <ThemedText muted>Select an action below</ThemedText>
+          </View>
+        )}
+
+        {viewMode === 'logList' && (
+          <View>
+            {loadingLogs ? (
+              <ActivityIndicator size="small" />
+            ) : monitoringLogs.length === 0 ? (
+              <ThemedText muted>No monitoring logs found.</ThemedText>
+            ) : (
+              <View>
+                <ThemedText muted style={{ marginBottom: 12, fontSize: 12 }}>
+                  Showing {displayedLogs.length} of {monitoringLogs.length} records
+                </ThemedText>
+                
+                {displayedLogs.map((log) => {
+                  const dateObj = log.check_date ? new Date(log.check_date) : null;
+                  const dateStr = dateObj ? dateObj.toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    day: '2-digit', 
+                    year: 'numeric' 
+                  }) : 'Unknown Date';
+                  
+                  return (
+                    <Pressable
+                      key={log.child_monitoring_id}
+                      onPress={() => {
+                        setSelectedLog(log);
+                        setViewMode('logDetail');
+                      }}
+                    >
+                      <ThemedCard style={{ marginBottom: 8, padding: 12 }}>
+                        <ThemedText style={{ fontWeight: '600', fontSize: 14 }}>{dateStr}</ThemedText>
+                        <ThemedText muted style={{ fontSize: 12, marginTop: 2 }}>
+                          Weight: {log.weight ?? 'N/A'} kg • Temp: {log.temperature ?? 'N/A'} °C
+                        </ThemedText>
+                      </ThemedCard>
+                    </Pressable>
+                  );
+                })}
+
+                {/* Pagination controls for logs */}
+                {totalLogPages > 1 && (
+                  <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 12, gap: 8 }}>
+                    <ThemedButton 
+                      label="Prev" 
+                      onPress={() => setLogPage((p) => Math.max(1, p - 1))}
+                      disabled={logPage === 1}
+                    />
+                    <ThemedText style={{ fontSize: 12 }}>Page {logPage} / {totalLogPages}</ThemedText>
+                    <ThemedButton 
+                      label="Next" 
+                      onPress={() => setLogPage((p) => Math.min(totalLogPages, p + 1))}
+                      disabled={logPage === totalLogPages}
+                    />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {viewMode === 'logDetail' && selectedLog && (
+          <View>
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Check Date</ThemedText>
+              <ThemedText muted>{selectedLog.check_date ? new Date(selectedLog.check_date).toLocaleDateString() : 'N/A'}</ThemedText>
+            </View>
+
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Age</ThemedText>
+              <ThemedText muted>{selectedLog.age !== null && selectedLog.age !== undefined ? String(selectedLog.age) : 'N/A'}</ThemedText>
+            </View>
+
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Weight (kg)</ThemedText>
+              <ThemedText muted>{selectedLog.weight !== null && selectedLog.weight !== undefined ? String(selectedLog.weight) : 'N/A'}</ThemedText>
+            </View>
+
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Temperature (°C)</ThemedText>
+              <ThemedText muted>{selectedLog.temperature !== null && selectedLog.temperature !== undefined ? String(selectedLog.temperature) : 'N/A'}</ThemedText>
+            </View>
+
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Height (cm)</ThemedText>
+              <ThemedText muted>{selectedLog.height !== null && selectedLog.height !== undefined ? String(selectedLog.height) : 'N/A'}</ThemedText>
+            </View>
+
+            {selectedLog.findings && (
+              <View style={{ marginBottom: 8 }}>
+                <ThemedText style={{ fontWeight: '700' }}>Findings</ThemedText>
+                <ThemedText muted>{selectedLog.findings}</ThemedText>
+              </View>
+            )}
+
+            {selectedLog.notes && (
+              <View style={{ marginBottom: 8 }}>
+                <ThemedText style={{ fontWeight: '700' }}>Notes</ThemedText>
+                <ThemedText muted>{selectedLog.notes}</ThemedText>
+              </View>
+            )}
+
+            <View style={{ marginBottom: 8 }}>
+              <ThemedText style={{ fontWeight: '700' }}>Monitoring ID</ThemedText>
+              <ThemedText muted>{selectedLog.child_monitoring_id}</ThemedText>
+            </View>
+
+            {selectedLog.visit_id && (
+              <View style={{ marginBottom: 8 }}>
+                <ThemedText style={{ fontWeight: '700' }}>Visit ID</ThemedText>
+                <ThemedText muted>{selectedLog.visit_id}</ThemedText>
+              </View>
+            )}
           </View>
         )}
 

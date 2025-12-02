@@ -11,6 +11,7 @@ import { showToast } from '@/components/Toast'
 import { Colors } from '@/constants/Colors'
 import { PostpartumVisitException } from '@/exception/PostpartumVisitException'
 import { useNiceModal } from '@/hooks/NiceModalProvider'
+import { useEmojiRemover } from '@/hooks/useEmojiRemover'
 import type { PostpartumScheduleDisplay } from '@/repository/MaternalRepository'
 import { MaternalService } from '@/services/MaternalService'
 import { useAccountRole } from '@/store/useAccountRole'
@@ -48,6 +49,7 @@ const PostpartumTab = () => {
     const service = useMemo(() => new MaternalService(), [])
     const roleStore = useAccountRole()
     const { showModal } = useNiceModal()
+    const { isValid: isEmojiValid, err: emojiErr } = useEmojiRemover()
     const [saving, setSaving] = useState(false)
     const [searchQuery, setSearchQuery] = useState<string>('')
     const [searchText, setSearchText] = useState<string>('')
@@ -123,23 +125,86 @@ const PostpartumTab = () => {
         const maternalRecordId = Number(selected.maternal_record_id)
         if (!Number.isFinite(maternalRecordId)) return
 
-    const staffId = roleStore.staffId ?? (roleStore.getProfile ? roleStore.getProfile('resident')?.staff_id ?? null : null)
-    // fallback for testing when session doesn't provide a staff id
-    const staffIdFinal = staffId ?? 15
-    if (staffId == null) console.warn('[Postpartum] using fallback staffId=15 for testing')
+        // Validate all required fields are present
+        const lochialTrimmed = (lochial ?? '').trim()
+        const bpSysTrimmed = (bpSys ?? '').trim()
+        const bpDiaTrimmed = (bpDia ?? '').trim()
 
-        const bpSysN = bpSys && String(bpSys).trim() ? Number(bpSys) : null
-        const bpDiaN = bpDia && String(bpDia).trim() ? Number(bpDia) : null
+        // Check for required fields
+        if (!lochialTrimmed) {
+            Alert.alert('Validation Error', 'Lochial discharges field is required.')
+            return
+        }
+
+        if (!bpSysTrimmed) {
+            Alert.alert('Validation Error', 'BP Systolic is required.')
+            return
+        }
+
+        if (!bpDiaTrimmed) {
+            Alert.alert('Validation Error', 'BP Diastolic is required.')
+            return
+        }
+
+        if (feedingTypeId === null || feedingTypeId === undefined) {
+            Alert.alert('Validation Error', 'Feeding type is required.')
+            return
+        }
+
+        // Validate no emojis in text fields
+        if (!isEmojiValid({ lochial: lochialTrimmed, bpSys: bpSysTrimmed, bpDia: bpDiaTrimmed })) {
+            Alert.alert('Validation Error', emojiErr ?? 'Emojis are not allowed in any field.')
+            return
+        }
+
+        // Validate BP values are numeric and within reasonable ranges
+        const bpSysN = Number(bpSysTrimmed)
+        const bpDiaN = Number(bpDiaTrimmed)
+
+        if (!Number.isFinite(bpSysN) || bpSysN <= 0) {
+            Alert.alert('Validation Error', 'BP Systolic must be a valid positive number.')
+            return
+        }
+
+        if (!Number.isFinite(bpDiaN) || bpDiaN <= 0) {
+            Alert.alert('Validation Error', 'BP Diastolic must be a valid positive number.')
+            return
+        }
+
+        // Validate reasonable BP ranges (40-250 for systolic, 30-200 for diastolic)
+        if (bpSysN < 40 || bpSysN > 250) {
+            Alert.alert('Validation Error', 'BP Systolic must be between 40 and 250 mmHg.')
+            return
+        }
+
+        if (bpDiaN < 30 || bpDiaN > 200) {
+            Alert.alert('Validation Error', 'BP Diastolic must be between 30 and 200 mmHg.')
+            return
+        }
+
+        // Validate systolic is greater than diastolic
+        if (bpSysN <= bpDiaN) {
+            Alert.alert('Validation Error', 'BP Systolic must be greater than BP Diastolic.')
+            return
+        }
+
+        // Sanitize lochial text (remove extra whitespace, trim)
+        const lochialSanitized = lochialTrimmed.replace(/\s+/g, ' ')
+
+        const staffId = roleStore.staffId ?? (roleStore.getProfile ? roleStore.getProfile('resident')?.staff_id ?? null : null)
+        // fallback for testing when session doesn't provide a staff id
+        const staffIdFinal = staffId ?? 15
+        if (staffId == null) console.warn('[Postpartum] using fallback staffId=15 for testing')
 
         try {
             setSaving(true)
             const res = await service.createOrGetTodayPostpartumVisit({
                 maternalRecordId,
                 staffId: staffIdFinal,
-                lochial: lochial ?? null,
+                lochial: lochialSanitized,
                 bpSystolic: bpSysN,
                 bpDiastolic: bpDiaN,
-                feedingTypeId: feedingTypeId ?? null,
+                feedingTypeId: feedingTypeId,
             })
             console.log('createOrGetTodayPostpartumVisit result', res)
 
@@ -186,7 +251,7 @@ const PostpartumTab = () => {
         } finally {
             setSaving(false)
         }
-    }, [selected, lochial, bpSys, bpDia, feedingTypeId, roleStore, service, load])
+    }, [selected, lochial, bpSys, bpDia, feedingTypeId, roleStore, service, load, isEmojiValid, emojiErr])
 
     const renderItem = ({ item }: { item: PostpartumScheduleDisplay }) => {
         // prefer full patient name; repository provides `person_name` when available

@@ -50,4 +50,30 @@ export class FamilyRepository {
         return JSON.stringify(data) || null;
     }
 
+    async GetHouseholdIdByFamilyId(family_id: number) {
+        const { data, error } = await supabase
+            .from('family_unit')
+            .select('household_id')
+            .eq('family_id', family_id)
+            .maybeSingle();
+        if (error) {
+            console.error('GetHouseholdIdByFamilyId error:', error);
+            return null;
+        }
+        return data?.household_id ?? null;
+    }
+
+    async GetHouseholdHeadIdByHouseholdId(household_id: number) {
+        const { data, error } = await supabase
+            .from('household_info')
+            .select('household_head_id')
+            .eq('household_id', household_id)
+            .maybeSingle();
+        if (error) {
+            console.error('GetHouseholdHeadIdByHouseholdId error:', error);
+            return null;
+        }
+        return data?.household_head_id ?? null;
+    }
+
 }

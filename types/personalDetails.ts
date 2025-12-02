@@ -18,4 +18,5 @@ export type PersonalDetails = {
     back_id_file?: string;
     selfie_id_file?: string;
     profile_picture?: string;
+    residency_status?: string;
 }
