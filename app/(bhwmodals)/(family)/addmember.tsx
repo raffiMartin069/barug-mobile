@@ -28,6 +28,7 @@ import { RELATIONSHIP } from "@/constants/relationship";
 import { useNiceModal } from '@/hooks/NiceModalProvider';
 import { useAddMember } from "@/hooks/useAddMember";
 import { usePersonSearchByKey } from "@/hooks/usePersonSearch";
+import { usePersonSearchActiveNonResident } from "@/hooks/usePersonSearchActiveNonResident";
 
 // --- Repository / Commands
 import { HouseholdCommand } from "@/repository/commands/HouseholdCommand";
@@ -72,7 +73,7 @@ const AddMember = () => {
 
     const [familyId, setFamilyId] = useState<number | null>(null);
     const familyNumber = useHouseMateStore((state: MgaKaHouseMates) => state.familyId);
-    const { results: residentItems, search } = usePersonSearchByKey();
+    const { results: residentItems, search } = usePersonSearchActiveNonResident();
     const { addMember, loading, error } = useAddMember();
     const profile = useAccountRole((s) => s.getProfile('resident'));
     const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null;
