@@ -140,6 +140,17 @@ const SocioeconomicInfo = () => {
     setMany,
   } = useResidentFormStore()
 
+  // Set default to current month/year if not set
+  React.useEffect(() => {
+    if (!residencyMonth || !residencyYear) {
+      const now = new Date()
+      setMany({
+        residencyMonth: residencyMonth || String(now.getMonth() + 1),
+        residencyYear: residencyYear || String(now.getFullYear())
+      })
+    }
+  }, [])
+
   const [isStudent, setIsStudent] = useState<boolean>(false)
   const [selectedGovs, setSelectedGovs] = useState<string[]>(() => fromCsv(govprogrm))
 
@@ -206,6 +217,7 @@ const SocioeconomicInfo = () => {
     if (REQUIRED.employmentstat && isEmpty(employmentstat)) missing.push(LABELS.employmentstat)
     if (REQUIRED.occupation && isEmpty(occupation)) missing.push(LABELS.occupation)
     if (REQUIRED.mnthlypersonalincome && isEmpty(mnthlypersonalincome)) missing.push(LABELS.mnthlypersonalincome)
+    if (isEmpty(residencyMonth) || isEmpty(residencyYear)) missing.push('Residency Period')
 
     if (missing.length) {
       setModal({
@@ -242,7 +254,7 @@ const SocioeconomicInfo = () => {
           />
 
           <ThemedDropdown
-            items={empStatOptions}
+            items={empStatOptions.filter(opt => opt.value !== '4')}
             value={employmentstat}
             setValue={setEmp}
             placeholder={`Employment Status${REQUIRED.employmentstat ? ' *' : ''}`}
@@ -269,7 +281,7 @@ const SocioeconomicInfo = () => {
 
           {/* --- Residency Period --- */}
           <View style={styles.card}>
-            <ThemedText subtitle>When did you start being a resident in Sto. Niño?</ThemedText>
+            <ThemedText subtitle>When did you start being a resident in Sto. Niño? *</ThemedText>
             <Spacer height={8} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>

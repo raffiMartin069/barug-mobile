@@ -57,6 +57,39 @@ export default function DocReqHistory() {
   const cached = roleStore.getProfile(role)
   const meId = Number(cached?.person_id ?? cached?.details?.person_id ?? 0)
 
+  const age = React.useMemo(() => {
+    if (!cached?.birthdate) return 0
+    const today = new Date()
+    const birthDate = new Date(cached.birthdate)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }, [cached?.birthdate])
+
+  const [idValidationRequest, setIdValidationRequest] = React.useState<any>(null)
+
+  React.useEffect(() => {
+    if (meId) {
+      const loadIdValidation = async () => {
+        try {
+          const { supabase } = await import('@/constants/supabase')
+          const { data } = await supabase.rpc('get_id_validation_requests')
+          const userRequest = data?.find((req: any) => req.requester_person_id === meId)
+          setIdValidationRequest(userRequest || null)
+        } catch (error) {
+          console.error('[DocReqHistory] Failed to load ID validation:', error)
+        }
+      }
+      loadIdValidation()
+    }
+  }, [meId])
+
+  const isVerified = cached?.is_id_valid === true && idValidationRequest?.latest_status === 'APPROVED'
+  const canRequestDocuments = age >= 18 && isVerified
+
   // UI state
   const [search, setSearch] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<(typeof FILTERS)[number]['key']>('ALL')
@@ -290,10 +323,12 @@ export default function DocReqHistory() {
         )}
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity style={styles.fab} onPress={() => router.push('/(residentmodals)/requestdoc')}>
-        <ThemedIcon name="add" size={20} iconColor="#fff" bgColor="transparent" containerSize={24} />
-      </TouchableOpacity>
+      {/* FAB - only show if user can request documents */}
+      {canRequestDocuments && (
+        <TouchableOpacity style={styles.fab} onPress={() => router.push('/(residentmodals)/requestdoc')}>
+          <ThemedIcon name="add" size={20} iconColor="#fff" bgColor="transparent" containerSize={24} />
+        </TouchableOpacity>
+      )}
       
       {/* Date Filter Modal */}
       <Modal

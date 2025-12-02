@@ -100,8 +100,7 @@ const PersonalInfo = () => {
     if (!civilStatus) return 'Civil Status is required'
     if (!nationality) return 'Nationality is required'
     if (!religion) return 'Religion is required'
-    if (!mobnum.trim()) return 'Mobile Number is required'
-    if (!/^\+63\d{10}$/.test(mobnum)) return 'Mobile Number must be in format +63XXXXXXXXXX'
+    if (mobnum.trim() && !/^\+63\d{10}$/.test(mobnum)) return 'Mobile Number must be in format +63XXXXXXXXXX'
     if (email.trim() && !/^[^@]+@[^@]+\.[^@]+$/.test(email)) return 'Invalid Email Address'
     return null
   }
@@ -186,7 +185,7 @@ const PersonalInfo = () => {
 
           <Spacer height={10} />
           <ThemedTextInput
-            placeholder="Mobile Number *"
+            placeholder="Mobile Number"
             value={mobnum}
             onChangeText={(val) => {
               // Keep only digits

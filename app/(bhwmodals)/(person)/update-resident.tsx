@@ -803,7 +803,7 @@ const UpdateResident = () => {
             <ThemedText style={styles.infoText}>
               {statusFilter === 'ACTIVE' && 'Searching active residents only (excludes deceased and inactive)'}
               {statusFilter === 'INACTIVE' && 'Searching inactive residents only'}
-              {statusFilter === 'ALL' && 'Searching all residents (active and inactive, excludes deceased)'}
+              {statusFilter === 'ALL' && 'Searching all residents (pending and resident status, excludes deceased)'}
             </ThemedText>
           </View>
 

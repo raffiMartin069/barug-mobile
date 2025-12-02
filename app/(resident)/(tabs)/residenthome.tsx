@@ -144,8 +144,6 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
       }
     }, [])
 
-    const [notifRefreshKey, setNotifRefreshKey] = useState(0)
-
     const onRefresh = useCallback(async () => {
       setRefreshing(true)
       try {
@@ -155,7 +153,6 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
             loadIdValidationRequest(details.person_id),
             loadProfileImage(details.person_id)
           ])
-          setNotifRefreshKey(k => k + 1)
         }
       } catch (error) {
         console.error('[ResidentHome] Refresh failed:', error)
@@ -194,6 +191,18 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
       return fn || 'Resident'
     }, [details])
 
+    const age = useMemo(() => {
+      if (!details?.birthdate) return 0
+      const today = new Date()
+      const birthDate = new Date(details.birthdate)
+      let age = today.getFullYear() - birthDate.getFullYear()
+      const monthDiff = today.getMonth() - birthDate.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--
+      }
+      return age
+    }, [details?.birthdate])
+
     const pushProfile = () => {
       router.push({
         pathname: '/residentprofile',
@@ -218,7 +227,6 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
           showNotif={true}
           showProfile={true}
           onPressProfile={pushProfile}
-          notificationRefreshTrigger={notifRefreshKey}
         />
 
         <KeyboardAvoidingView>
@@ -258,12 +266,16 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
 
             <Spacer height={5} />
 
-            {/* Full Verification prompt — show only if NOT yet fully verified */}
-            {details?.is_id_valid === false && (
+            {/* Full Verification prompt — show only if not approved or under 18 */}
+            {!(age >= 18 && details?.is_id_valid === true && idValidationRequest?.latest_status === 'APPROVED') && (
               <>
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={() => {
+                    if (age < 18) {
+                      Alert.alert('Age Requirement', 'You need to be 18 years old or older to verify your ID.')
+                      return
+                    }
                     if (idValidationRequest) {
                       // Show validation details modal or navigate to status page
                       router.push({
@@ -294,6 +306,9 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
                           {idValidationRequest 
                             ? `Status: ${idValidationRequest.latest_status}${idValidationRequest.latest_status === 'REJECTED' ? ' - Tap to resubmit' : ''}` 
                             : 'Please submit a valid ID to access the Request Document feature.'}
+                        </ThemedText>
+                        <ThemedText style={[styles.verifySubtext, { color: '#059669', marginTop: 4, fontWeight: '600' }]}>
+                          Current Age: {age} years old
                         </ThemedText>
                         {idValidationRequest?.latest_remarks && (
                           <ThemedText style={[styles.verifySubtext, { color: '#dc2626', marginTop: 2 }]}>
@@ -386,29 +401,67 @@ import { ActivityIndicator, Alert, BackHandler, KeyboardAvoidingView, RefreshCon
               <ThemedText style={styles.sectionTitle}>Quick Services</ThemedText>
             </View>
             <View style={styles.servicesGrid}>
-              <TouchableOpacity style={[styles.serviceCard, { backgroundColor: '#fef3c7' }]} onPress={() => router.push('/requestdoc')} activeOpacity={0.7}>
+              <TouchableOpacity 
+                style={[styles.serviceCard, { backgroundColor: '#fef3c7' }]} 
+                onPress={() => {
+                  const isVerified = details?.is_id_valid === true && idValidationRequest?.latest_status === 'APPROVED'
+                  if (age >= 18 && !isVerified) {
+                    Alert.alert('Verification Required', 'You need to be verified to request documents.')
+                  } else if (age < 18) {
+                    router.push('/requestdoc')
+                  } else {
+                    router.push('/requestdoc')
+                  }
+                }} 
+                activeOpacity={0.7}
+              >
                 <View style={styles.serviceIconContainer}>
                   <ThemedIcon name={'newspaper'} iconColor={'#92400e'} bgColor={'#fde68a'} size={28} containerSize={60} />
                 </View>
                 <ThemedText style={styles.serviceTitle}>Request Document</ThemedText>
-                {/* <ThemedText style={styles.serviceSubtitle}>Get barangay certificates</ThemedText> */}
               </TouchableOpacity>
               
-              <TouchableOpacity style={[styles.serviceCard, { backgroundColor: '#dbeafe' }]} onPress={() => router.push('/fileblotterreport')} activeOpacity={0.7}>
-                <View style={styles.serviceIconContainer}>
-                  <ThemedIcon name={'receipt'} iconColor={'#1e40af'} bgColor={'#bfdbfe'} size={28} containerSize={60} />
-                </View>
-                <ThemedText style={styles.serviceTitle}>File Report</ThemedText>
-                <ThemedText style={styles.serviceSubtitle}>Submit blotter report</ThemedText>
-              </TouchableOpacity>
-              
-              <TouchableOpacity style={[styles.serviceCard, { backgroundColor: '#d1fae5' }]} onPress={() => router.push('/barangaycases')} activeOpacity={0.7}>
-                <View style={styles.serviceIconContainer}>
-                  <ThemedIcon name={'folder-open'} iconColor={'#065f46'} bgColor={'#a7f3d0'} size={28} containerSize={60} />
-                </View>
-                <ThemedText style={styles.serviceTitle}>View Cases</ThemedText>
-                <ThemedText style={styles.serviceSubtitle}>Track your cases</ThemedText>
-              </TouchableOpacity>
+              {age >= 18 && (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.serviceCard, { backgroundColor: '#dbeafe' }]} 
+                    onPress={() => {
+                      const isVerified = details?.is_id_valid === true && idValidationRequest?.latest_status === 'APPROVED'
+                      if (!isVerified) {
+                        Alert.alert('Verification Required', 'You need to be verified to use this service.')
+                      } else {
+                        router.push('/fileblotterreport')
+                      }
+                    }} 
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.serviceIconContainer}>
+                      <ThemedIcon name={'receipt'} iconColor={'#1e40af'} bgColor={'#bfdbfe'} size={28} containerSize={60} />
+                    </View>
+                    <ThemedText style={styles.serviceTitle}>File Report</ThemedText>
+                    <ThemedText style={styles.serviceSubtitle}>Submit blotter report</ThemedText>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={[styles.serviceCard, { backgroundColor: '#d1fae5' }]} 
+                    onPress={() => {
+                      const isVerified = details?.is_id_valid === true && idValidationRequest?.latest_status === 'APPROVED'
+                      if (!isVerified) {
+                        Alert.alert('Verification Required', 'You need to be verified to use this service.')
+                      } else {
+                        router.push('/barangaycases')
+                      }
+                    }} 
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.serviceIconContainer}>
+                      <ThemedIcon name={'folder-open'} iconColor={'#065f46'} bgColor={'#a7f3d0'} size={28} containerSize={60} />
+                    </View>
+                    <ThemedText style={styles.serviceTitle}>View Cases</ThemedText>
+                    <ThemedText style={styles.serviceSubtitle}>Track your cases</ThemedText>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
