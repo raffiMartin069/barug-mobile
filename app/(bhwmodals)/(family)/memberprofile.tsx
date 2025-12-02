@@ -31,6 +31,7 @@ const MemberProfile = () => {
   const [relToHousehold, setRelToHousehold] = React.useState<number | null>(null)
   const [relToFamily, setRelToFamily] = React.useState<number | null>(null)
   const [relationshipPicker, setRelationshipPicker] = React.useState<'household' | 'family' | null>(null)
+  const [isConfirmed, setIsConfirmed] = React.useState<boolean>(false)
 
   const mountedRef = useRef(true)
   const [refreshing, setRefreshing] = React.useState(false)
@@ -42,43 +43,44 @@ const MemberProfile = () => {
       else setLoading(true);
       const details: any = await repo.getAllResidentInfo(memberId);
 
-        if (!mountedRef.current) return;
+      if (!mountedRef.current) return;
 
-        // attempt relationship-prefill: try house_member records first, then fallback to kinship DTO
-        try {
-          const houseCmd = new HouseMemberCommand()
-          const hm = await houseCmd.FetchActiveHouseMemberByPersonId(Number(memberId))
-          if (hm) {
-            const hhRel = hm.relationship_to_hholdhead_id ?? hm.relationship_to_household_head_id ?? hm.relationship_to_household_id ?? hm.rel_to_hhold_head_id ?? null
-            const famRel = hm.relationship_to_family_head_id ?? hm.relationship_to_family_id ?? hm.rel_to_family_head_id ?? null
-            if (hhRel != null) setRelToHousehold(Number(hhRel))
-            if (famRel != null) setRelToFamily(Number(famRel))
-          }
-        } catch {
+      // attempt relationship-prefill: try house_member records first, then fallback to kinship DTO
+      try {
+        const houseCmd = new HouseMemberCommand()
+        const hm = await houseCmd.FetchActiveHouseMemberByPersonId(Number(memberId))
+        if (hm) {
+          const hhRel = hm.relationship_to_hholdhead_id ?? hm.relationship_to_household_head_id ?? hm.relationship_to_household_id ?? hm.rel_to_hhold_head_id ?? null
+          const famRel = hm.relationship_to_family_head_id ?? hm.relationship_to_family_id ?? hm.rel_to_family_head_id ?? null
+          if (hhRel != null) setRelToHousehold(Number(hhRel))
+          if (famRel != null) setRelToFamily(Number(famRel))
         }
+      } catch {
+      }
 
-        // Use image paths directly from the details response
-        setPersonalDetails({
-          person_id: details[0].person_id,
-          first_name: details[0].first_name,
-          middle_name: details[0].middle_name,
-          last_name: details[0].last_name,
-          suffix: details[0].suffix,
-          sex: details[0].sex,
-          birthdate: details[0].birthdate,
-          civil_status: details[0].civil_status,
-          nationality: details[0].nationality,
-          religion: details[0].religion,
-          education: details[0].education,
-          employment_status: details[0].employment_status,
-          occupation: details[0].occupation,
-          personal_monthly_income: details[0].personal_monthly_income,
-          gov_program: details[0].gov_program,
-          front_id_file: details[0].valid_id_front_path || undefined,
-          back_id_file: details[0].valid_id_back_path || undefined,
-          selfie_id_file: details[0].selfie_with_id || undefined,
-          profile_picture: details[0].profile_picture || undefined,
-        });
+      // Use image paths directly from the details response
+      setPersonalDetails({
+        person_id: details[0].person_id,
+        first_name: details[0].first_name,
+        middle_name: details[0].middle_name,
+        last_name: details[0].last_name,
+        suffix: details[0].suffix,
+        sex: details[0].sex,
+        birthdate: details[0].birthdate,
+        civil_status: details[0].civil_status,
+        nationality: details[0].nationality,
+        religion: details[0].religion,
+        education: details[0].education,
+        employment_status: details[0].employment_status,
+        occupation: details[0].occupation,
+        personal_monthly_income: details[0].personal_monthly_income,
+        gov_program: details[0].gov_program,
+        front_id_file: details[0].valid_id_front_path || undefined,
+        back_id_file: details[0].valid_id_back_path || undefined,
+        selfie_id_file: details[0].selfie_with_id || undefined,
+        profile_picture: details[0].profile_picture || undefined,
+        residency_status: String(details[0].residential_status).toLowerCase() || undefined,
+      });
 
     } catch (e: any) {
       showModal({ title: 'Error', message: e?.message || 'Failed to load member details.', variant: 'error', primaryText: 'OK', dismissible: true })
@@ -103,21 +105,38 @@ const MemberProfile = () => {
 
   const submitConfirmResidency = async () => {
     const repo = new ResidentRepository();
-      try {
-        setSubmitting(true);
-        await repo.confirmResidency(Number(memberId), undefined, relToHousehold ?? null, relToFamily ?? null, reason ?? null)
-        showModal({ title: 'Success', message: 'Residency has been confirmed.', variant: 'success', primaryText: 'OK', dismissible: true })
-        setConfirmModalVisible(false)
-        setRelToHousehold(null)
-        setRelToFamily(null)
-        setReason('')
-      } catch (e: any) {
-        if (e instanceof ResidencyException) {
-          showModal({ title: 'Warning', message: e.message, variant: 'warn', primaryText: 'OK', dismissible: true })
-          return
-        }
-        showModal({ title: 'Error', message: 'Failed to confirm residency.', variant: 'error', primaryText: 'OK', dismissible: true })
-      } finally {
+    try {
+      const residentialStatus = personalDetails?.residency_status || ''
+      if (residentialStatus.toLowerCase() !== 'resident') {
+        showModal({ title: 'Warning', message: 'Only residents can have their residency confirmed.', variant: 'warn', primaryText: 'OK', dismissible: true })
+        return;
+      }
+
+      if (!reason || !reason.trim()) {
+        showModal({ title: 'Warning', message: 'Please provide a reason for confirming residency.', variant: 'warn', primaryText: 'OK', dismissible: true })
+        return;
+      }
+
+      if (isConfirmed) {
+        showModal({ title: 'Warning', message: 'Residency has already been confirmed.', variant: 'warn', primaryText: 'OK', dismissible: true })
+        return;
+      }
+
+      setSubmitting(true);
+      await repo.confirmResidency(Number(memberId), undefined, relToHousehold ?? null, relToFamily ?? null, reason ?? null)
+      showModal({ title: 'Success', message: 'Residency has been confirmed.', variant: 'success', primaryText: 'OK', dismissible: true })
+      setConfirmModalVisible(false)
+      setRelToHousehold(null)
+      setRelToFamily(null)
+      setReason('')
+      setIsConfirmed(true)
+    } catch (e: any) {
+      if (e instanceof ResidencyException) {
+        showModal({ title: 'Warning', message: e.message, variant: 'warn', primaryText: 'OK', dismissible: true })
+        return
+      }
+      showModal({ title: 'Error', message: 'Failed to confirm residency.', variant: 'error', primaryText: 'OK', dismissible: true })
+    } finally {
       setSubmitting(false)
     }
   }
@@ -369,22 +388,44 @@ const MemberProfile = () => {
 
         {/* Fixed Footer Actions */}
         <View style={styles.footer}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              styles.primaryBtn,
-              pressed && styles.pressed,
-              (submitting || loading) && styles.disabled,
-            ]}
-            disabled={submitting || loading}
-            onPress={handleConfirmResidency}
-          >
-            {submitting ? (
-              <ActivityIndicator />
+          {
+            personalDetails?.residency_status === 'resident' ? (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  styles.primaryBtn,
+                  pressed && styles.pressed,
+                  styles.disabled,
+                ]}
+                disabled={true}
+                onPress={handleConfirmResidency}
+              >
+                {submitting ? (
+                  <ActivityIndicator />
+                ) : (
+                  <ThemedText style={styles.buttonText}>Residency Confirmed</ThemedText>
+                )}
+              </Pressable>
             ) : (
-              <ThemedText style={styles.buttonText}>Confirm Residency</ThemedText>
-            )}
-          </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.button,
+                  styles.primaryBtn,
+                  pressed && styles.pressed,
+                  (submitting || loading) && styles.disabled,
+                ]}
+                disabled={submitting || loading || isConfirmed}
+                onPress={handleConfirmResidency}
+              >
+                {submitting ? (
+                  <ActivityIndicator />
+                ) : (
+                  <ThemedText style={styles.buttonText}>{isConfirmed ? 'Residency Confirmed' : 'Confirm Residency'}</ThemedText>
+                )}
+              </Pressable>
+            )
+          }
+
 
           {/* <Pressable
             style={({ pressed }) => [
