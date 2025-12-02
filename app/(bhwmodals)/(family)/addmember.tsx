@@ -75,8 +75,7 @@ const AddMember = () => {
     const familyNumber = useHouseMateStore((state: MgaKaHouseMates) => state.familyId);
     const { results: residentItems, search } = usePersonSearchActiveNonResident();
     const { addMember, loading, error } = useAddMember();
-    const profile = useAccountRole((s) => s.getProfile('resident'));
-    const addedById = profile?.person_id ?? useAccountRole.getState().staffId ?? null;
+    const { staffId } = useAccountRole();
     const { showModal } = useNiceModal();
 
     useEffect(() => {
@@ -172,7 +171,7 @@ const AddMember = () => {
 
         const data: FamilyMembershipType = {
             p_family_id: familyId,
-            p_added_by_id: parseInt(addedById ?? '1'),
+            p_added_by_id: parseInt(String(staffId ?? '1')),
             p_existing_person_id: Number(residentId),
             p_relationship_to_hholdhead_id: Number(hhheadrel),
             p_relationship_to_family_head_id: Number(famheadrel),
