@@ -727,11 +727,11 @@ const styles = StyleSheet.create({
   
   // Timeline
   timelineList: {
-    gap: 16,
+    gap: 20,
   },
   timelineItem: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
   },
   timelineIconContainer: {
     alignItems: 'center',
@@ -752,12 +752,13 @@ const styles = StyleSheet.create({
     left: '50%',
     marginLeft: -1,
     width: 2,
-    height: 16,
+    height: 20,
     backgroundColor: '#e5e7eb',
   },
   timelineContent: {
     flex: 1,
-    paddingTop: 4,
+    paddingTop: 2,
+    paddingBottom: 4,
   },
   timelineTitle: {
     fontSize: 15,
@@ -771,6 +772,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   timelineDetails: {
-    marginTop: 4,
+    marginTop: 8,
   },
 })

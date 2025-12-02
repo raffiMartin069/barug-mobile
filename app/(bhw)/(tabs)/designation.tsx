@@ -441,7 +441,7 @@ const HouseholdList = () => {
 
   return (
     <ThemedView style={{ flex: 1, justifyContent: "flex-start" }} safe={true}>
-      <ThemedAppBar title="Designation" />
+      <ThemedAppBar title="Designation" showNotif={false} />
 
       <KeyboardAvoidingView>
         <ScrollView

@@ -16,10 +16,10 @@ import {
   mnthlyPerosonalIncomeOptions,
 } from '@/constants/formoptions'
 import { useResidentFormStore } from '@/store/forms'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, View } from 'react-native'
-import { Ionicons } from '@expo/vector-icons'
 
 /** Required flags */
 const REQUIRED = {
@@ -137,8 +137,21 @@ const SocioeconomicInfo = () => {
     govprogrm, // CSV ("1,3,5")
     residencyMonth,
     residencyYear,
+    residencyMonth,
+    residencyYear,
     setMany,
   } = useResidentFormStore()
+
+  // Set default to current month/year if not set
+  React.useEffect(() => {
+    if (!residencyMonth || !residencyYear) {
+      const now = new Date()
+      setMany({
+        residencyMonth: residencyMonth || String(now.getMonth() + 1),
+        residencyYear: residencyYear || String(now.getFullYear())
+      })
+    }
+  }, [])
 
   const [isStudent, setIsStudent] = useState<boolean>(false)
   const [selectedGovs, setSelectedGovs] = useState<string[]>(() => fromCsv(govprogrm))
@@ -181,6 +194,22 @@ const SocioeconomicInfo = () => {
   React.useEffect(() => {
     console.log('[SocioeconomicInfo] Current residency values:', { residencyMonth, residencyYear })
   }, [residencyMonth, residencyYear])
+  
+  const setResidencyMonth = (v: string | ((curr: string) => string)) => {
+    const value = typeof v === 'function' ? v(residencyMonth) : v
+    console.log('[SocioeconomicInfo] Setting residency month:', value)
+    setMany({ residencyMonth: value })
+  }
+  const setResidencyYear = (v: string | ((curr: string) => string)) => {
+    const value = typeof v === 'function' ? v(residencyYear) : v
+    console.log('[SocioeconomicInfo] Setting residency year:', value)
+    setMany({ residencyYear: value })
+  }
+  
+  // Log current values whenever they change
+  React.useEffect(() => {
+    console.log('[SocioeconomicInfo] Current residency values:', { residencyMonth, residencyYear })
+  }, [residencyMonth, residencyYear])
 
   // Government Programs
   const NONE_VALUE = '7'
@@ -206,6 +235,7 @@ const SocioeconomicInfo = () => {
     if (REQUIRED.employmentstat && isEmpty(employmentstat)) missing.push(LABELS.employmentstat)
     if (REQUIRED.occupation && isEmpty(occupation)) missing.push(LABELS.occupation)
     if (REQUIRED.mnthlypersonalincome && isEmpty(mnthlypersonalincome)) missing.push(LABELS.mnthlypersonalincome)
+    if (isEmpty(residencyMonth) || isEmpty(residencyYear)) missing.push('Residency Period')
 
     if (missing.length) {
       setModal({
@@ -242,7 +272,7 @@ const SocioeconomicInfo = () => {
           />
 
           <ThemedDropdown
-            items={empStatOptions}
+            items={empStatOptions.filter(opt => opt.value !== '4')}
             value={employmentstat}
             setValue={setEmp}
             placeholder={`Employment Status${REQUIRED.employmentstat ? ' *' : ''}`}
@@ -269,7 +299,7 @@ const SocioeconomicInfo = () => {
 
           {/* --- Residency Period --- */}
           <View style={styles.card}>
-            <ThemedText subtitle>When did you start being a resident in Sto. Niño?</ThemedText>
+            <ThemedText subtitle>When did you start being a resident in Sto. Niño? *</ThemedText>
             <Spacer height={8} />
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}>

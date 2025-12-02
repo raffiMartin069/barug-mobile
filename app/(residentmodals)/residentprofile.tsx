@@ -478,30 +478,6 @@
                   <Spacer height={18} />
                 </>
               )}
-
-              <ThemedCard style={[styles.cardPad, styles.shadow]}>
-                <ThemedText style={styles.sectionTitle} title>Tools</ThemedText>
-                <Spacer height={8} />
-                <View style={[styles.toolsGrid, { alignContent: 'center' }]}>
-                  <Pressable style={styles.tool} onPress={() => {}}>
-                    <View style={styles.toolIconWrap}><Ionicons name="id-card-outline" size={22} color={ACCENT} /></View>
-                    <ThemedText style={styles.toolLabel}>Verify IDs</ThemedText>
-                  </Pressable>
-                  <Pressable style={styles.tool} onPress={() => {}}>
-                    <View style={styles.toolIconWrap}><Ionicons name="people-outline" size={22} color={ACCENT} /></View>
-                    <ThemedText style={styles.toolLabel}>Residents</ThemedText>
-                  </Pressable>
-                  <Pressable style={styles.tool} onPress={() => {}}>
-                    <View style={styles.toolIconWrap}><Ionicons name="home-outline" size={22} color={ACCENT} /></View>
-                    <ThemedText style={styles.toolLabel}>Households</ThemedText>
-                  </Pressable>
-                  <Pressable style={styles.tool} onPress={() => {}}>
-                    <View style={styles.toolIconWrap}><Ionicons name="document-text-outline" size={22} color={ACCENT} /></View>
-                    <ThemedText style={styles.toolLabel}>Doc Requests</ThemedText>
-                  </Pressable>
-                </View>
-              </ThemedCard>
-              <Spacer height={18} />
             </>
           )}
 

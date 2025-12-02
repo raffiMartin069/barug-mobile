@@ -592,7 +592,7 @@ export default function ChildScreen() {
 
   return (
     <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
-      <ThemedAppBar title="Child Health Records" />
+      <ThemedAppBar title="Child Health Records" showNotif={false} />
 
       <View style={{ padding: 12 }}>
         <ThemedTextInput

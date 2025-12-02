@@ -66,7 +66,7 @@ const Profiling = () => {
 
     return (
         <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
-            <ThemedAppBar />
+            <ThemedAppBar showNotif={false} />
 
             <ScrollView>
 

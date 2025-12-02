@@ -350,7 +350,17 @@ export default function RequestDoc() {
         if (path.includes('payments') && path.includes('success') && docId > 0) {
           // ask server to finalize (idempotent; DEV can bypass with ?dev=1)
           try { await confirmDocPayment(docId, { dev: true }) } catch {}
-          router.replace({ pathname: '/(residentmodals)/receipt', params: { id: String(docId) } })
+          // Show success modal for GCash payment
+          showModal({
+            icon: 'success',
+            title: 'Payment Successful!',
+            message: "You've successfully paid via GCash. Please wait for the Clerk's review. Once approved, your payment will be transferred to the Treasurer's account. Thank you!",
+            primaryText: 'View Receipt',
+            onPrimary: () => {
+              hideModal()
+              router.replace({ pathname: '/(residentmodals)/receipt', params: { id: String(docId) } })
+            },
+          })
         }
       } catch { /* ignore */ }
     }
@@ -474,7 +484,12 @@ export default function RequestDoc() {
   const documentItems = useMemo(
     () =>
       docTypes
-        .filter(dt => !isBusinessDocTypeName(dt.document_type_name))
+        .filter(dt => {
+          const name = dt.document_type_name.toUpperCase();
+          return name.includes('BARANGAY CLEARANCE') || 
+                 name.includes('CERTIFICATE OF LOW INCOME') || 
+                 name.includes('CERTIFICATE OF RESIDENCY');
+        })
         .map(dt => ({ label: dt.document_type_name, value: dt.document_type_id })),
     [docTypes]
   )

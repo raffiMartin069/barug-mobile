@@ -95,7 +95,7 @@ const BhwHome = () => {
 
   return (
     <ThemedView style={{flex: 1, justifyContent: 'flex-start'}} safe>
-      <ThemedAppBar showBack={false}/>
+      <ThemedAppBar showBack={false} showNotif={false}/>
 
       <KeyboardAvoidingView>
         <ScrollView contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>

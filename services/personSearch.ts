@@ -20,8 +20,10 @@ export class PersonSearchService {
         let rpcName = "search_person_by_code_or_name_not_deceased";
         
         // Use different RPC based on status filter
-        if (this.statusFilter === 'INACTIVE' || this.statusFilter === 'ALL') {
+        if (this.statusFilter === 'INACTIVE') {
             rpcName = "search_person_all_and_previous_resident";
+        } else if (this.statusFilter === 'ALL') {
+            rpcName = "search_person_by_code_or_name_not_deceased_pending";
         }
         
         console.log('[PersonSearchService] Using RPC:', rpcName, 'with key:', this.key, 'filter:', this.statusFilter);

@@ -155,6 +155,7 @@ const UpdateResident = () => {
   const [searchText, setSearchText] = useState('')
   const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null)
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | 'ALL'>('ACTIVE')
 
   /** 2) Central store */
   const store = useResidentFormStore()
@@ -803,7 +804,7 @@ const UpdateResident = () => {
             <ThemedText style={styles.infoText}>
               {statusFilter === 'ACTIVE' && 'Searching active residents only (excludes deceased and inactive)'}
               {statusFilter === 'INACTIVE' && 'Searching inactive residents only'}
-              {statusFilter === 'ALL' && 'Searching all residents (active and inactive, excludes deceased)'}
+              {statusFilter === 'ALL' && 'Searching all residents (pending and resident status, excludes deceased)'}
             </ThemedText>
           </View>
 
@@ -814,6 +815,7 @@ const UpdateResident = () => {
             getLabel={(p) => p.person_code ? `${p.full_name} · ${p.person_code}` : p.full_name}
             getSubLabel={(p) => p.address}
             inputValue={searchText}
+            onInputValueChange={(t) => { setSearchText(t); search(t, statusFilter) }}
             onInputValueChange={(t) => { setSearchText(t); search(t, statusFilter) }}
             placeholder="Search by name or resident ID…"
             emptyText="No matches"
@@ -1431,6 +1433,52 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  filterChipActive: {
+    borderColor: '#441010',
+    backgroundColor: '#FFF6F6',
+  },
+  filterText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterTextActive: {
+    color: '#441010',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 16,
   },
   filterRow: {
     flexDirection: 'row',

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useNavigation, useRouter } from 'expo-router'
 import React, { useState } from 'react'
 import { StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
+import { useAccountRole } from '@/store/useAccountRole'
 
 type Props = {
   style?: any
@@ -36,11 +37,22 @@ const ThemedAppBar = ({
   const ACCENT = theme.link
 
   const [showNotifCard, setShowNotifCard] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const roleStore = useAccountRole()
+  const role = roleStore.currentRole ?? 'resident'
+  const profile = roleStore.getProfile(role)
+  const personId = profile?.person_id || null
+  const staffId = profile?.staff_id || null
+  const userTypeId = role === 'resident' ? 1 : 2
 
-  const { items, unread, markAllRead } = useNotifications({
-    userTypeId: 1, // Resident appbar; for staff screens use 2
-    personId: 4,
-    staffId: undefined,
+  React.useEffect(() => {
+    if (refreshTrigger > 0) refresh()
+  }, [refreshTrigger])
+
+  const { items, unread, markAllRead, refresh } = useNotifications({
+    userTypeId,
+    personId,
+    staffId,
   })
 
   return (

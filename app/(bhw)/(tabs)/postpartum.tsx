@@ -326,7 +326,7 @@ const PostpartumTab = () => {
 
     return (
         <ThemedView safe style={{ flex: 1, justifyContent: 'flex-start' }}>
-            <ThemedAppBar title="Postpartum" />
+            <ThemedAppBar title="Postpartum" showNotif={false} />
             <ThemedView style={styles.container}>
                 {/* Search and sort controls */}
                 <View style={styles.controlsStack}>

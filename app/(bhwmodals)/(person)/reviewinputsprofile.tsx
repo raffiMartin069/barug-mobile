@@ -115,13 +115,13 @@ const ReviewInputsProfile = () => {
     const first = data.fname?.trim()
     const last = data.lname?.trim()
     const birthdate = toYYYYMMDD(data.dob)
-    const mobile = data.mobnum?.trim()
+    const mobile = data.mobnum?.trim() || null
     const email = data.email?.trim() || null
 
-    if (!first || !last || !birthdate || !mobile) {
+    if (!first || !last || !birthdate) {
       openModal({
         title: 'Missing required info',
-        message: 'First, Last, Date of Birth, and Mobile are required.',
+        message: 'First, Last, and Date of Birth are required.',
         variant: 'warn',
       })
       return
@@ -297,30 +297,6 @@ const ReviewInputsProfile = () => {
           <View style={styles.row}>
             <ThemedText subtitle>Religion:</ThemedText>
             <ThemedText subtitle>{religionMap[data.religion as keyof typeof religionMap]}</ThemedText>
-          </View>
-
-          <Spacer height={10} />
-          <View style={styles.row}>
-            <ThemedText subtitle>Street:</ThemedText>
-            <ThemedText subtitle>{data.street}</ThemedText>
-          </View>
-
-          <Spacer height={10} />
-          <View style={styles.row}>
-            <ThemedText subtitle>Purok / Sitio:</ThemedText>
-            <ThemedText subtitle>{data.purokSitio}</ThemedText>
-          </View>
-
-          <Spacer height={10} />
-          <View style={styles.row}>
-            <ThemedText subtitle>Barangay:</ThemedText>
-            <ThemedText subtitle>{data.brgy}</ThemedText>
-          </View>
-
-          <Spacer height={10} />
-          <View style={styles.row}>
-            <ThemedText subtitle>City:</ThemedText>
-            <ThemedText subtitle>{data.city}</ThemedText>
           </View>
 
           <Spacer height={10} />
