@@ -137,8 +137,6 @@ const SocioeconomicInfo = () => {
     govprogrm, // CSV ("1,3,5")
     residencyMonth,
     residencyYear,
-    residencyMonth,
-    residencyYear,
     setMany,
   } = useResidentFormStore()
 
@@ -178,22 +176,6 @@ const SocioeconomicInfo = () => {
   const setIncome = (next: string | ((curr: string) => string)) =>
     setMany({ mnthlypersonalincome: String(typeof next === 'function' ? next(mnthlypersonalincome) : next) })
   const setOcc = (v: string) => setMany({ occupation: v })
-  
-  const setResidencyMonth = (v: string | ((curr: string) => string)) => {
-    const value = typeof v === 'function' ? v(residencyMonth) : v
-    console.log('[SocioeconomicInfo] Setting residency month:', value)
-    setMany({ residencyMonth: value })
-  }
-  const setResidencyYear = (v: string | ((curr: string) => string)) => {
-    const value = typeof v === 'function' ? v(residencyYear) : v
-    console.log('[SocioeconomicInfo] Setting residency year:', value)
-    setMany({ residencyYear: value })
-  }
-  
-  // Log current values whenever they change
-  React.useEffect(() => {
-    console.log('[SocioeconomicInfo] Current residency values:', { residencyMonth, residencyYear })
-  }, [residencyMonth, residencyYear])
   
   const setResidencyMonth = (v: string | ((curr: string) => string)) => {
     const value = typeof v === 'function' ? v(residencyMonth) : v
