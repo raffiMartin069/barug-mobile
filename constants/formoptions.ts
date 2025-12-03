@@ -276,26 +276,8 @@ export const govProgMap: Record<number | string, string> = {
 
 // ✅ ID Type Options (matches document_type table)
 export const ocr_idTypeOptions = [
-  { label: 'PHILIPPINE PASSPORT', value: '1' },
   { label: 'ePHILID', value: 'ephil_id' },
   { label: 'PHILIPPINE NATIONAL ID', value: 'philippine_national_id' },
-  { label: 'SSS/UMID CARD', value: '3' },
-  { label: 'GSIS ECARD', value: '4' },
-  { label: 'PRC ID', value: '5' },
-  { label: "DRIVER'S LICENSE", value: '6' },
-  { label: 'PHILHEALTH ID', value: '7' },
-  { label: "VOTER'S ID", value: '8' },
-  { label: 'POSTAL ID', value: '9' },
-  { label: 'SENIOR CITIZEN ID', value: '10' },
-  { label: 'PWD ID', value: '11' },
-  { label: 'OWWA ID', value: '12' },
-  { label: 'IBP ID', value: '13' },
-  { label: 'TIN ID', value: '14' },
-  { label: 'BIRTH CERTIFICATE', value: '15' },
-  { label: 'BARANGAY CERTIFICATE', value: '16' },
-  { label: 'SCHOOL ID', value: '17' },
-  { label: 'RESIDENT PICTURE', value: '18' },
-  { label: 'RESIDENT SELFIE', value: '19' },
 ];
 
 export const ocr_idTypeMap: Record<number | string, string> = {
@@ -344,7 +326,6 @@ export const idTypeOptions = [
 ];
 
 export const idTypeMap: Record<number | string, string> = {
-  1: 'PHILIPPINE PASSPORT',
   2: 'PHILIPPINE NATIONAL ID',
   3: 'SSS/UMID CARD',
   4: 'GSIS ECARD',
