@@ -30,7 +30,12 @@ jobs:
       - name: Build Android APK
         id: eas_build
         run: |
-          eas build --platform android --type apk --non-interactive --output json > build-output.json
+          eas build \
+            --platform android \
+            --type apk \
+            --profile preview \
+            --non-interactive \
+            --output json > build-output.json
 
       - name: Get APK URL
         id: apk_url
