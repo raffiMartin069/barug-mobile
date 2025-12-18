@@ -16,7 +16,8 @@
       }
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myorg.barugapp"
     },
     "android": {
       "package": "com.myorg.barugapp",
@@ -24,9 +25,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "useNextNotificationsApi": true,
-      "googleServicesFile": null
+      "edgeToEdgeEnabled": true
     },
     "notification": {
       "icon": "./assets/images/icon.png",
