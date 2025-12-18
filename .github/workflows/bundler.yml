@@ -2,11 +2,12 @@ on:
   push:
     branches:
       - develop
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup repo
+      - name: Checkout repo
         uses: actions/checkout@v3
 
       - name: Setup Node
@@ -22,7 +23,29 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build app
+      - name: Set version info
+        id: version
+        run: |
+          # Use branch name + short commit SHA + timestamp
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | tr / -)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date +%Y%m%d%H%M)
+          VERSIONED_NAME="barug-${BRANCH_NAME}-${SHORT_SHA}-${TIMESTAMP}.apk"
+          echo "VERSIONED_NAME=$VERSIONED_NAME" >> $GITHUB_ENV
+
+      - name: Build APK
         run: eas build -p android --profile preview --non-interactive
+
+      - name: Download APK
+        run: eas build:download --platform android --latest --output ./app.apk
+
+      - name: Rename APK with version
+        run: mv ./app.apk ./ ${{ env.VERSIONED_NAME }}
+
+      - name: Upload APK to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.VERSIONED_NAME }}
+          path: ./${{ env.VERSIONED_NAME }}
