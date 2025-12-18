@@ -1,0 +1,20 @@
+export type PaymentHistory = {
+  or_id: number;
+  or_number: string;
+  payment_method: string;
+  amount_paid: number;
+  purpose: string;
+  issued_by_staff_id: number;
+  issued_by_staff_code: string;
+  issued_by_person_id: number;
+  issued_by: string;
+  issued_at: string;
+  business_id: number;
+  origin_type: string;
+  origin_request_id: number;
+  origin_request_code: string;
+  origin_period_type: string;
+  origin_period_year: number;
+  origin_total_quote: number;
+  clearance_rec_id: number;
+};

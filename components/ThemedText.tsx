@@ -1,60 +1,54 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { Colors } from '@/constants/Colors'
+import React from 'react'
+import { StyleSheet, Text, useColorScheme } from 'react-native'
 
-import { useThemeColor } from '@/hooks/useThemeColor';
+const ThemedText = ({ style = null, title = false , subtitle = false,
+    link = false, btn = false , non_btn = false, ...props }) => {
+    const colorScheme = useColorScheme()
+    const theme = Colors[colorScheme] ?? Colors.light
+    const textColor = link
+        ? theme.link
+        : title
+        ? theme.title
+        : theme.text
 
-export type ThemedTextProps = TextProps & {
-  lightColor?: string;
-  darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
-};
-
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = 'default',
-  ...rest
-}: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
-
-  return (
-    <Text
-      style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
-        style,
-      ]}
-      {...rest}
-    />
-  );
+    return (
+        <Text
+            style={[{color: textColor},
+                    title && styles.title, 
+                    subtitle && styles.subtitle, 
+                    link && styles.link,
+                    btn && styles.btn,
+                    non_btn && styles.non_btn,
+                    style]}
+            {...props}
+        />
+    )
 }
 
+export default ThemedText
+
 const styles = StyleSheet.create({
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
-  },
-});
+    title: {
+        fontSize: 22,
+        fontWeight: 'bold',
+    },
+    subtitle: {
+        fontSize: 16,
+    },
+    link: {
+        fontWeight: 'bold',
+    },
+    btn: {
+        fontSize: 16,
+        fontWeight: 500,
+        color: '#fff',
+        alignSelf: 'center',
+    },
+    non_btn: {
+        fontSize: 16,
+        fontWeight: 500,
+        color: Colors.primary,
+        alignSelf: 'center',
+    },
+})
