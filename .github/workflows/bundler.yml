@@ -1,12 +1,15 @@
+name: Build and Release Android APK
+
 on:
   push:
     branches:
       - develop
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Node
@@ -15,14 +18,43 @@ jobs:
           node-version: 20.19
           cache: npm
 
+      - name: Install dependencies
+        run: npm install
+
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Install dependencies
-        run: npm install
+      - name: Build Android APK
+        id: eas_build
+        run: |
+          eas build \
+            --platform android \
+            --type apk \
+            --profile preview \
+            --non-interactive \
+            --output json > build-output.json
 
-      - name: Build app
-        run: eas build --platform android --non-interactive
+      - name: Get APK URL
+        id: apk_url
+        run: |
+          APK_URL=$(jq -r '.artifacts[0].uri' build-output.json)
+          echo "APK_URL=$APK_URL" >> $GITHUB_ENV
+
+      - name: Download APK
+        run: |
+          VERSION=$(jq -r .expo.version app.json)
+          APK_NAME="barug-android-${VERSION}-${GITHUB_SHA::7}.apk"
+          curl -L $APK_URL -o $APK_NAME
+          echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "preview-${GITHUB_SHA}"
+          name: "Preview Build $GITHUB_SHA"
+          files: ${{ env.APK_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
