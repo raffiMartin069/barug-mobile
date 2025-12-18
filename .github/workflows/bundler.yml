@@ -1,4 +1,4 @@
-name: Build and Release Android APK
+name: Build Android APK Locally
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - develop
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,36 +21,41 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Setup EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli@latest
 
-      - name: Build Android APK
-        id: eas_build
+      - name: Prebuild native Android
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build APK locally
         run: |
           eas build \
             --platform android \
-            --type apk \
             --profile preview \
+            --local \
             --non-interactive \
             --output json > build-output.json
 
-      - name: Get APK URL
-        id: apk_url
+      - name: Get APK path
+        id: apk
         run: |
-          APK_URL=$(jq -r '.artifacts[0].uri' build-output.json)
-          echo "APK_URL=$APK_URL" >> $GITHUB_ENV
+          APK_PATH=$(jq -r '.artifacts[0].path' build-output.json)
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
 
-      - name: Download APK
+      - name: Rename APK
         run: |
           VERSION=$(jq -r .expo.version app.json)
-          APK_NAME="barug-android-${VERSION}-${GITHUB_SHA::7}.apk"
-          curl -L $APK_URL -o $APK_NAME
+          APK_NAME="myapp-android-${VERSION}-${GITHUB_SHA::7}.apk"
+          mv $APK_PATH $APK_NAME
           echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
 
-      - name: Publish Release
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.APK_NAME }}
+          path: ${{ env.APK_NAME }}
+
+      - name: Publish APK to Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: "preview-${GITHUB_SHA}"
