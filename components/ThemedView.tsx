@@ -1,40 +1,14 @@
-import { Colors } from '@/constants/Colors'
-import React from 'react'
-import { StyleSheet, useColorScheme, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { View, type ViewProps } from 'react-native';
 
-const ThemedView = ({ style = null, safe = false, ...props }) => {
-    const colorScheme = useColorScheme()
-    const theme = Colors[colorScheme] ?? Colors.light
-    
-    if (!safe) return (
-        <View
-            style={[{backgroundColor: theme.background}, styles.container, style]}
-            {...props}
-        />
-    )
-    
-    const insets = useSafeAreaInsets()
+import { useThemeColor } from '@/hooks/useThemeColor';
 
-    return(
-        <View
-            style={[{ 
-                backgroundColor: theme.background,
-                paddingTop: insets.top,
-                paddingBottom: insets.bottom,
-            }, 
-            styles.container, 
-            style]} 
-        {...props}
-        />
-    )
+export type ThemedViewProps = ViewProps & {
+  lightColor?: string;
+  darkColor?: string;
+};
+
+export function ThemedView({ style, lightColor, darkColor, ...otherProps }: ThemedViewProps) {
+  const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
+
+  return <View style={[{ backgroundColor }, style]} {...otherProps} />;
 }
-
-export default ThemedView
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-})
