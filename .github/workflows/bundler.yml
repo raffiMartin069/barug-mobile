@@ -1,15 +1,12 @@
-name: Build Android APK Locally
-
 on:
   push:
     branches:
       - develop
-
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Setup repo
         uses: actions/checkout@v3
 
       - name: Setup Node
@@ -18,48 +15,14 @@ jobs:
           node-version: 20.19
           cache: npm
 
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
       - name: Install dependencies
         run: npm install
 
-      - name: Setup EAS CLI
-        run: npm install -g eas-cli@latest
-
-      - name: Prebuild native Android
-        run: npx expo prebuild --platform android --no-install
-
-      - name: Build APK locally
-        run: |
-          eas build \
-            --platform android \
-            --profile preview \
-            --local \
-            --non-interactive \
-            --output json > build-output.json
-
-      - name: Get APK path
-        id: apk
-        run: |
-          APK_PATH=$(jq -r '.artifacts[0].path' build-output.json)
-          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
-
-      - name: Rename APK
-        run: |
-          VERSION=$(jq -r .expo.version app.json)
-          APK_NAME="myapp-android-${VERSION}-${GITHUB_SHA::7}.apk"
-          mv $APK_PATH $APK_NAME
-          echo "APK_NAME=$APK_NAME" >> $GITHUB_ENV
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.APK_NAME }}
-          path: ${{ env.APK_NAME }}
-
-      - name: Publish APK to Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: "preview-${GITHUB_SHA}"
-          name: "Preview Build $GITHUB_SHA"
-          files: ${{ env.APK_NAME }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build app
+        run: eas build --platform android --non-interactive
