@@ -22,7 +22,7 @@
     "android": {
       "package": "com.myorg.barugapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/brgy_sto_nino_logo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
