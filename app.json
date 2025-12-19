@@ -4,7 +4,7 @@
     "slug": "barug",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/brgy_sto_niño_logo.png",
     "scheme": "barug",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -43,7 +43,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/icon-.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

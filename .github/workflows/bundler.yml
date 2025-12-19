@@ -39,7 +39,7 @@ jobs:
         run: eas build -p android --profile preview --non-interactive
 
       - name: Download APK
-        run: eas build:download --platform android --latest --output ./app.apk
+        run: eas build:download --platform android --non-interactive
 
       - name: Rename APK with version
         run: mv ./app.apk ./ ${{ env.VERSIONED_NAME }}
